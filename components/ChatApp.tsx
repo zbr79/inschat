@@ -13,6 +13,7 @@ import type {
   SessionConclusion,
 } from "@/lib/types";
 import { ModelMarkerParser } from "@/lib/markers";
+import { elapsedSeconds } from "@/lib/format";
 import {
   appendGuestMessage,
   createGuestSession,
@@ -359,17 +360,18 @@ useEffect(() => {
       setSending(true);
       setFreeNotice(false);
 
+      const startedAt = Date.now();
       let elapsedValue = 0;
       const elapsedTimer = setInterval(() => {
-        elapsedValue += 1;
+        elapsedValue = elapsedSeconds(startedAt);
         setMessages((prev) =>
           prev.map((message) =>
             message.id === modelMessage.id
-              ? { ...message, elapsed: (message.elapsed ?? 0) + 1 }
+              ? { ...message, elapsed: elapsedValue }
               : message
           )
         );
-      }, 1000);
+      }, 100);
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -454,9 +456,12 @@ useEffect(() => {
             )
           );
         }
+        elapsedValue = elapsedSeconds(startedAt);
         setMessages((prev) =>
           prev.map((message) =>
-            message.id === modelMessage.id ? { ...message, streaming: false } : message
+            message.id === modelMessage.id
+              ? { ...message, streaming: false, elapsed: elapsedValue }
+              : message
           )
         );
 

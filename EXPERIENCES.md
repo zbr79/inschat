@@ -1132,3 +1132,15 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Add-card buttons rely on visible text for their name (no aria-label) — acceptable for screen readers.
 ### Disproved
 - The modal cannot be audited by Lighthouse directly (it audits page navigations, not client-side state) — Playwright probing is the correct tool.
+
+## 2026-09-06 — One-decimal response elapsed time
+### Solved
+- Chat and OpenCode response timers now measure actual elapsed time at 100 ms resolution and persist rounded tenths of a second.
+- Chat bubbles and shared-chat views now display elapsed times with exactly one decimal place, including older whole-second records.
+### Verified
+- `npm run build` passed.
+- The PM2-managed `inschat` process was restarted from the existing Node 22 PM2 installation and served HTTP 200 on port 3001.
+### Unresolved
+- n/a
+### Disproved
+- Starting a second production server on port 3001 was not a valid smoke-test path because the PM2-managed app already owned the port; the existing app was verified with `curl`.
