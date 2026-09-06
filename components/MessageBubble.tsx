@@ -9,6 +9,7 @@ import "highlight.js/styles/github.css";
 import SummaryCard from "./SummaryCard";
 import ImageViewer from "./ImageViewer";
 import type { ConcludeResult } from "@/lib/types";
+import { formatElapsed } from "@/lib/format";
 import { STR, useUiLang } from "@/lib/i18n";
 import { modelLabel } from "@/lib/modelLabels";
 
@@ -233,7 +234,7 @@ export default function MessageBubble({
                 {!message.failed && message.model && (
                   <div className={`model-meta${message.streaming ? " live" : ""}`}>
                     {!message.streaming && message.elapsed !== undefined && (
-                      <span>{message.elapsed}s · </span>
+                      <span>{formatElapsed(message.elapsed)}s · </span>
                     )}
                     <span>{modelLabel(message.model)}</span>
                   </div>
