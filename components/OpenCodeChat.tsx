@@ -5,7 +5,12 @@ import MessageBubble from "./MessageBubble";
 import Composer from "./Composer";
 import type { ChatImage, ChatMessage } from "@/lib/types";
 import { ModelMarkerParser } from "@/lib/markers";
-import { formatLimitReset, parseLimitPayload, type LimitWindow } from "@/lib/format";
+import {
+  elapsedSeconds,
+  formatLimitReset,
+  parseLimitPayload,
+  type LimitWindow,
+} from "@/lib/format";
 import { AlertTriangle } from "lucide-react";
 import { STR, useUiLang } from "@/lib/i18n";
 import { useInsulinMode } from "@/lib/prefs";
@@ -65,17 +70,18 @@ export default function OpenCodeChat() {
       setMessages((prev) => [...prev, userMessage, modelMessage]);
       setSending(true);
 
+      const startedAt = Date.now();
       let elapsedValue = 0;
       const elapsedTimer = setInterval(() => {
-        elapsedValue += 1;
+        elapsedValue = elapsedSeconds(startedAt);
         setMessages((prev) =>
           prev.map((message) =>
             message.id === modelMessage.id
-              ? { ...message, elapsed: (message.elapsed ?? 0) + 1 }
+              ? { ...message, elapsed: elapsedValue }
               : message
           )
         );
-      }, 1000);
+      }, 100);
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -155,6 +161,7 @@ export default function OpenCodeChat() {
             )
           );
         }
+        elapsedValue = elapsedSeconds(startedAt);
         setMessages((prev) =>
           prev.map((message) =>
             message.id === modelMessage.id

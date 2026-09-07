@@ -13,6 +13,7 @@ import type {
   SessionConclusion,
 } from "@/lib/types";
 import { ModelMarkerParser } from "@/lib/markers";
+import { elapsedSeconds } from "@/lib/format";
 import {
   appendGuestMessage,
   createGuestSession,
@@ -353,14 +354,15 @@ useEffect(() => {
       setSending(true);
       setFreeNotice(false);
 
+      const startedAt = Date.now();
       let elapsedValue = 0;
       let contentStarted = false;
       const elapsedTimer = setInterval(() => {
-        elapsedValue += 0.1;
+        elapsedValue = elapsedSeconds(startedAt);
         setMessages((prev) =>
           prev.map((message) =>
             message.id === modelMessage.id
-              ? { ...message, elapsed: (message.elapsed ?? 0) + 0.1 }
+              ? { ...message, elapsed: elapsedValue }
               : message
           )
         );
@@ -372,7 +374,15 @@ useEffect(() => {
       const freezeElapsed = () => {
         if (!contentStarted) {
           contentStarted = true;
+          elapsedValue = elapsedSeconds(startedAt);
           clearInterval(elapsedTimer);
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === modelMessage.id
+                ? { ...message, elapsed: elapsedValue }
+                : message
+            )
+          );
         }
       };
 
@@ -461,9 +471,12 @@ useEffect(() => {
             )
           );
         }
+        if (!contentStarted) elapsedValue = elapsedSeconds(startedAt);
         setMessages((prev) =>
           prev.map((message) =>
-            message.id === modelMessage.id ? { ...message, streaming: false } : message
+            message.id === modelMessage.id
+              ? { ...message, streaming: false, elapsed: elapsedValue }
+              : message
           )
         );
 

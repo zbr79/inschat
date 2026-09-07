@@ -8,13 +8,21 @@ export type UiLang = "zh" | "en";
 const KEY = "inschat_ui_lang";
 const EVENT = "inschat-lang";
 
+function detectSystemLang(): UiLang {
+  const systemLang =
+    typeof navigator !== "undefined"
+      ? navigator.language || navigator.languages?.[0] || ""
+      : "";
+  return /^zh(?:-|$)/i.test(systemLang) ? "zh" : "en";
+}
+
 export function getUiLang(): UiLang {
-  if (typeof window === "undefined") return "zh";
+  if (typeof window === "undefined") return "en";
   try {
     const raw = window.localStorage.getItem(KEY);
     if (raw === "en" || raw === "zh") return raw;
   } catch {}
-  return "zh";
+  return detectSystemLang();
 }
 
 export function setUiLang(lang: UiLang): void {

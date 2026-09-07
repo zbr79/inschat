@@ -2,6 +2,14 @@
 
 export type LimitWindow = "rolling" | "weekly" | "monthly";
 
+export function elapsedSeconds(startedAt: number): number {
+  return Math.max(0, Math.round((Date.now() - startedAt) / 100) / 10);
+}
+
+export function formatElapsed(seconds: number): string {
+  return seconds.toFixed(1);
+}
+
 export function parseLimitPayload(
   value: string
 ): { window: LimitWindow; resetAt: number } | null {
