@@ -23,6 +23,7 @@ interface RecordDoc {
   sourceText?: string;
   savedAt: Date;
   datetime: Date | null;
+  pinned?: boolean;
 }
 
 let clientPromise: Promise<MongoClient> | null = null;
@@ -58,6 +59,7 @@ export function toSavedRecord(doc: RecordDoc): SavedRecord {
     sourceText: doc.sourceText,
     savedAt: doc.savedAt.toISOString(),
     datetime: doc.datetime ? doc.datetime.toISOString() : null,
+    pinned: doc.pinned ?? false,
   };
 }
 
@@ -80,6 +82,7 @@ export async function insertRecord(
     datetime: new Date(),
     userId: new ObjectId(userId),
     savedAt: new Date(),
+    pinned: false,
   };
   const result = await db.collection<RecordDoc>("records").insertOne(doc);
   return toSavedRecord({ ...doc, _id: result.insertedId });
@@ -90,7 +93,7 @@ export async function listRecords(userId: string, limit = 100): Promise<SavedRec
   const docs = await db
     .collection<RecordDoc>("records")
     .find({ userId: new ObjectId(userId) })
-    .sort({ savedAt: -1 })
+    .sort({ pinned: -1, savedAt: -1 })
     .limit(limit)
     .toArray();
   return docs.map(toSavedRecord);
@@ -114,6 +117,7 @@ export async function updateRecord(
     items: ConcludeItem[];
     meals?: ConcludeMeal[];
     sourceText?: string;
+    pinned?: boolean;
   }
 ): Promise<SavedRecord | null> {
   if (!ObjectId.isValid(id)) return null;
@@ -129,6 +133,7 @@ export async function updateRecord(
           items: input.items,
           meals: input.meals,
           sourceText: input.sourceText,
+          ...(input.pinned === undefined ? {} : { pinned: input.pinned }),
         },
       },
       { returnDocument: "after" }

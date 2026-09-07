@@ -1586,3 +1586,42 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - A long Chats list can place the Records header lower in the shared sidebar scroll area, as expected with one shared scrollbar.
 ### Disproved
 - n/a
+
+## 2026-09-07 — Add data confirmation and record row actions
+### Solved
+- Renamed the guest settings action to Delete data and replaced the repeated-click confirmation with a modal dialog.
+- Delete data now clears both guest chat sessions and saved records while preserving preferences.
+- Added record-row Rename, Pin/Unpin, and Delete actions for guest and authenticated record lists.
+- Added persisted record pinning so pinned records sort to the top.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the record menu actions, record pinning, record rename, individual record deletion, confirmation modal, and removal of both local-storage data keys.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- The settings Delete data action remains guest-only, matching its local-storage scope.
+### Disproved
+- n/a
+
+## 2026-09-07 — Bold chat and record action menus
+### Solved
+- Increased the Rename, Pin/Unpin, and Delete menu-item weight to 600 for both chat and record row menus.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed both chat and record action menus render at font weight 600.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Soften action-menu weight
+### Solved
+- Reduced chat and record action-menu text from weight 600 to 500 after the stronger treatment was too bold.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the final row-menu weight is 500.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
