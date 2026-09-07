@@ -6,7 +6,7 @@ import { getSystemPrompt } from "./prompt";
 import { encodeFreeMarker, encodeModelMarker, encodeTryingMarker } from "./markers";
 import { getChatChain } from "./models";
 import { insertCall } from "./db";
-import { fetchPageText } from "./webfetch";
+import { fetchPageText, searchWeb } from "./webfetch";
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type ChatMessage } from "./types";
 
 export const OPENCODE_BASE_URL = "https://opencode.ai/zen/go/v1";
@@ -272,6 +272,25 @@ const WEB_FETCH_TOOL = {
   },
 };
 
+const WEB_SEARCH_TOOL = {
+  type: "function",
+  function: {
+    name: "web_search",
+    description:
+      "Search the live web for current information, news, prices, or documentation. Use web_fetch on useful result URLs when the answer needs source details.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "A concise web search query.",
+        },
+      },
+      required: ["query"],
+    },
+  },
+};
+
 interface DeltaToolCall {
   index?: number;
   id?: string;
@@ -364,7 +383,7 @@ async function* streamOpenCodeOnce(
     temperature: 0.7,
   };
   if (!skipReasoning) body.reasoning_effort = reasoningLevel;
-  if (tools) body.tools = [WEB_FETCH_TOOL];
+  if (tools) body.tools = [WEB_SEARCH_TOOL, WEB_FETCH_TOOL];
   const startedAt = Date.now();
   console.log(
     `[opencode:${requestId}] start — model ${model}, ${messages.length} messages${tools ? ", tools on" : ""}`
@@ -508,7 +527,32 @@ async function executeTool(
   call: ToolCall
 ): Promise<OpenAiMessage> {
   let text: string;
-  if (call.name === "web_fetch") {
+  if (call.name === "web_search") {
+    let query: string | undefined;
+    try {
+      query = (JSON.parse(call.arguments) as { query?: unknown }).query as
+        | string
+        | undefined;
+    } catch {}
+    if (typeof query !== "string" || !query.trim()) {
+      text = "web_search failed: missing query argument.";
+    } else {
+      const result = await searchWeb(query);
+      if (!result.ok) {
+        text = `Search failed (${result.error}).`;
+      } else if (!result.results?.length) {
+        text = `No web results found for "${query}".`;
+      } else {
+        text = [
+          `Search results for "${query}":`,
+          ...result.results.map(
+            (item, index) =>
+              `${index + 1}. ${item.title}\nURL: ${item.url}\n${item.snippet}`
+          ),
+        ].join("\n\n");
+      }
+    }
+  } else if (call.name === "web_fetch") {
     let url: string | undefined;
     try {
       url = (JSON.parse(call.arguments) as { url?: unknown }).url as
@@ -536,8 +580,8 @@ async function executeTool(
 
 const MAX_TOOL_ROUNDS = 6;
 
-// Chat with web_fetch tool use: images → vision model (no tools); text →
-// pinned model or pro→flash chain, with an agent loop for tool calls.
+// Chat with web search/fetch tools: images → vision model (no tools); text →
+// pinned model or pro→flash chain, with a direct tool loop.
 export async function* streamChat(
   messages: ChatMessage[],
   timeZone?: string,
