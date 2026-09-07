@@ -1563,6 +1563,7 @@ span.conclude-rank-badge {
 }
 
 .message.model .bubble {
+  min-height: 42px;
   background: var(--bubble-model);
   color: var(--bubble-model-text);
   border-bottom-left-radius: 6px;
@@ -2958,6 +2959,7 @@ span.conclude-rank-badge {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-height: 14px;
   width: 100%;
   gap: 8px;
 }
