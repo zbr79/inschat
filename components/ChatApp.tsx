@@ -854,6 +854,11 @@ useEffect(() => {
           />
         </div>
       )}
+      {freeNotice && (
+        <p className="free-note-overlay" onClick={() => setFreeNotice(false)}>
+          {t["free.notice"]}
+        </p>
+      )}
       {messages.length > 0 && (
         <Composer
           onSend={send}
@@ -861,11 +866,6 @@ useEffect(() => {
           sending={sending}
           placeholder={t["composer.placeholder"]}
         />
-      )}
-      {freeNotice && (
-        <p className="free-note-overlay" onClick={() => setFreeNotice(false)}>
-          {t["free.notice"]}
-        </p>
       )}
       <ConcludeModal
         open={concludeDraft !== null}

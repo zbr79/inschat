@@ -1,4 +1,4 @@
-# Agent
+# InsChat
 
 Minimalist AI chatbot — text chat + image upload, streaming responses. Powered by the **opencode-go subscription** (`https://opencode.ai/zen/go/v1`).
 
@@ -8,7 +8,7 @@ Minimalist AI chatbot — text chat + image upload, streaming responses. Powered
 
 - Text chat with streaming responses
 - Image upload (JPEG/PNG/WebP) — DeepSeek V4 Flash Vision Exp analyzes your photo
-- Live web research: the model can fetch pages itself (`web_fetch` tool) for current prices, docs, news
+- Live web research: the direct engine can search the web and fetch pages (`web_search` and `web_fetch`)
 - Multi-turn conversation (last 20 messages kept as context)
 - Conclude button: extracts structured health data (insulin/glucose/meals) and saves records
 - Model picker (`/models`), usage pages (`/usage`, `/opencode-calls`) with the official Go quota windows
@@ -44,15 +44,12 @@ npm run start      # serves on port 3000 by default
 
 ```bash
 npm run build
-pm2 start ecosystem.config.js   # starts agent on port 3002
+pm2 start ecosystem.config.js
 ```
 
-Text chat runs through the **opencode agent server** (`opencode serve`, port 4096, localhost-only, basic auth): full agent tools (web search, rendered page fetches, multi-step research) using the same opencode-go key. Images still go directly to `deepseek-v4-flash-vision-exp`. If the agent server is down, the app falls back to its built-in direct engine — chat never hard-fails.
-
-Agent server config lives in `/home/ubuntu/opencode-tmp/agent/`:
-- `opencode.jsonc` — web-only permissions (`webfetch`/`websearch` allowed, everything else denied)
-- `.server-env` — `OPENCODE_SERVER_PASSWORD` / `OPENCODE_SERVER_USERNAME`
-- `start-server.sh` — sources `.server-env`, runs `opencode serve --port 4096`
+Text and image chat use the direct opencode-go engine. Text requests can call
+`web_search` for live sources and `web_fetch` for readable page content; image
+requests stay on the vision model without web tools.
 
 Put nginx (or any reverse proxy) in front and proxy `/` to `127.0.0.1:3002`. If proxying, keep `proxy_buffering off;` so responses stream. Note: each new API route needs its own nginx `location` block (POST-only routes fall through `location /`, which only allows GET).
 

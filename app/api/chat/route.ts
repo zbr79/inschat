@@ -1,12 +1,10 @@
 import {
   chatErrorMessage,
-  getOpenCodeOfficialUsage,
   imageExhaustedText,
   isBalanceError,
   quotaResetInfo,
   streamChat,
 } from "@/lib/opencode";
-import { agentChat, isAgentUp } from "@/lib/agent";
 import { ChatValidationError } from "@/lib/errors";
 import { parseChatBody, type ChatRequest } from "@/lib/chatRequest";
 
@@ -40,48 +38,6 @@ export async function POST(req: Request) {
       const enqueue = (text: string) => controller.enqueue(encoder.encode(text));
 
       try {
-        if (!hasImage) {
-          // Direct engine first: measured 0.2s first-token on multi-turn
-          // conversations vs 16-22s through the opencode agent server (its
-          // agent loop reasons pathologically hard once assistant turns
-          // exist). The agent stays as the fallback.
-          const official = await getOpenCodeOfficialUsage();
-          const quotaExhausted =
-            official !== null &&
-            (official.monthly?.status === "rate-limited" ||
-              official.rolling.percent >= 100);
-          const agentReady = !quotaExhausted && (await isAgentUp());
-          let produced = false;
-          try {
-            for await (const text of streamChat(messages, timeZone, language, freeMode, reasoning)) {
-              produced = true;
-              enqueue(text);
-            }
-            return;
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            console.log(
-              `[chat] direct failed${produced ? " mid-stream" : ""} → ${message.slice(0, 160)}`
-            );
-            if (produced) return;
-          }
-          if (agentReady) {
-            produced = false;
-            try {
-              for await (const text of agentChat(messages, timeZone, language, freeMode)) {
-                produced = true;
-                enqueue(text);
-              }
-              return;
-            } catch (error) {
-              const message = error instanceof Error ? error.message : String(error);
-              console.log(
-                `[chat] agent failed${produced ? " mid-stream" : ""} → ${message.slice(0, 160)}`
-              );
-              if (produced) return;
-            }
-          }
-        }
         for await (const text of streamChat(messages, timeZone, language, freeMode, reasoning)) {
           enqueue(text);
         }

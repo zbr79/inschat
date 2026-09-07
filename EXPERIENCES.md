@@ -21,6 +21,19 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 
 ---
 
+## 2026-09-06 — Direct web research and agent removal
+
+### Solved
+- Removed the local OpenCode agent-server route and SDK dependency; `/api/chat` now uses the direct engine for both text and image requests.
+- Added a direct `web_search` tool backed by Bing RSS results, alongside the existing `web_fetch` tool. Text requests can search first and fetch source pages in the same tool loop.
+- Reverted the uncommitted free-model fallback banner to the previous centered notice.
+
+### Unresolved
+- Search quality depends on the public Bing RSS endpoint and may need a provider/API-key change if it becomes unreliable.
+
+### Disproved
+- The separate agent server was not needed for direct web research once search and fetch tools were available in `streamChat`; it added latency and a second runtime to maintain.
+
 ## 2026-08-27 — v1 built: text chat + image upload + streaming
 
 ### Solved
