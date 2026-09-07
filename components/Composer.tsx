@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUp, Plus, Square, X } from "lucide-react";
 import type { ChatImage } from "@/lib/types";
 import { MAX_IMAGES } from "@/lib/types";
@@ -48,6 +48,14 @@ export default function Composer({ sending, onSend, onStop, disabled = false, pl
   const [images, setImages] = useState<ChatImage[]>([]);
   const [imageError, setImageError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const input = textInputRef.current;
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
+  }, [text]);
 
   const reasoningLabels: Record<ReasoningEffort, string> = {
     max: t["composer.reasoning.max"],
@@ -151,6 +159,7 @@ export default function Composer({ sending, onSend, onStop, disabled = false, pl
           <Plus size={18} />
         </button>
         <textarea
+          ref={textInputRef}
           rows={1}
           value={text}
            placeholder={placeholder ?? t["composer.placeholder"]}
