@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Check, Copy, Pencil, RefreshCw } from "lucide-react";
+import { Check, Copy, Pencil, RefreshCw, X } from "lucide-react";
 import "highlight.js/styles/github.css";
 import ImageViewer from "./ImageViewer";
-import type { ConcludeResult } from "@/lib/types";
+import type { ChatImage, ConcludeResult } from "@/lib/types";
 import { formatElapsed } from "@/lib/format";
 import { STR, useUiLang } from "@/lib/i18n";
 import { modelLabel } from "@/lib/modelLabels";
@@ -16,7 +16,7 @@ interface Message {
   id: number;
   role: "user" | "model";
   text: string;
-  images?: { mimeType: string; data: string }[];
+  images?: ChatImage[];
   streaming?: boolean;
   failed?: boolean;
   model?: string;
@@ -51,7 +51,9 @@ export default function MessageBubble({
   flashId = null,
   editingId = null,
   editingText = "",
+  editingImages = [],
   onEditingText,
+  onEditingImages,
   onEditSave,
   onEditCancel,
 }: {
@@ -65,11 +67,14 @@ export default function MessageBubble({
   flashId?: number | null;
   editingId?: number | null;
   editingText?: string;
+  editingImages?: ChatImage[];
   onEditingText?: (text: string) => void;
+  onEditingImages?: (images: ChatImage[]) => void;
   onEditSave?: (id: number) => void;
   onEditCancel?: () => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
   const [viewer, setViewer] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const lang = useUiLang();
@@ -78,6 +83,22 @@ export default function MessageBubble({
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    const input = editInputRef.current;
+    if (!input || editingId === null) return;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 220)}px`;
+  }, [editingId]);
+
+  useEffect(() => {
+    const input = editInputRef.current;
+    if (!input || editingId === null) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 220)}px`;
+  }, [editingId, editingText]);
 
   const copy = async (message: Message) => {
     try {
@@ -136,6 +157,7 @@ export default function MessageBubble({
             ? imageUrls
             : null;
         const isEditing = editingId === message.id;
+        const editImages = editingImages ?? message.images ?? [];
         return (
         <div
           key={message.id}
@@ -145,13 +167,61 @@ export default function MessageBubble({
           <div className="message-body">
             {isEditing ? (
               <div className="bubble edit-bubble">
+                {editImages.length > 0 && (
+                  <div className="edit-images">
+                    {editImages.map((image, imageIndex) => {
+                      const url = dataUrl(image);
+                      return (
+                        <div key={imageIndex} className="edit-image">
+                          <img
+                            src={url}
+                            alt={t["composer.uploadedAlt"]}
+                            onClick={() => setViewer(url)}
+                          />
+                          <button
+                            type="button"
+                            className="image-remove"
+                            onClick={() =>
+                              onEditingImages?.(
+                                editImages.filter((_, index) => index !== imageIndex)
+                              )
+                            }
+                            aria-label={t["composer.removeImage"]}
+                          >
+                            <X size={14} strokeWidth={2.5} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <textarea
+                  ref={editInputRef}
                   className="edit-input"
                   value={editingText}
                   onChange={(event) => onEditingText?.(event.target.value)}
-                   aria-label={t["actions.edit"]}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      onEditCancel?.();
+                    } else if (
+                      event.key === "Enter" &&
+                      (event.metaKey || event.ctrlKey)
+                    ) {
+                      event.preventDefault();
+                      onEditSave?.(message.id);
+                    }
+                  }}
+                  aria-label={t["actions.edit"]}
                 />
                 <div className="edit-actions">
+                  <button
+                    type="button"
+                    className="edit-cancel"
+                    onClick={() => onEditCancel?.()}
+                  >
+                    {t["actions.cancel"]}
+                  </button>
                   <button
                     type="button"
                     className="edit-save"
@@ -159,13 +229,6 @@ export default function MessageBubble({
                     disabled={!editingText.trim()}
                   >
                     {t["actions.save"]}
-                  </button>
-                  <button
-                    type="button"
-                    className="edit-cancel"
-                    onClick={() => onEditCancel?.()}
-                  >
-                    {t["actions.cancel"]}
                   </button>
                 </div>
               </div>
