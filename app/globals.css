@@ -1711,21 +1711,6 @@ span.conclude-rank-badge {
   padding: 0;
 }
 
-.cursor {
-  display: inline-block;
-  width: 8px;
-  height: 16px;
-  background: currentColor;
-  vertical-align: text-bottom;
-  animation: blink 1s step-start infinite;
-}
-
-@keyframes blink {
-  50% {
-    opacity: 0;
-  }
-}
-
 .thinking {
   display: inline-flex;
   align-items: center;

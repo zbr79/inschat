@@ -34,6 +34,42 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 ### Disproved
 - The separate agent server was not needed for direct web research once search and fetch tools were available in `streamChat`; it added latency and a second runtime to maintain.
 
+## 2026-09-06 — Suppress transient streaming trailing whitespace
+
+### Solved
+- Trimmed only the text shown during streaming in both chat surfaces, preventing model-emitted trailing newlines/spaces from appearing as a temporary blank line.
+- Kept the raw accumulated response unchanged for conclusion parsing and persistence.
+
+### Unresolved
+- Intentional trailing whitespace is not visually shown while a response is still streaming.
+
+### Disproved
+- No backend response mutation was needed; the issue was caused by the UI rendering raw incomplete stream chunks before final cleanup.
+
+## 2026-09-06 — Streaming cursor extra-line artifact
+
+### Solved
+- Found that `MessageBubble` appended Markdown hard-break spaces to the final rendered line, then placed the blinking cursor after the Markdown block.
+- Stopped adding the hard-break suffix to the final line while preserving breaks between content lines.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The remaining one-frame blank line was not caused by the model emitting an extra response line; it was caused by the cursor following a forced Markdown break.
+
+## 2026-09-06 — Remove block-level streaming cursor
+
+### Solved
+- Browser inspection showed the cursor was a sibling after ReactMarkdown's block-level `<p>`, which forced it onto a separate line before the model/time footer.
+- Removed the cursor element and its unused animation styles; the existing thinking dots still indicate an active response before text arrives.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Trimming trailing response whitespace alone could not fix the gap because the cursor's block-flow position created it independently.
+
 ## 2026-08-27 — v1 built: text chat + image upload + streaming
 
 ### Solved
