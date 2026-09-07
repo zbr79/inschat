@@ -21,7 +21,7 @@ export async function POST(req: Request) {
         : "Invalid request body.";
     return Response.json({ error: message }, { status: 400 });
   }
-  const { messages, timeZone, language, mode, sessionId } = parsed;
+  const { messages, timeZone, language, mode, reasoning, sessionId } = parsed;
   const freeMode = mode === "free";
 
   const encoder = new TextEncoder();
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
           timeZone,
           language,
           freeMode,
-          "max",
+          reasoning ?? "medium",
           sessionId
         )) {
           controller.enqueue(encoder.encode(text));

@@ -14,7 +14,7 @@ import {
 } from "@/lib/format";
 import { AlertTriangle } from "lucide-react";
 import { STR, useUiLang } from "@/lib/i18n";
-import { useInsulinMode } from "@/lib/prefs";
+import { useInsulinMode, useReasoningEffort } from "@/lib/prefs";
 
 interface UiMessage {
   id: number;
@@ -43,6 +43,7 @@ export default function OpenCodeChat() {
   const lang = useUiLang();
   const t = STR[lang];
   const [insulinMode, toggleInsulinMode] = useInsulinMode();
+  const [reasoningEffort] = useReasoningEffort();
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [sending, setSending] = useState(false);
   const [limitReset, setLimitReset] = useState<number | null>(null);
@@ -99,6 +100,7 @@ export default function OpenCodeChat() {
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             language: lang,
             mode: insulinMode ? "preset" : "free",
+            reasoning: reasoningEffort,
             sessionId,
           }),
           signal: controller.signal,
@@ -197,7 +199,7 @@ export default function OpenCodeChat() {
         abortRef.current = null;
       }
     },
-    [messages, sending, lang, insulinMode]
+    [messages, sending, lang, insulinMode, reasoningEffort]
   );
 
   const stop = useCallback(() => {
@@ -243,7 +245,6 @@ export default function OpenCodeChat() {
             onSend={send}
             onStop={stop}
             disabled={limitReset !== null}
-            placeholder={t["composer.placeholder"]}
           />
         </main>
       ) : (
@@ -261,7 +262,6 @@ export default function OpenCodeChat() {
             onSend={send}
             onStop={stop}
             disabled={limitReset !== null}
-            placeholder={t["composer.placeholder"]}
           />
         </>
       )}

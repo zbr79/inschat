@@ -828,7 +828,6 @@ useEffect(() => {
             onSend={send}
             onStop={stop}
             sending={sending}
-            placeholder={t["composer.placeholder"]}
           />
         </main>
       ) : (
@@ -881,7 +880,6 @@ useEffect(() => {
           onSend={send}
           onStop={stop}
           sending={sending}
-          placeholder={t["composer.placeholder"]}
         />
       )}
       <ConcludeModal

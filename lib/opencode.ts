@@ -371,7 +371,7 @@ async function* streamOpenCodeOnce(
   messages: OpenAiMessage[],
   model: string,
   tools: boolean,
-  reasoningLevel: "max" | "medium" | "low" = "max",
+  reasoningLevel: "max" | "medium" | "low" = "medium",
   sessionId?: string
 ): AsyncGenerator<string, { toolCalls: ToolCall[] }, void> {
   const requestId = Math.random().toString(36).slice(2, 8);
@@ -592,7 +592,7 @@ export async function* streamChat(
   timeZone?: string,
   language?: "zh" | "en",
   freeMode = false,
-  reasoning: "max" | "medium" | "low" = "max",
+  reasoning: "max" | "medium" | "low" = "medium",
   sessionId?: string
 ): AsyncGenerator<string> {
   const lastMessage = messages[messages.length - 1];
