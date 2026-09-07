@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Menu, X, SquarePen, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, Sparkles, ChevronRight, Languages, Activity, Gauge, LogOut, ImageDown } from "lucide-react";
+import { Menu, X, SquarePen, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, Sparkles, ChevronDown, ChevronRight, Languages, Activity, Gauge, LogOut, ImageDown } from "lucide-react";
 import type { ChatSession } from "@/lib/types";
 import { deleteGuestSession, clearGuestSessions, listGuestSessions, pinGuestSession, renameGuestSession } from "@/lib/guestStore";
 import { STR, useUiLang, setUiLang } from "@/lib/i18n";
@@ -57,6 +57,9 @@ export default function Sidebar() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarScrolled, setSidebarScrolled] = useState(false);
+  const [chatsCollapsed, setChatsCollapsed] = useState(false);
+  const [recordsCollapsed, setRecordsCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteArmed, setDeleteArmed] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
@@ -408,6 +411,11 @@ export default function Sidebar() {
       <aside
         className={`sidebar${menuOpen ? " open" : ""}${collapsed ? " collapsed" : ""}`}
       >
+        <div
+          className="sidebar-scroll"
+          onScroll={(event) => setSidebarScrolled(event.currentTarget.scrollTop > 0)}
+        >
+        <div className={`sidebar-top${sidebarScrolled ? " scrolled" : ""}`}>
         <div className="sidebar-brand-row">
           <span className="brand-mark">
             <Sparkles size={16} />
@@ -432,19 +440,32 @@ export default function Sidebar() {
             <PanelLeft size={16} />
           </button>
         </div>
-        <div className="sidebar-scroll">
         <Link
-            href="/"
-            className={`sidebar-new${pathname === "/" && !currentSession ? " active" : ""}`}
-            onClick={() => setMenuOpen(false)}
-          >
-            <SquarePen size={16} />
-            {t["nav.newChat"]}
-          </Link>
+          href="/"
+          className={`sidebar-new${pathname === "/" && !currentSession ? " active" : ""}`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <SquarePen size={16} />
+          {t["nav.newChat"]}
+        </Link>
+        </div>
       {authChecked && (
         <div className="session-nav">
           <div className="session-label-row">
-            <span className="sidebar-label">{t["nav.chats"]}</span>
+            <button
+              type="button"
+              className="catalog-toggle"
+              onClick={() => setChatsCollapsed((value) => !value)}
+              aria-expanded={!chatsCollapsed}
+              title={t["nav.chats"]}
+            >
+              <span className="sidebar-label sidebar-catalog-label">{t["nav.chats"]}</span>
+              <ChevronDown
+                size={14}
+                className={`catalog-chevron${chatsCollapsed ? " collapsed" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
             <button
               type="button"
               className="session-new-btn"
@@ -458,49 +479,68 @@ export default function Sidebar() {
               <SquarePen size={13} />
             </button>
           </div>
-          <div className="session-list">
-            {user ? (
-              <>
-                {sessions === null && <p className="session-hint">{t["nav.loading"]}</p>}
-                {sessions !== null && ownerList.length === 0 && (
-                  <p className="session-hint">{t["nav.noSessions"]}</p>
-                )}
-                {ownerList.map((session) =>
-                  renderSessionRow(session._id, session.title, Boolean(session.pinned))
-                )}
-              </>
-            ) : (
-              <>
-                {guestList.length === 0 && (
-                  <p className="session-hint">{t["nav.guestHint"]}</p>
-                )}
-                {guestList.map((session) =>
-                  renderSessionRow(session.id, session.title, Boolean(session.pinned))
-                )}
-              </>
-            )}
-          </div>
+          {!chatsCollapsed && (
+            <div className="session-list">
+              {user ? (
+                <>
+                  {sessions === null && <p className="session-hint">{t["nav.loading"]}</p>}
+                  {sessions !== null && ownerList.length === 0 && (
+                    <p className="session-hint">{t["nav.noSessions"]}</p>
+                  )}
+                  {ownerList.map((session) =>
+                    renderSessionRow(session._id, session.title, Boolean(session.pinned))
+                  )}
+                </>
+              ) : (
+                <>
+                  {guestList.length === 0 && (
+                    <p className="session-hint">{t["nav.guestHint"]}</p>
+                  )}
+                  {guestList.map((session) =>
+                    renderSessionRow(session.id, session.title, Boolean(session.pinned))
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
       {authChecked && (
         <div className="session-nav">
-          <span className="sidebar-label">{t["nav.records"]}</span>
-          <div className="session-list">
-            {records === null && <p className="session-hint">{t["nav.loading"]}</p>}
-            {records !== null && records.length === 0 && (
-              <p className="session-hint">{t["records.empty"]}</p>
-            )}
-            {records?.map((record) => (
-              <Link
-                key={record._id}
-                href="/records"
-                className="session-link"
-                onClick={() => setMenuOpen(false)}
-              >
-                <FitTitle title={record.title} />
-              </Link>
-            ))}
+          <div className="session-label-row">
+            <button
+              type="button"
+              className="catalog-toggle"
+              onClick={() => setRecordsCollapsed((value) => !value)}
+              aria-expanded={!recordsCollapsed}
+              title={t["nav.records"]}
+            >
+              <span className="sidebar-label sidebar-catalog-label">{t["nav.records"]}</span>
+              <ChevronDown
+                size={14}
+                className={`catalog-chevron${recordsCollapsed ? " collapsed" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
           </div>
+          {!recordsCollapsed && (
+            <div className="session-list">
+              {records === null && <p className="session-hint">{t["nav.loading"]}</p>}
+              {records !== null && records.length === 0 && (
+                <p className="session-hint">{t["records.empty"]}</p>
+              )}
+              {records?.map((record) => (
+                <Link
+                  key={record._id}
+                  href="/records"
+                  className="session-link"
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <FitTitle title={record.title} />
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
       )}
         </div>
