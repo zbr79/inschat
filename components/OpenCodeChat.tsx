@@ -9,6 +9,7 @@ import {
   elapsedSeconds,
   formatLimitReset,
   parseLimitPayload,
+  trimStreamingEnd,
   type LimitWindow,
 } from "@/lib/format";
 import { AlertTriangle } from "lucide-react";
@@ -138,7 +139,7 @@ export default function OpenCodeChat() {
             setMessages((prev) =>
               prev.map((message) =>
                 message.id === modelMessage.id
-                  ? { ...message, text: message.text + text }
+                  ? { ...message, text: trimStreamingEnd(modelText) }
                   : message
               )
             );
@@ -156,7 +157,7 @@ export default function OpenCodeChat() {
           setMessages((prev) =>
             prev.map((message) =>
               message.id === modelMessage.id
-                ? { ...message, text: message.text + tail }
+                  ? { ...message, text: trimStreamingEnd(modelText) }
                 : message
             )
           );
