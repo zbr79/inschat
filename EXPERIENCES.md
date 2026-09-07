@@ -46,6 +46,65 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 ### Disproved
 - The response-bubble layout change was not the cause of the provider error; the direct request lacked the provider's newly enforced session metadata.
 
+## 2026-09-06 — ChatGPT-style sent-message editing
+
+### Solved
+- Upgraded inline editing with a composer-style card, auto-growing textarea, clearer Submit/Cancel hierarchy, and visible image previews.
+- Added `Ctrl/Cmd+Enter` to submit and `Escape` to cancel without changing the existing truncate-and-regenerate behavior.
+
+### Unresolved
+- Message version history is not implemented; editing still replaces the conversation path from the edited message.
+
+### Disproved
+- A separate editing route or modal was unnecessary; the existing inline editor can support the improved workflow.
+
+## 2026-09-07 — Make edit composer visibly distinct
+
+### Solved
+- Expanded the editor to a clearly wider composer-style card with a title, keyboard hint, stronger border, and shadow.
+- Kept the message bubble width separate from the editor width so the edit state is visibly intentional rather than a small restyled bubble.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The first editor polish pass was too subtle to be reliably visible in the live UI.
+
+## 2026-09-07 — Simplify edit box and grow multiline inputs
+
+### Solved
+- Simplified the edit state to one full-width gray container with only the textarea and two actions.
+- Removed the extra edit title and keyboard-hint layers.
+- Added auto-growth to the main composer textarea so multiline input increases its height up to the existing maximum.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The layered edit header and hint improved discoverability enough to justify the added visual complexity; the simpler ChatGPT-like treatment is clearer.
+
+## 2026-09-07 — Rename edit action to Send
+
+### Solved
+- Changed the edit action label from “Save & submit” to the shorter “Send” in English and Chinese.
+
+### Unresolved
+- n/a
+
+### Disproved
+- n/a
+
+## 2026-09-07 — Refine inline edit actions
+### Solved
+- The inline editor now places Cancel on the left and Send on the right.
+- Removed the border around the inline editing area while preserving the gray editor background.
+### Verified
+- `npm run build` passed after each requested UI change.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
 ## 2026-09-06 — Suppress transient streaming trailing whitespace
 
 ### Solved
@@ -1237,6 +1296,55 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Verified
 - `npm run build` passed.
 - The PM2-managed `inschat` process was restarted and served HTTP 200 on port 3001.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Align image removal controls
+### Solved
+- Added an X button to every image thumbnail while editing a sent message.
+- Removed images from the edited message state when their X button is pressed.
+- Unified the normal composer and editing-preview X buttons with a centered, circular, keyboard-focusable control.
+### Verified
+- `npm run build` passed after adding edit-mode removal and after unifying the button styling.
+- Guest browser probing confirmed the normal preview X is 22×22px, flex-centered, and visually aligned over the thumbnail.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Tighten inline edit spacing
+### Solved
+- Reduced the inline editor's internal padding from 10px to 8px.
+- Reduced the vertical gap between the image preview and text area from 8px to 4px.
+### Verified
+- `npm run build` passed after each spacing adjustment.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Restore visible edit-box padding
+### Solved
+- Fixed the generic image-bubble selector overriding the edit composer padding whenever an edited message contained a photo.
+- The edit composer now has an explicit 12px inner padding while retaining the 4px image-to-text gap.
+### Verified
+- `npm run build` passed.
+- Browser CSS probing confirmed the rendered editor computes to `padding: 12px` and `gap: 4px`.
+### Unresolved
+- n/a
+### Disproved
+- The earlier 8px edit-bubble padding was not actually visible for image messages because of the higher-specificity image selector.
+
+## 2026-09-07 — Widen desktop chat column
+### Solved
+- Increased the app chat container from 40rem (640px) to 48rem (768px), matching ChatGPT's large-screen conversation width.
+- Preserved fluid sizing at narrower and mobile viewport widths.
+### Verified
+- `npm run build` passed.
+- Browser measurements confirmed 768px at 1440px viewport width, 764px at 1024px, and fluid 390px at mobile width.
+- PM2 restarted and the app returned HTTP 200.
 ### Unresolved
 - n/a
 ### Disproved

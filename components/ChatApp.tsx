@@ -144,6 +144,7 @@ export default function ChatApp() {
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingText, setEditingText] = useState("");
+  const [editingImages, setEditingImages] = useState<ChatImage[]>([]);
   // const [shareMsg, setShareMsg] = useState<"link" | "error" | null>(null); // share feature removed
   const [flashId, setFlashId] = useState<number | null>(null);
   const handledMsgRef = useRef<string | null>(null);
@@ -671,6 +672,7 @@ useEffect(() => {
       if (!message || message.role !== "user") return;
       setEditingId(id);
       setEditingText(message.text);
+      setEditingImages(message.images ?? []);
     },
     [messages]
   );
@@ -679,9 +681,14 @@ useEffect(() => {
     async (id: number) => {
       const index = messages.findIndex((m) => m.id === id);
       if (index < 0 || !editingText.trim()) return;
-      const edited: UiMessage = { ...messages[index], text: editingText.trim() };
+      const edited: UiMessage = {
+        ...messages[index],
+        text: editingText.trim(),
+        images: editingImages.length > 0 ? editingImages : undefined,
+      };
       const base = messages.slice(0, index);
       setEditingId(null);
+      setEditingImages([]);
       await truncatePersisted(base);
       const sessionId = sessionIdRef.current;
       if (sessionId) {
@@ -697,7 +704,7 @@ useEffect(() => {
       }
       await streamReply([...base, edited]);
     },
-    [messages, editingText, isAuthed, truncatePersisted, streamReply]
+    [messages, editingText, editingImages, isAuthed, truncatePersisted, streamReply]
   );
 
   const regenerate = useCallback(
@@ -834,9 +841,14 @@ useEffect(() => {
           canAct={!sending}
           editingId={editingId}
           editingText={editingText}
+          editingImages={editingImages}
           onEditingText={setEditingText}
+          onEditingImages={setEditingImages}
           onEditSave={editSave}
-          onEditCancel={() => setEditingId(null)}
+          onEditCancel={() => {
+            setEditingId(null);
+            setEditingImages([]);
+          }}
         />
       )}
       {messages.length > 0 && (
