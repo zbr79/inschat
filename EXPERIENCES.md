@@ -1349,3 +1349,240 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - n/a
 ### Disproved
 - n/a
+
+## 2026-09-07 — Simplify reasoning choices
+### Solved
+- Replaced the three-state Deep/Balanced/Fast selector with a two-state checkbox.
+- Checked now sends `max` reasoning; unchecked sends `medium` Balanced reasoning.
+- Changed the default from max to Balanced and normalized old saved `low` preferences to medium.
+- Applied the same reasoning value to the OpenCode chat surface instead of always forcing max.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed only a checkbox is rendered, old `low` becomes Balanced, and toggling stores `max`/`medium`.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Match ChatGPT Thinking control
+### Solved
+- Renamed the checked max-reasoning state to Thinking in English and Chinese.
+- Styled the checked control as an active dark pill at the end of the composer, while unchecked remains Balanced.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed Balanced is the default and the checked control displays Thinking with the active pill styling.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Replace reasoning checkbox with button
+### Solved
+- Removed the checkbox entirely.
+- Replaced it with a real button at the end of the input row, using Balanced when off and Thinking when active.
+- Added a sparkle icon, pressed-state semantics, and ChatGPT-style active pill styling.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the control is a `button` with zero checkbox elements and toggles `aria-pressed` from false to true.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Soften Thinking button appearance
+### Solved
+- Reworked the reasoning button into a smaller, borderless composer-toolbar control.
+- Replaced the dark active fill with a subtle gray active highlight and softer hover/focus treatment.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed a 32px-high button with transparent Balanced styling and subtle active Thinking styling.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Keep Thinking label across states
+### Solved
+- Both inactive and active states now display the Thinking label.
+- Changed the inactive state to a neutral gray pill and the active state to a clearly different purple highlight.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed both states say Thinking and use distinct colors.
+### Unresolved
+- n/a
+### Disproved
+- The previous Balanced label and subtle gray active state did not match the requested ChatGPT-style control.
+
+## 2026-09-07 — Use borderless light-blue Thinking states
+### Solved
+- Removed the Thinking button border in all states.
+- Changed the inactive state to light blue and the active state to a stronger light-blue highlight.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed both states have a 0px border and distinct light-blue backgrounds.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Make composer white and placeholder-free
+### Solved
+- Changed the composer input row from gray to white with a subtle gray border.
+- Removed placeholder text from the main Chat and OpenCode composer instances.
+### Verified
+- The first build caught stale placeholder props in two call sites; removing them restored a clean TypeScript build.
+- Guest browser probing confirmed white background, subtle gray border, and an empty placeholder attribute.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Make left sidebar white
+### Solved
+- Changed the left sidebar background from the soft gray surface to white.
+- Kept the subtle right divider and existing navigation styling unchanged.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the sidebar background is white with the existing gray divider.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Bold sidebar Chats and Records catalogs
+### Solved
+- Increased the Chats and Records section-label weight from 500 to 600.
+- Scoped the change to the two sidebar catalog headers without changing individual session rows.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed both labels render at font weight 600.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Compact and extend sidebar account footer
+### Solved
+- Reduced the sidebar footer padding from 10px/12px to 8px/8px, making the login/settings area approximately 10% shorter.
+- Extended the footer's top divider to the full sidebar width with matching inner content padding.
+### Verified
+- `npm run build` passed.
+- Guest browser probing measured a 71px footer spanning 259px inside the 260px sidebar, with a full-width top divider.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Neutral inactive Thinking control
+### Solved
+- Changed the inactive Thinking button to a neutral gray surface and muted text.
+- Preserved the light-blue background and blue text for the active Thinking state.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed inactive `rgba(0, 0, 0, 0.05)` and active `rgb(191, 224, 255)` backgrounds.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Keep sidebar top controls visible
+### Solved
+- Added a non-shrinking top sidebar panel containing the brand controls and New Chat link.
+- Left chats and records in the independently scrollable middle region.
+- Added a full-width divider below the top panel to match the fixed account footer treatment.
+### Verified
+- `npm run build` passed.
+- Guest browser probing injected overflowing catalog content and confirmed the top panel and New Chat position stayed fixed while the middle region scrolled.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Adaptive sidebar scrollbar and divider
+### Solved
+- Moved the sticky top panel into the full-height catalog scroll container so its scrollbar begins at the top of the sidebar.
+- Added scroll-state tracking so the divider below the sticky panel is hidden at scroll position 0 and appears after scrolling.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the scroll container starts at y=0, the top divider is 0px at the top, and becomes 1px after scrolling overflowing catalog content.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Animate sidebar divider visibility
+### Solved
+- Replaced the layout-changing border with a pseudo-element that fades in and out over 160ms.
+- Kept the bottom account bar unchanged.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the divider opacity changes from 0 at the top to 1 after scrolling, with the transition configured at 160ms.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Soften top divider and compact footer again
+### Solved
+- Reduced the top divider contrast to a subtle rgba black line.
+- Reduced the bottom account footer padding from 8px to 5px, producing a 65px footer.
+- Kept the bottom footer divider permanently visible.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the 65px footer retains a 1px top divider and the top divider is subtle and hidden at the top position.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Add collapsible Chats and Records catalogs
+### Solved
+- Added independent chevron toggle buttons to the Chats and Records headers.
+- Collapsing a catalog hides only its session list and rotates its chevron.
+- Preserved the existing New Chat action beside the Chats toggle.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed both controls start expanded and each click removes only its own catalog list while setting `aria-expanded` to false.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- Collapse state resets on a full page reload because persistence was not requested.
+### Disproved
+- n/a
+
+## 2026-09-07 — Cap Chats catalog and place instant chevrons
+### Solved
+- Capped the Chats session list at 320px on desktop-sized viewports with its own scrollbar so the Records header remains visible.
+- Positioned each chevron directly beside its catalog name instead of at the far edge.
+- Removed chevron transition animation while preserving the open/closed direction change.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed a 320px chat list cap, overflowing chat content, visible Records header, a 2px label-to-chevron gap, and `transition: none`.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Restore shared sidebar catalog scrolling
+### Solved
+- Removed the per-folder Chats height cap and nested scrollbar.
+- Restored one shared sidebar scrollbar for both Chats and Records, excluding the fixed account footer.
+- Removed catalog-name hover color changes so labels remain gray on hover.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the outer sidebar is scrollable, the catalog list overflow is visible, and label color remains `rgb(142, 142, 142)` before and after hover.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- A long Chats list can place the Records header lower in the shared sidebar scroll area, as expected with one shared scrollbar.
+### Disproved
+- n/a
