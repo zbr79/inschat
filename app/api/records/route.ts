@@ -180,6 +180,7 @@ export async function PUT(req: Request) {
   let items: ConcludeItem[];
   let meals: ConcludeMeal[] | undefined;
   let sourceText: string | undefined;
+  let pinned: boolean | undefined;
   try {
     const body: unknown = await req.json();
     if (!body || typeof body !== "object") {
@@ -191,6 +192,7 @@ export async function PUT(req: Request) {
       items: rawItems,
       meals: rawMeals,
       sourceText: rawSource,
+      pinned: rawPinned,
     } = body as Record<string, unknown>;
     if (typeof rawTitle !== "string" || !rawTitle.trim() || rawTitle.length > MAX_TITLE) {
       throw new Error('"title" must be a short non-empty string.');
@@ -208,6 +210,12 @@ export async function PUT(req: Request) {
       }
       sourceText = rawSource;
     }
+    if (rawPinned !== undefined) {
+      if (typeof rawPinned !== "boolean") {
+        throw new Error('"pinned" is invalid.');
+      }
+      pinned = rawPinned;
+    }
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Invalid request body." },
@@ -217,7 +225,7 @@ export async function PUT(req: Request) {
 
   try {
     const translated = translateRecord({ title, summary, items, meals, sourceText });
-    const record = await updateRecord(auth._id, id, translated);
+    const record = await updateRecord(auth._id, id, { ...translated, pinned });
     if (!record) {
       return Response.json({ error: "Record not found." }, { status: 404 });
     }

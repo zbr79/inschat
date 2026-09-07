@@ -52,6 +52,7 @@ export interface SavedRecord {
   sourceText?: string;
   savedAt: string;
   datetime: string | null;
+  pinned?: boolean;
 }
 
 export interface ApiCall {
