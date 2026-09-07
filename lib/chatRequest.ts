@@ -8,6 +8,7 @@ export interface ChatRequest {
   language?: "zh" | "en";
   mode?: "preset" | "free";
   reasoning?: "max" | "medium" | "low";
+  sessionId?: string;
 }
 
 function parseImage(raw: unknown, index: number): ChatImage {
@@ -95,5 +96,19 @@ export function parseChatBody(body: unknown): ChatRequest {
     reasoning = rawReasoning;
   }
 
-  return { messages, timeZone, language, mode, reasoning };
+  const rawSessionId = (body as { sessionId?: unknown }).sessionId;
+  let sessionId: string | undefined;
+  if (rawSessionId !== undefined) {
+    if (
+      typeof rawSessionId !== "string" ||
+      rawSessionId.length === 0 ||
+      rawSessionId.length > 128 ||
+      /[\r\n]/.test(rawSessionId)
+    ) {
+      throw new ChatValidationError('"sessionId" is invalid.');
+    }
+    sessionId = rawSessionId;
+  }
+
+  return { messages, timeZone, language, mode, reasoning, sessionId };
 }

@@ -402,6 +402,7 @@ useEffect(() => {
             language: lang,
             mode: insulinMode ? "preset" : "free",
             reasoning: reasoningEffort,
+            sessionId: sessionIdRef.current,
           }),
           signal: controller.signal,
         });

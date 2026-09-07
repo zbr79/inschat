@@ -34,6 +34,18 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 ### Disproved
 - The separate agent server was not needed for direct web research once search and fetch tools were available in `streamChat`; it added latency and a second runtime to maintain.
 
+## 2026-09-06 — Restore OpenCode Go session routing
+
+### Solved
+- Added the required stable `x-opencode-session` header to direct Go requests, using the chat session ID when available and a generated ID for one-off requests.
+- Added the recommended `InsChat/1.0` user agent and passed session IDs through both chat APIs.
+
+### Unresolved
+- The provider may still reject individual models for quota, availability, or endpoint-specific reasons.
+
+### Disproved
+- The response-bubble layout change was not the cause of the provider error; the direct request lacked the provider's newly enforced session metadata.
+
 ## 2026-09-06 — Suppress transient streaming trailing whitespace
 
 ### Solved
@@ -69,6 +81,18 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 
 ### Disproved
 - Trimming trailing response whitespace alone could not fix the gap because the cursor's block-flow position created it independently.
+
+## 2026-09-06 — Stabilize assistant bubble phases
+
+### Solved
+- Kept one assistant bubble visually stable while it transitions from thinking dots to streamed text.
+- Reserved the metadata footer's height so the model/time row does not create a new layout jump when the response completes.
+
+### Unresolved
+- The assistant bubble still grows naturally for multi-line answers.
+
+### Disproved
+- Combining the user and assistant messages into one bubble was rejected because it would obscure who wrote each message.
 
 ## 2026-08-27 — v1 built: text chat + image upload + streaming
 

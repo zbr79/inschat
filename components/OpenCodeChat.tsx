@@ -48,6 +48,7 @@ export default function OpenCodeChat() {
   const [limitReset, setLimitReset] = useState<number | null>(null);
   const [limitWindow, setLimitWindow] = useState<LimitWindow | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
 
   const send = useCallback(
     async (text: string, images?: ChatImage[]) => {
@@ -86,6 +87,8 @@ export default function OpenCodeChat() {
 
       const controller = new AbortController();
       abortRef.current = controller;
+      const sessionId =
+        sessionIdRef.current ?? (sessionIdRef.current = crypto.randomUUID());
 
       try {
         const response = await fetch("/api/opencode", {
@@ -96,6 +99,7 @@ export default function OpenCodeChat() {
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             language: lang,
             mode: insulinMode ? "preset" : "free",
+            sessionId,
           }),
           signal: controller.signal,
         });
