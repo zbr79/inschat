@@ -13,7 +13,7 @@ import type {
   SessionConclusion,
 } from "@/lib/types";
 import { ModelMarkerParser } from "@/lib/markers";
-import { elapsedSeconds } from "@/lib/format";
+import { elapsedSeconds, trimStreamingEnd } from "@/lib/format";
 import {
   appendGuestMessage,
   createGuestSession,
@@ -448,7 +448,9 @@ useEffect(() => {
             // Health-mode replies end with a <CONCLUDE> JSON tail for the
             // single-call recording flow — hide it from the bubble.
             const openIdx = modelText.indexOf("<CONCLUDE>");
-            const visible = openIdx === -1 ? modelText : modelText.slice(0, openIdx);
+            const visible = trimStreamingEnd(
+              openIdx === -1 ? modelText : modelText.slice(0, openIdx)
+            );
             setMessages((prev) =>
               prev.map((message) =>
                 message.id === modelMessage.id
@@ -462,7 +464,9 @@ useEffect(() => {
         if (tail) {
           modelText += tail;
           const openIdx = modelText.indexOf("<CONCLUDE>");
-          const visible = openIdx === -1 ? modelText : modelText.slice(0, openIdx);
+          const visible = trimStreamingEnd(
+            openIdx === -1 ? modelText : modelText.slice(0, openIdx)
+          );
           setMessages((prev) =>
             prev.map((message) =>
               message.id === modelMessage.id

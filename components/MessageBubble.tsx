@@ -31,9 +31,12 @@ function dataUrl(image: { mimeType: string; data: string }): string {
 // Markdown collapses single newlines into spaces; convert them to hard
 // breaks so the model's line-by-line format renders as separate lines.
 function preserveLineBreaks(text: string): string {
-  return text
-    .split("\n")
-    .map((line) => (line.endsWith("  ") ? line : `${line}  `))
+  const lines = text.split("\n");
+  return lines
+    .map((line, index) => {
+      if (index === lines.length - 1 || line.endsWith("  ")) return line;
+      return `${line}  `;
+    })
     .join("\n");
 }
 
@@ -216,7 +219,6 @@ export default function MessageBubble({
                     </span>
                   </span>
                 )}
-                {message.streaming && message.text && <span className="cursor" />}
               </div>
             )}
             {message.role === "model" ? (

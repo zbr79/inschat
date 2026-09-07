@@ -10,6 +10,10 @@ export function formatElapsed(seconds: number): string {
   return seconds.toFixed(1);
 }
 
+export function trimStreamingEnd(text: string): string {
+  return text.trimEnd();
+}
+
 export function parseLimitPayload(
   value: string
 ): { window: LimitWindow; resetAt: number } | null {
