@@ -29,6 +29,7 @@ export interface GuestRecord {
   meals?: ConcludeMeal[];
   sourceText?: string;
   savedAt: string;
+  pinned?: boolean;
 }
 
 const SESSIONS_KEY = "inschat_guest_sessions";
@@ -156,9 +157,19 @@ export function clearGuestSessions(): void {
   } catch {}
 }
 
+export function clearGuestData(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(SESSIONS_KEY);
+    window.localStorage.removeItem(RECORDS_KEY);
+  } catch {}
+}
+
 export function listGuestRecords(): GuestRecord[] {
-  return readJson<GuestRecord[]>(RECORDS_KEY, []).sort((a, b) =>
-    b.savedAt.localeCompare(a.savedAt)
+  return readJson<GuestRecord[]>(RECORDS_KEY, []).sort(
+    (a, b) =>
+      Number(b.pinned ?? false) - Number(a.pinned ?? false) ||
+      b.savedAt.localeCompare(a.savedAt)
   );
 }
 
@@ -173,6 +184,7 @@ export function addGuestRecord(input: {
     ...input,
     id: newId(),
     savedAt: new Date().toISOString(),
+    pinned: false,
   };
   const records = readJson<GuestRecord[]>(RECORDS_KEY, []);
   if (writeJson(RECORDS_KEY, [record, ...records])) return record;
@@ -198,6 +210,7 @@ export function updateGuestRecord(
     items: ConcludeItem[];
     meals?: ConcludeMeal[];
     sourceText?: string;
+    pinned?: boolean;
   }
 ): void {
   writeJson(
