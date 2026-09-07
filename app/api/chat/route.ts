@@ -21,7 +21,7 @@ export async function POST(req: Request) {
         : "Invalid request body.";
     return Response.json({ error: message }, { status: 400 });
   }
-  const { messages, timeZone, language, mode, reasoning } = parsed;
+  const { messages, timeZone, language, mode, reasoning, sessionId } = parsed;
   const freeMode = mode === "free";
   // Only the latest message decides whether this send is an image request;
   // earlier photos in the history must not re-route text sends to the
@@ -38,7 +38,14 @@ export async function POST(req: Request) {
       const enqueue = (text: string) => controller.enqueue(encoder.encode(text));
 
       try {
-        for await (const text of streamChat(messages, timeZone, language, freeMode, reasoning)) {
+        for await (const text of streamChat(
+          messages,
+          timeZone,
+          language,
+          freeMode,
+          reasoning,
+          sessionId
+        )) {
           enqueue(text);
         }
       } catch (error) {

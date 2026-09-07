@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { ChatValidationError } from "./errors";
 import { getSystemPrompt } from "./prompt";
 import { encodeFreeMarker, encodeModelMarker, encodeTryingMarker } from "./markers";
@@ -335,13 +336,16 @@ function baseUrlForModel(model: string): string {
 async function postCompletion(
   model: string,
   body: Record<string, unknown>,
-  timeoutMs: number
+  timeoutMs: number,
+  sessionId?: string
 ): Promise<Response> {
   return fetch(`${baseUrlForModel(model)}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${getOpenCodeKey()}`,
+      "User-Agent": "InsChat/1.0",
+      "x-opencode-session": sessionId ?? `inschat-${randomUUID()}`,
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
@@ -367,7 +371,8 @@ async function* streamOpenCodeOnce(
   messages: OpenAiMessage[],
   model: string,
   tools: boolean,
-  reasoningLevel: "max" | "medium" | "low" = "max"
+  reasoningLevel: "max" | "medium" | "low" = "max",
+  sessionId?: string
 ): AsyncGenerator<string, { toolCalls: ToolCall[] }, void> {
   const requestId = Math.random().toString(36).slice(2, 8);
   const hasImageParts = messages.some(
@@ -395,7 +400,7 @@ async function* streamOpenCodeOnce(
     );
   }
 
-  const response = await postCompletion(model, body, 120_000);
+  const response = await postCompletion(model, body, 120_000, sessionId);
 
   if (!response.ok || !response.body) {
     const text = await response.text().catch(() => "");
@@ -587,7 +592,8 @@ export async function* streamChat(
   timeZone?: string,
   language?: "zh" | "en",
   freeMode = false,
-  reasoning: "max" | "medium" | "low" = "max"
+  reasoning: "max" | "medium" | "low" = "max",
+  sessionId?: string
 ): AsyncGenerator<string> {
   const lastMessage = messages[messages.length - 1];
   const hasImage = (lastMessage?.images?.length ?? 0) > 0;
@@ -631,7 +637,13 @@ export async function* streamChat(
         let toolCalls: ToolCall[] = [];
         try {
           yield encodeTryingMarker(model);
-          const gen = streamOpenCodeOnce(working, model, useTools, reasoning);
+          const gen = streamOpenCodeOnce(
+            working,
+            model,
+            useTools,
+            reasoning,
+            sessionId
+          );
           while (true) {
             const { done, value } = await gen.next();
             if (done) {
