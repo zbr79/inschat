@@ -278,6 +278,24 @@ body {
   padding: 4px 0;
 }
 
+.sidebar-report-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sidebar-report-link:hover,
+.sidebar-report-link.active {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-muted);
+}
+
 .session-new {
   font-size: 13px;
   color: var(--text);
@@ -371,7 +389,7 @@ body {
 }
 
 .usage-page {
-  max-width: 560px;
+  max-width: 48rem;
   margin: 0 auto;
   padding: 32px 24px;
 }
@@ -2091,10 +2109,225 @@ span.conclude-rank-badge {
   gap: 8px;
 }
 
+.glucose-chart-card {
+  margin-top: 18px;
+}
+
+.glucose-chart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.glucose-chart-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.glucose-chart-head p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.glucose-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.glucose-range select {
+  min-height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+.glucose-chart-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.glucose-chart-types {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--bg-soft);
+}
+
+.glucose-chart-types button {
+  border: none;
+  border-radius: 7px;
+  padding: 5px 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.glucose-chart-types button:hover,
+.glucose-chart-types button.active {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.glucose-chart-frame {
+  width: 100%;
+  overflow: hidden;
+  margin-top: 14px;
+}
+
+.glucose-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.glucose-grid-line {
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.glucose-chart text {
+  fill: var(--text-muted);
+  font-family: var(--font);
+  font-size: 11px;
+}
+
+.glucose-bar {
+  fill: #60a5fa;
+  opacity: 0.86;
+}
+
+.glucose-bar:hover {
+  fill: #2563eb;
+  opacity: 1;
+}
+
+.glucose-bar-value {
+  fill: var(--text) !important;
+  font-size: 10px !important;
+  font-weight: 600;
+}
+
+.glucose-line {
+  fill: none;
+  stroke: #2563eb;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+}
+
+.glucose-daily-line {
+  fill: none;
+  stroke: #60a5fa;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.25;
+  opacity: 0.28;
+}
+
+.glucose-point {
+  fill: var(--bg);
+  stroke: #2563eb;
+  stroke-width: 2.5;
+}
+
+.glucose-baseline {
+  stroke: var(--text-muted);
+  stroke-width: 1.25;
+}
+
+.glucose-chart-empty {
+  margin: 28px 0 10px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.records-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.records-page-head h2 {
+  margin-top: 0;
+}
+
+.records-demo-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  max-width: 320px;
+}
+
+.records-demo-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.records-demo-buttons button {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.records-demo-buttons button:hover {
+  background: var(--bg-soft);
+}
+
+.records-demo-buttons button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.records-demo-remove {
+  color: #b42318 !important;
+}
+
+.records-demo-actions > span {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: right;
+}
+
 .timeline {
   display: flex;
   flex-direction: column;
   margin-top: 8px;
+}
+
+.timeline-month-group {
+  margin-top: 18px;
+}
+
+.timeline-month {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 650;
 }
 
 .timeline-day {
@@ -2189,6 +2422,27 @@ span.conclude-rank-badge {
 
 .timeline-content .record-delete {
   align-self: flex-start;
+}
+
+@media (max-width: 640px) {
+  .glucose-chart-head {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .glucose-range {
+    justify-content: space-between;
+  }
+
+  .glucose-chart-controls {
+    justify-content: flex-start;
+  }
+
+  .record-edit-item,
+  .record-edit-meal {
+    grid-template-columns: 1fr;
+  }
 }
 
 .conclusion-head strong {
@@ -2544,15 +2798,35 @@ span.conclude-rank-badge {
   margin-top: 8px;
 }
 
+.record-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.record-edit-trigger,
 .record-delete {
   border: 1px solid var(--border);
   background: var(--bg);
-  color: #d93025;
   font-family: var(--font);
   font-size: 12px;
   padding: 4px 12px;
   border-radius: 999px;
   cursor: pointer;
+}
+
+.record-edit-trigger {
+  color: var(--text-muted);
+}
+
+.record-edit-trigger:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.record-delete {
+  color: #d93025;
 }
 
 .record-delete:hover:not(:disabled) {
@@ -2562,6 +2836,161 @@ span.conclude-rank-badge {
 .record-delete:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.record-edit-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.record-edit-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 121;
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24);
+}
+
+.record-edit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.record-edit-head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.record-edit-close {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.record-edit-close:hover {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+
+.record-edit-body {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+}
+
+.record-edit-field,
+.record-edit-section {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.record-edit-field > span,
+.record-edit-section h4 {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.record-edit-field input,
+.record-edit-field textarea,
+.record-edit-item input,
+.record-edit-meal input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+
+.record-edit-field textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.record-edit-items,
+.record-edit-meals {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.record-edit-item,
+.record-edit-meal {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 0.8fr;
+  gap: 7px;
+}
+
+.record-edit-field input:focus,
+.record-edit-field textarea:focus,
+.record-edit-item input:focus,
+.record-edit-meal input:focus {
+  outline: 2px solid rgba(37, 99, 235, 0.25);
+  border-color: #2563eb;
+}
+
+.record-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.record-edit-actions button {
+  border-radius: 8px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.record-edit-cancel {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+}
+
+.record-edit-save {
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.record-edit-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
 }
 
 .calls-list {
