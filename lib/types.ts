@@ -52,6 +52,8 @@ export interface SavedRecord {
   sourceText?: string;
   savedAt: string;
   datetime: string | null;
+  recordedAt?: string;
+  sessionId?: string;
   pinned?: boolean;
 }
 

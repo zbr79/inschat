@@ -595,6 +595,24 @@ body {
   background: rgba(0, 0, 0, 0.08);
 }
 
+.conclude-modal-delete {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #d93025;
+  cursor: pointer;
+}
+
+.conclude-modal-delete:hover,
+.conclude-modal-delete:focus-visible {
+  background: rgba(217, 48, 37, 0.1);
+}
+
 .conclude-section {
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -749,6 +767,12 @@ body {
   color: var(--text);
 }
 
+.conclude-inline-foods {
+  min-width: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
 .conclude-inline-meal-time {
   font-size: 13px;
   color: var(--text-muted);
@@ -767,8 +791,14 @@ body {
   margin-right: -8px;
 }
 
-/* delete buttons are always visible */
-.conclude-card-remove {
+/* Keep destructive controls quiet until the user focuses the report section. */
+.conclude-section-report .conclude-card-remove {
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.conclude-section-report:hover .conclude-card-remove,
+.conclude-section-report .conclude-card-remove:focus-visible {
   opacity: 1;
 }
 
@@ -2374,6 +2404,101 @@ span.conclude-rank-badge {
   min-width: 0;
 }
 
+.full-report-log {
+  margin-top: 18px;
+}
+
+.full-report-log .timeline-day-group {
+  margin-bottom: 16px;
+  padding: 0 16px 8px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+}
+
+.full-report-log .timeline-day {
+  margin: 0 -16px 0;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.full-report-log .timeline-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 -16px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.full-report-log .timeline-day-head .timeline-day {
+  margin: 0;
+  padding: 12px 0 10px;
+  border: none;
+}
+
+.full-day-edit-trigger {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 11px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 140ms ease, background 140ms ease;
+}
+
+.full-report-log .timeline-day-group:hover .full-day-edit-trigger,
+.full-report-log .timeline-day-group:focus-within .full-day-edit-trigger {
+  opacity: 1;
+}
+
+.full-day-edit-trigger:hover,
+.full-day-edit-trigger:focus-visible {
+  background: var(--bg-soft);
+}
+
+.full-report-log .timeline-entry {
+  padding: 12px 0;
+}
+
+.full-report-log .timeline-content {
+  position: relative;
+  width: 100%;
+  padding: 0 82px 0 0;
+  border: none;
+  background: transparent;
+}
+
+.full-report-log .record-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.full-report-log .timeline-entry:hover .record-actions,
+.full-report-log .timeline-entry:focus-within .record-actions {
+  opacity: 1;
+}
+
+.full-report-log .record-edit-trigger {
+  border-color: var(--border);
+  background: var(--bg);
+  box-shadow: 0 2px 8px rgba(29, 29, 31, 0.08);
+  color: var(--text);
+  font-weight: 600;
+}
+
 .timeline-time {
   font-size: 12px;
   color: var(--text-muted);
@@ -2383,6 +2508,12 @@ span.conclude-rank-badge {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.timeline-mixed-events {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .timeline-reading {
@@ -2408,6 +2539,66 @@ span.conclude-rank-badge {
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.full-report-log .timeline-reading,
+.full-report-log .timeline-meal {
+  position: relative;
+  min-height: 34px;
+  box-sizing: border-box;
+  padding: 8px 100px 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+
+.full-report-log .timeline-reading-time,
+.full-report-log .timeline-meal .meal-time {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.full-report-log .timeline-meal .dish-grid {
+  margin-top: 3px;
+}
+
+.full-report-log .dish-box {
+  min-height: 0;
+  padding: 3px 8px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.full-report-log .dish-box-name {
+  font-weight: 500;
+}
+
+.full-report-log .dish-box.rank-low {
+  border-color: #a3d9ad;
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.full-report-log .dish-box.rank-mid {
+  border-color: #f0ad4e;
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.full-report-log .dish-box.rank-high {
+  border-color: #f1aeb5;
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.full-report-log .dish-box-rank {
+  display: none;
 }
 
 .timeline-meal .meal-name {
@@ -2836,6 +3027,104 @@ span.conclude-rank-badge {
 .record-delete:disabled {
   opacity: 0.5;
   cursor: default;
+}
+
+.full-day-edit-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.full-day-edit-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 121;
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  transform: translate(-50%, -50%);
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24);
+}
+
+.full-day-edit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.full-day-edit-head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.full-day-edit-head time {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.full-day-edit-head > button {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.full-day-edit-head > button:hover {
+  background: var(--bg-soft);
+  color: var(--text);
+}
+
+.full-day-edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 18px 18px;
+}
+
+.full-day-edit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.full-day-edit-row + .full-day-edit-row {
+  border-top: 1px solid var(--border);
+}
+
+.full-day-edit-row button {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 11px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.full-day-edit-row button:hover {
+  background: var(--bg-soft);
 }
 
 .record-edit-backdrop {

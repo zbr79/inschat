@@ -202,6 +202,169 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 ### Disproved
 - n/a
 
+## 2026-09-07 — Migrate records to one account report
+### Solved
+- Added a single account-level report container for guest data and authenticated MongoDB data.
+- Existing per-session records migrate into timestamped entries the first time the account report is read.
+- New chat conclusions append entries; later saves for the same linked chat entry update that entry.
+- Report entries retain session IDs and recorded timestamps, while the Records page continues sorting by date.
+- Kept the existing records API shape for the UI while changing its storage source to the account report.
+### Verified
+- `npm run build` passed after the storage, API, and chat-save changes.
+- PM2 restarted successfully after the build.
+### Unresolved
+- The report is currently stored as one MongoDB document with embedded entries; a separate event collection may be needed if a user's history approaches MongoDB's document-size limit.
+### Disproved
+- Append order is not used for timeline display; entries are sorted by recorded time.
+
+## 2026-09-07 — Add Full report account log page
+### Solved
+- Added a Full report page at `/records/full` beneath the Records sidebar folder.
+- Reused the account report data source and dated grouping so the page shows every saved entry from newest to oldest.
+- Added report titles, summaries, and recorded timestamps to make the page a complete account log rather than only a chart view.
+### Verified
+- `npm run build` passed after fixing the sidebar fragment required for two Records links.
+- Both `/records` and `/records/full` returned HTTP 200 after restarting PM2.
+### Unresolved
+- The full log currently shares the Records page's edit and delete controls; a separate export/print action has not been added.
+### Disproved
+- n/a
+
+## 2026-09-07 — Match Full report editing to session reports
+### Solved
+- Full report entries now open the same `ConcludeModal` structure used for reports created from chat sessions.
+- Kept the page itself as a read-only account log; editing remains an editing panel.
+- Made report titles, summaries, meal names, foods, dish names, meal times, reading values, units, phases, and timestamps editable in that panel.
+- Removed repeated delete buttons from the full-report list; entry deletion is available from the open editor instead.
+- Expanded guest demo data into a one-month full report with breakfast, lunch, dinner, occasional afternoon snacks, occasional 11 PM entries, glucose, insulin, phases, timestamps, and variable dish counts.
+### Verified
+- `npm run build` passed after the editor and demo-data changes.
+- Both Records routes returned HTTP 200 after restarting PM2.
+### Unresolved
+- Demo data remains guest-only and synthetic; it is not written into authenticated MongoDB reports.
+### Disproved
+- A generic grid editor is not equivalent to the session report editor because it omitted the session editor's reading, phase, meal, and dish controls.
+
+## 2026-09-07 — Remove unrequested Full report labels
+### Solved
+- Removed entry titles and summaries from the Full report log.
+- Removed generated breakfast/lunch/dinner category labels and phase labels from the log; timestamps, values, insulin, glucose, and actual food names remain.
+- Removed title and summary fields from the session-style editing panel.
+- Kept food names editable because they are the actual food records the Full report needs to control.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Existing stored entries may still contain internal title and summary data for compatibility, but those fields are no longer shown or edited in Full report.
+### Disproved
+- n/a
+
+## 2026-09-07 — Unify insulin and glucose display labels
+### Solved
+- Full report and session-style editors now display both glucose and insulin readings as “Blood sugar” or “血糖”.
+- Kept canonical stored metric names as `glucose` and `insulin` so the data model remains accurate.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Existing raw records can still contain older localized metric names internally; display normalization covers them.
+### Disproved
+- Changing stored insulin data into glucose would have corrupted chart and analysis semantics, so only the visible label was unified.
+
+## 2026-09-07 — Normalize demo readings to mg/dL
+### Solved
+- Updated the one-month guest demo report so glucose and insulin-labeled example readings both use `mg/dL`.
+- Adjusted the synthetic insulin-labeled values to stay around 100 instead of using `U` values.
+- Restricted the editor's unit choices to blood-sugar units for the unified display.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Existing demo data already loaded in local storage must be removed and loaded again to receive the new units and values.
+### Disproved
+- n/a
+
+## 2026-09-07 — Interleave readings and meals by time
+### Solved
+- Records now render readings and meal entries in one chronological stream instead of separate reading and meal blocks.
+- Each event retains its own timestamp, so a measurement appears before or after a meal according to the recorded time.
+- Kept the Full report's simplified labels while preserving editable food entries.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Events with exactly identical timestamps use readings before meals as the deterministic tie-breaker.
+### Disproved
+- Grouping every measurement together before every meal did not represent the user's actual sequence of measuring, eating, and measuring again.
+
+## 2026-09-07 — Group Full report by day and normalize time display
+### Solved
+- Full report now renders one card per day, with all that day's readings and food entries inside it.
+- Daily cards show only the month/day without a year.
+- Event times now use localized 12-hour AM/PM formatting instead of raw or 24-hour strings.
+- Moved Edit to the upper-right of each underlying entry block and reveal it on hover or keyboard focus.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- If multiple independent report entries share one day, each underlying entry retains its own hover Edit control within the shared day card.
+### Disproved
+- Showing a full timestamp on every entry duplicated the day context and mixed 12-hour and 24-hour formats.
+
+## 2026-09-07 — Add day-level Full report editing
+### Solved
+- Replaced per-entry Full report Edit buttons with one Edit button per day card.
+- Added a day editor dialog that selects the underlying entry before opening the familiar session-style editor.
+- Rebuilt day grouping from event timestamps, so meals and readings are assigned to the correct calendar day independently of record titles.
+- Flattened all events within a day before rendering, so an earlier reading from one source record cannot appear after a later reading from another.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Multiple source entries on one day are selectable inside the day editor rather than merged into one persisted database entry.
+### Disproved
+- Grouping a day by the first reading in a source record could misplace events when one record contains multiple dates.
+
+## 2026-09-07 — Style Full report event cards and dish effectiveness
+### Solved
+- Applied the same gray card treatment to reading and meal rows.
+- Moved each event's time to the upper-right corner of its card.
+- Removed visible `low`, `medium`, and `high` words from Full report dish tags.
+- Used green, yellow, and red borders to communicate dish effectiveness.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Existing records without a stored rank keep the neutral border.
+### Disproved
+- Showing the rank word beside every dish was necessary once the color border communicates the same status.
+
+## 2026-09-07 — Compact Full report dish tags
+### Solved
+- Matched dish text sizing and weight to the blood-sugar reading text.
+- Removed the dish tag minimum height and reduced its internal padding.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- The larger dish tag dimensions were not needed to preserve the effectiveness border.
+
+## 2026-09-07 — Match Full report dish timestamp styling
+### Solved
+- Matched meal/dish timestamps to blood-sugar timestamps at 12px, muted color, and normal weight.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- Inherited dish timestamp styling was not visually consistent with reading timestamps.
+
+## 2026-09-07 — Apply role-card colors to Full report dishes
+### Solved
+- Reused the referenced repository's pastel role palette for dish effectiveness.
+- Low, medium, and high dishes now use green, orange/yellow, and red card backgrounds with matching borders.
+- Kept the compact tag dimensions and timestamp styling unchanged.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Dishes without an effectiveness rank remain neutral.
+### Disproved
+- Border-only coloring did not sufficiently match the referenced role-card visual language.
+
 ## 2026-09-06 — Suppress transient streaming trailing whitespace
 
 ### Solved

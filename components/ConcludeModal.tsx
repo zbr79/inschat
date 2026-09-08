@@ -6,7 +6,7 @@ import type { ConcludeResult } from "@/lib/types";
 import { addGuestRecord, updateGuestRecord } from "@/lib/guestStore";
 import { STR, useUiLang } from "@/lib/i18n";
 import { formatDateTimeDisplay, formatDateTimeNoYear, READING_PHASES, readingPhase, parseFlexibleDateTime, refineMealName } from "@/lib/mealTime";
-import { Calendar, ChevronLeft, ChevronRight, Clock, Pencil, Trash2, X } from "lucide-react";
+import { Calendar, Clock, Pencil, Trash2, X } from "lucide-react";
 
 const RANK_CYCLE: Record<string, string[]> = {
   zh: ["低", "中", "高"],
@@ -14,46 +14,6 @@ const RANK_CYCLE: Record<string, string[]> = {
 };
 
 const UNITS = ["mg/dL", "mmol/L"];
-
-// Insulin units are few — cycle them with left/right steppers instead of a
-// dropdown. Custom units typed in old records are kept as-is.
-const INSULIN_UNITS = ["U", "IU"];
-
-function UnitStepper({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (unit: string) => void;
-}) {
-  const idx = INSULIN_UNITS.indexOf(value);
-  const step = (delta: number) => {
-    if (idx === -1) return;
-    const next = INSULIN_UNITS[(idx + delta + INSULIN_UNITS.length) % INSULIN_UNITS.length];
-    onChange(next);
-  };
-  return (
-    <div className="conclude-unit-stepper">
-      <button
-        type="button"
-        onClick={() => step(-1)}
-        disabled={idx === -1}
-        aria-label="previous unit"
-      >
-        <ChevronLeft size={14} />
-      </button>
-      <span className="conclude-unit-value">{value}</span>
-      <button
-        type="button"
-        onClick={() => step(1)}
-        disabled={idx === -1}
-        aria-label="next unit"
-      >
-        <ChevronRight size={14} />
-      </button>
-    </div>
-  );
-}
 
 function isTimeItem(name: string): boolean {
   return /^(时间|time|timestamp|date|when)$/i.test(name.trim());
@@ -346,53 +306,15 @@ function TimePickerModal({
   );
 }
 
-function InlineUnitStepper({
-  value,
-  onCommit,
-  className,
-}: {
-  value: string;
-  onCommit: (next: string) => void;
-  className?: string;
-}) {
-  const [editing, setEditing] = useState(false);
-  if (editing) {
-    return (
-      <div onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setEditing(false);
-        }
-      }}>
-        <UnitStepper value={value} onChange={(unit) => onCommit(unit)} />
-      </div>
-    );
-  }
-  return (
-    <span
-      className={`conclude-inline-text ${className ?? ""}`}
-      role="button"
-      tabIndex={0}
-      onClick={() => setEditing(true)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          setEditing(true);
-        }
-      }}
-    >
-      {value}
-      <Pencil size={11} className="edit-pen" aria-hidden="true" />
-    </span>
-  );
-}
-
 export default function ConcludeModal({
   open,
   result,
   sourceText,
   guest = false,
   recordId = null,
+  sessionId,
   onClose,
+  onDelete,
   onSaved,
 }: {
   open: boolean;
@@ -400,7 +322,9 @@ export default function ConcludeModal({
   sourceText: string;
   guest?: boolean;
   recordId?: string | null;
+  sessionId?: string | null;
   onClose: () => void;
+  onDelete?: () => void;
   onSaved: (edited: ConcludeResult, savedRecordId: string | null) => void;
 }) {
   const lang = useUiLang();
@@ -538,7 +462,8 @@ closeRef.current = () => {
 
   if (!open || !result) return null;
 
-  const glucoseName = lang === "zh" ? "血糖" : "glucose";
+  const glucoseName = "glucose";
+  const bloodSugarLabel = t["records.glucose.label"];
   const timeName = lang === "zh" ? "时间" : "time";
   const phaseName = lang === "zh" ? "时段" : "phase";
 
@@ -561,7 +486,7 @@ closeRef.current = () => {
   const phaseOf = (reading: Reading): string =>
     reading.phase ?? readingPhase(reading.time, lang);
 
-  const insulinBaseName = (): string => (lang === "zh" ? "胰岛素" : "Insulin");
+  const insulinBaseName = (): string => "insulin";
 
   const setMeal = (index: number, patch: Partial<NonNullable<ConcludeResult["meals"]>[number]>) => {
     setMeals((prev) => prev.map((meal, i) => (i === index ? { ...meal, ...patch } : meal)));
@@ -659,6 +584,7 @@ closeRef.current = () => {
             items: edited.items,
             meals: edited.meals,
             sourceText,
+            sessionId: sessionId ?? undefined,
           });
         } else {
           const record = addGuestRecord({
@@ -667,6 +593,7 @@ closeRef.current = () => {
             items: edited.items,
             meals: edited.meals,
             sourceText,
+            sessionId: sessionId ?? undefined,
           });
           savedId = record.id;
         }
@@ -682,6 +609,7 @@ closeRef.current = () => {
               items: edited.items,
               meals: edited.meals,
               sourceText,
+              sessionId: sessionId ?? undefined,
             }),
           }
         );
@@ -765,6 +693,17 @@ closeRef.current = () => {
           <div className="conclude-modal-head-text">
             <h3 className="conclude-modal-title">{t["concludeModal.title"]}</h3>
           </div>
+          {onDelete && (
+            <button
+              type="button"
+              className="conclude-modal-delete"
+              onClick={onDelete}
+              aria-label={t["records.delete"]}
+              title={t["records.delete"]}
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
           <button
             type="button"
             className="conclude-modal-close"
@@ -832,7 +771,12 @@ closeRef.current = () => {
                   >
                     <Trash2 size={14} />
                   </button>
-                  <span className="conclude-inline-meal-name">{meal.name}</span>
+                  <InlineText
+                    className="conclude-inline-meal-name"
+                    value={meal.name}
+                    onCommit={(name) => commitMeal(entry.index, { name })}
+                    ariaLabel={t["concludeModal.mealName"]}
+                  />
                   <InlineTime
                     value={meal.time ?? ""}
                     lang={lang}
@@ -842,7 +786,8 @@ closeRef.current = () => {
                   />
                 </div>
                 <div className="conclude-dishes">
-                  {(meal.dishes ?? []).map((dish, dishIndex) => (
+                  {(meal.dishes ?? []).length > 0 ? (
+                    (meal.dishes ?? []).map((dish, dishIndex) => (
                     <div key={dishIndex} className="conclude-dish-row">
                       <button
                         type="button"
@@ -871,7 +816,16 @@ closeRef.current = () => {
                         {dish.rank ?? "低"}
                       </button>
                     </div>
-                  ))}
+                    ))
+                  ) : (
+                    <InlineText
+                      className="conclude-inline-foods"
+                      value={meal.foods ?? ""}
+                      onCommit={(foods) => commitMeal(entry.index, { foods })}
+                      ariaLabel={t["concludeModal.foods"]}
+                      placeholder={t["concludeModal.foods"]}
+                    />
+                  )}
                 </div>
               </section>
             );
@@ -881,7 +835,7 @@ closeRef.current = () => {
               ? insulins[entry.index]
               : readings[entry.index];
           const label =
-            entry.kind === "insulin" ? insulinBaseName() : glucoseName;
+            bloodSugarLabel;
           const phase = phaseOf(reading);
           const setter =
             entry.kind === "insulin" ? commitInsulin : commitReading;
@@ -932,21 +886,13 @@ closeRef.current = () => {
                     ariaLabel={t["concludeModal.value"]}
                     placeholder="0"
                   />
-                  {entry.kind === "insulin" ? (
-                    <InlineUnitStepper
-                      value={reading.unit}
-                      onCommit={(unit) => setter(entry.index, { unit })}
-                      className="conclude-inline-unit"
-                    />
-                  ) : (
-                    <InlineSelect
-                      className="conclude-inline-unit"
-                      value={reading.unit}
-                      options={UNITS}
-                      onCommit={(unit) => setter(entry.index, { unit })}
-                      ariaLabel={t["concludeModal.unit"]}
-                    />
-                  )}
+                  <InlineSelect
+                    className="conclude-inline-unit"
+                    value={reading.unit}
+                    options={UNITS}
+                    onCommit={(unit) => setter(entry.index, { unit })}
+                    ariaLabel={t["concludeModal.unit"]}
+                  />
                 </div>
               </div>
             </section>
