@@ -105,6 +105,103 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 ### Disproved
 - n/a
 
+## 2026-09-07 — Add glucose timeline chart and month grouping
+### Solved
+- Added a records-page blood-glucose line chart with selectable 1-day, 7-day, 3-month, 1-year, and all-time ranges.
+- Chart points are extracted from saved glucose readings and never synthesize missing health data.
+- Grouped saved records under month headings while retaining day-level entries.
+### Verified
+- `npm run build` passed after each implementation point.
+### Unresolved
+- The chart currently supports blood glucose only; insulin-dose visualization remains a separate follow-up.
+- No manual backfill or import flow was added, so ranges with no recorded readings remain empty.
+### Disproved
+- n/a
+
+## 2026-09-07 — Replace glucose line chart with bars
+### Solved
+- Replaced the connected glucose line with vertical bars that rise from a visible zero baseline.
+- Each bar represents one actual reading, making missing readings visually explicit without interpolation.
+### Verified
+- `npm run build` passed.
+- PM2 restarted and `/records` returned HTTP 200.
+### Unresolved
+- The IDE browser probe could not access the local app, so visual verification was limited to the production build and HTTP smoke test.
+### Disproved
+- n/a
+
+## 2026-09-07 — Add reusable synthetic records preview
+### Solved
+- Added a guest-only Records control that loads 60 days of clearly labeled synthetic data into local storage.
+- Each demo day contains four glucose readings: morning before eating, morning after eating, afternoon before eating, and afternoon after eating.
+- Added a separate removal action that deletes only demo records and leaves real guest records untouched.
+- Kept the chart inside the available content width; dense ranges use narrower bars and suppress overlapping value labels.
+### Verified
+- `npm run build` passed after each implementation point.
+### Unresolved
+- Demo values are for chart visualization only and must not be interpreted as real health measurements.
+### Disproved
+- n/a
+
+## 2026-09-07 — Simplify Records navigation and fit chart width
+### Solved
+- Replaced the sidebar's per-record list with one Report timeline link.
+- Removed horizontal chart scrolling so the complete selected range fits inside the widened records content area.
+### Verified
+- `npm run build` passed after the sidebar and chart updates.
+### Unresolved
+- Very dense ranges show exact values through bar tooltips rather than drawing every number on the chart.
+### Disproved
+- n/a
+
+## 2026-09-07 — Restore Records folder with timeline child
+### Solved
+- Restored the Records folder header and its collapse control.
+- Kept the folder contents limited to the single Report timeline item.
+### Verified
+- `npm run build` passed.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Add timestamp-aware glucose line view
+### Solved
+- Added a Bar chart / Line chart toggle to the glucose timeline.
+- Line points use their actual recorded timestamps, preserving visible time gaps when readings are irregular or skipped.
+- Range bounds now represent the selected time window instead of compressing points between the first and last reading.
+### Verified
+- `npm run build` passed after the chart helper, UI, and styling updates.
+### Unresolved
+- The line connects adjacent real observations; it does not create missing readings or infer health values.
+### Disproved
+- n/a
+
+## 2026-09-07 — Add chronological and daily-pattern chart modes
+### Solved
+- Added Timeline and Daily pattern view modes.
+- Daily pattern overlays each date on a 24-hour axis, with separate per-day lines and actual reading points.
+- Kept missing time-of-day readings absent rather than filling or connecting separate dates.
+### Verified
+- `npm run build` passed after the chart mode, labels, and styling updates.
+### Unresolved
+- The current daily mode overlays daily traces; aggregate statistics such as median bands can be added later if needed.
+### Disproved
+- n/a
+
+## 2026-09-07 — Add connected report editing
+### Solved
+- Added an Edit action to each dated report entry.
+- Added a shared record editor for title, summary, data items, timestamps, units, and meal details.
+- Guest edits persist to local storage; authenticated edits persist through the existing records PUT endpoint.
+- Updated records in state immediately so edited glucose values update the timeline and charts without leaving the page.
+### Verified
+- `npm run build` passed after the editor, persistence, and styling updates.
+### Unresolved
+- The editor does not alter the original chat transcript; it updates the connected saved report only.
+### Disproved
+- n/a
+
 ## 2026-09-06 — Suppress transient streaming trailing whitespace
 
 ### Solved
