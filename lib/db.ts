@@ -26,6 +26,29 @@ interface RecordDoc {
   pinned?: boolean;
 }
 
+interface ReportEntryDoc {
+  id: string;
+  sessionId?: string;
+  title: string;
+  summary: string;
+  items: ConcludeItem[];
+  meals?: ConcludeMeal[] | null;
+  sourceText?: string | null;
+  savedAt: Date;
+  datetime: Date | null;
+  recordedAt: Date;
+  pinned?: boolean;
+}
+
+interface AccountReportDoc {
+  _id?: ObjectId;
+  userId: ObjectId;
+  title: string;
+  entries: ReportEntryDoc[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 let clientPromise: Promise<MongoClient> | null = null;
 
 function getClient(): Promise<MongoClient> {
@@ -139,6 +162,171 @@ export async function updateRecord(
       { returnDocument: "after" }
     );
   return result ? toSavedRecord(result) : null;
+}
+
+function reportDate(value: string | undefined, fallback = new Date()): Date {
+  if (!value) return fallback;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+}
+
+function toSavedReportEntry(entry: ReportEntryDoc): SavedRecord {
+  return {
+    _id: entry.id,
+    title: entry.title,
+    summary: entry.summary,
+    items: entry.items,
+    meals: entry.meals ?? undefined,
+    sourceText: entry.sourceText ?? undefined,
+    savedAt: entry.savedAt.toISOString(),
+    datetime: entry.datetime?.toISOString() ?? null,
+    recordedAt: entry.recordedAt.toISOString(),
+    sessionId: entry.sessionId,
+    pinned: entry.pinned ?? false,
+  };
+}
+
+async function ensureAccountReport(userId: string): Promise<AccountReportDoc> {
+  const db = await getDb();
+  const reports = db.collection<AccountReportDoc>("account_reports");
+  const ownerId = new ObjectId(userId);
+  const existing = await reports.findOne({ userId: ownerId });
+  if (existing) return existing;
+
+  // Migrate old per-session records the first time the account report is read.
+  const legacy = await db
+    .collection<RecordDoc>("records")
+    .find({ userId: ownerId })
+    .sort({ savedAt: 1 })
+    .toArray();
+  const now = new Date();
+  const candidate: AccountReportDoc = {
+    _id: new ObjectId(),
+    userId: ownerId,
+    title: "Health report",
+    entries: legacy.map((record) => ({
+      id: record._id?.toString() ?? new ObjectId().toString(),
+      title: record.title,
+      summary: record.summary,
+      items: record.items,
+      meals: record.meals,
+      sourceText: record.sourceText,
+      savedAt: record.savedAt,
+      datetime: record.datetime,
+      recordedAt: record.datetime ?? record.savedAt,
+      pinned: record.pinned ?? false,
+    })),
+    createdAt: now,
+    updatedAt: now,
+  };
+  try {
+    await reports.updateOne(
+      { userId: ownerId },
+      { $setOnInsert: candidate },
+      { upsert: true }
+    );
+  } catch {
+    // Another request may have initialized this account's report concurrently.
+  }
+  return (await reports.findOne({ userId: ownerId })) ?? candidate;
+}
+
+export async function listReportEntries(userId: string): Promise<SavedRecord[]> {
+  const report = await ensureAccountReport(userId);
+  return [...report.entries]
+    .sort(
+      (a, b) =>
+        Number(b.pinned ?? false) - Number(a.pinned ?? false) ||
+        b.recordedAt.getTime() - a.recordedAt.getTime()
+    )
+    .map(toSavedReportEntry);
+}
+
+export async function appendReportEntry(
+  userId: string,
+  input: {
+    title: string;
+    summary: string;
+    items: ConcludeItem[];
+    meals?: ConcludeMeal[];
+    sourceText?: string;
+    sessionId?: string;
+    recordedAt?: string;
+  }
+): Promise<SavedRecord> {
+  const report = await ensureAccountReport(userId);
+  const now = new Date();
+  const recordedAt = reportDate(input.recordedAt, now);
+  const entry: ReportEntryDoc = {
+    id: new ObjectId().toString(),
+    sessionId: input.sessionId,
+    title: input.title,
+    summary: input.summary,
+    items: input.items,
+    meals: input.meals,
+    sourceText: input.sourceText,
+    savedAt: now,
+    datetime: recordedAt,
+    recordedAt,
+    pinned: false,
+  };
+  const db = await getDb();
+  await db.collection<AccountReportDoc>("account_reports").updateOne(
+    { _id: report._id },
+    { $push: { entries: entry }, $set: { updatedAt: now } }
+  );
+  return toSavedReportEntry(entry);
+}
+
+export async function updateReportEntry(
+  userId: string,
+  id: string,
+  input: {
+    title: string;
+    summary: string;
+    items: ConcludeItem[];
+    meals?: ConcludeMeal[];
+    sourceText?: string;
+    sessionId?: string;
+    recordedAt?: string;
+    pinned?: boolean;
+  }
+): Promise<SavedRecord | null> {
+  await ensureAccountReport(userId);
+  const now = new Date();
+  const db = await getDb();
+  const set: Record<string, unknown> = {
+    "entries.$.title": input.title,
+    "entries.$.summary": input.summary,
+    "entries.$.items": input.items,
+    "entries.$.meals": input.meals ?? null,
+    updatedAt: now,
+  };
+  if (input.sourceText !== undefined) set["entries.$.sourceText"] = input.sourceText;
+  if (input.sessionId !== undefined) set["entries.$.sessionId"] = input.sessionId;
+  if (input.recordedAt !== undefined) {
+    const recordedAt = reportDate(input.recordedAt, now);
+    set["entries.$.recordedAt"] = recordedAt;
+    set["entries.$.datetime"] = recordedAt;
+  }
+  if (input.pinned !== undefined) set["entries.$.pinned"] = input.pinned;
+  const result = await db.collection<AccountReportDoc>("account_reports").findOneAndUpdate(
+    { userId: new ObjectId(userId), "entries.id": id },
+    { $set: set },
+    { returnDocument: "after" }
+  );
+  const entry = result?.entries.find((candidate) => candidate.id === id);
+  return entry ? toSavedReportEntry(entry) : null;
+}
+
+export async function deleteReportEntry(userId: string, id: string): Promise<boolean> {
+  await ensureAccountReport(userId);
+  const db = await getDb();
+  const result = await db.collection<AccountReportDoc>("account_reports").updateOne(
+    { userId: new ObjectId(userId), "entries.id": id },
+    { $pull: { entries: { id } }, $set: { updatedAt: new Date() } }
+  );
+  return result.modifiedCount > 0;
 }
 
 interface CallDoc {

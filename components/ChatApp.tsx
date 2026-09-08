@@ -888,6 +888,7 @@ useEffect(() => {
         sourceText={concludeDraft?.sourceText ?? ""}
         guest={isAuthed === false}
         recordId={recordIdRef.current}
+        sessionId={sessionIdRef.current}
         onClose={() => {
           setConcludeDraft(null);
         }}
