@@ -239,7 +239,7 @@ function demoRecordContent(date: Date, dayIndex: number): {
 
   const meals: ConcludeMeal[] = [
     {
-      name: "Breakfast",
+      name: "",
       time: `${key} 07:30`,
       dishes: (dayIndex % 2 === 0
         ? ["Oatmeal", "Egg"]
@@ -247,7 +247,7 @@ function demoRecordContent(date: Date, dayIndex: number): {
       ).map((name) => ({ name, rank: "medium" })),
     },
     {
-      name: "Lunch",
+      name: "",
       time: `${key} 12:15`,
       dishes: (dayIndex % 2 === 0
         ? ["Rice bowl", "Chicken"]
@@ -255,7 +255,7 @@ function demoRecordContent(date: Date, dayIndex: number): {
       ).map((name) => ({ name, rank: "medium" })),
     },
     {
-      name: "Dinner",
+      name: "",
       time: `${key} 18:45`,
       dishes: (dayIndex % 2 === 0
         ? ["Soup", "Fish", "Greens"]
@@ -270,7 +270,7 @@ function demoRecordContent(date: Date, dayIndex: number): {
 
   if (dayIndex % 3 === 0) {
     meals.push({
-      name: "Afternoon snack",
+      name: "",
       time: `${key} 15:45`,
       dishes: [{ name: "Yogurt", rank: "low" }, { name: "Nuts", rank: "low" }],
     });
@@ -278,7 +278,7 @@ function demoRecordContent(date: Date, dayIndex: number): {
   }
   if (dayIndex % 7 === 5) {
     meals.push({
-      name: "Late-night snack",
+      name: "",
       time: `${key} 23:00`,
       dishes: [{ name: "Milk", rank: "low" }],
     });
