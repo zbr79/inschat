@@ -20,6 +20,7 @@ interface RecordInsightsProps {
     lowestGlucose: string;
     biggestJump: string;
     biggestDecrease: string;
+    dangerousFoods: string;
     noData: string;
     noMeals: string;
   };
@@ -167,6 +168,16 @@ export default function RecordInsights({
                 <strong>{labels.noData}</strong>
               )}
             </div>
+          </div>
+          <div className="record-insight-stat record-insight-dangerous-stat">
+            <div className="record-insight-card-head">
+              <span className="record-insight-label">{labels.dangerousFoods}</span>
+            </div>
+            {insights.dangerousFoods.length > 0 ? (
+              <FoodBubbles foods={insights.dangerousFoods} />
+            ) : (
+              <em className="record-insight-empty">{labels.noMeals}</em>
+            )}
           </div>
         </article>
         <article className="record-insight-card record-insight-jump">

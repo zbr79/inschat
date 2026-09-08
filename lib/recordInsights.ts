@@ -22,6 +22,12 @@ export interface InsightMeal {
   ts: number;
 }
 
+export interface ImpactFoodStat {
+  name: string;
+  rank: "high" | "medium";
+  count: number;
+}
+
 export interface GlucoseJumpStat {
   delta: number;
   from: number;
@@ -38,6 +44,7 @@ export interface RecordInsights {
   highestGlucose: BloodSugarStat | null;
   lowestGlucose: BloodSugarStat | null;
   biggestJump: GlucoseJumpStat | null;
+  dangerousFoods: ImpactFoodStat[];
 }
 
 interface TimedReading {
@@ -54,6 +61,13 @@ function numericValue(value: string | undefined): number | null {
   if (!match) return null;
   const parsed = Number(match[0]);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function foodImpactRank(value: string | undefined): "high" | "medium" | null {
+  const clean = value?.trim().toLowerCase();
+  if (clean === "高" || clean === "high") return "high";
+  if (clean === "中" || clean === "medium") return "medium";
+  return null;
 }
 
 function dateKeyOf(ts: number): string {
@@ -116,6 +130,7 @@ export function computeRecordInsights(
   const nowTs = now.getTime();
   const glucose: TimedReading[] = [];
   const mealsByDay = new Map<string, InsightMeal[]>();
+  const foodStats = new Map<string, ImpactFoodStat>();
 
   for (const record of records) {
     const fallback = recordTimestamp(record, nowTs);
@@ -139,6 +154,19 @@ export function computeRecordInsights(
       const meals = mealsByDay.get(dateKey) ?? [];
       if (!meals.some((entry) => mealKey(entry.meal, entry.ts) === mealKey(meal, ts))) {
         meals.push({ meal, ts });
+        for (const dish of meal.dishes ?? []) {
+          const name = dish.name.trim();
+          const rank = foodImpactRank(dish.rank);
+          if (!name || !rank) continue;
+          const key = name.toLocaleLowerCase();
+          const existing = foodStats.get(key);
+          if (existing) {
+            existing.count += 1;
+            if (rank === "high") existing.rank = "high";
+          } else {
+            foodStats.set(key, { name, rank, count: 1 });
+          }
+        }
       }
       mealsByDay.set(dateKey, meals);
     }
@@ -185,10 +213,20 @@ export function computeRecordInsights(
     }
   }
   jumps.sort((a, b) => b.delta - a.delta);
+  const dangerousFoods = [...foodStats.values()]
+    .sort(
+      (a, b) =>
+        (a.rank === "high" ? 0 : 1) -
+          (b.rank === "high" ? 0 : 1) ||
+        b.count - a.count ||
+        a.name.localeCompare(b.name)
+    )
+    .slice(0, 5);
 
   return {
     highestGlucose: sortedGlucose.at(-1) ?? null,
     lowestGlucose: sortedGlucose[0] ?? null,
     biggestJump: jumps[0] ?? null,
+    dangerousFoods,
   };
 }
