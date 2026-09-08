@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import type { ConcludeItem, ConcludeMeal, SavedRecord } from "@/lib/types";
+import { mealNameForTime } from "@/lib/mealTime";
+import { useUiLang } from "@/lib/i18n";
 
 export interface RecordEditDraft {
   title: string;
@@ -54,6 +56,7 @@ export default function RecordEditModal({
 }: RecordEditModalProps) {
   const [draft, setDraft] = useState(() => draftFromRecord(record));
   const [saving, setSaving] = useState(false);
+  const lang = useUiLang();
 
   const updateItem = (index: number, patch: Partial<ConcludeItem>) => {
     setDraft((current) => ({
@@ -89,7 +92,7 @@ export default function RecordEditModal({
         items: cleanItems,
         meals: draft.meals?.map((meal) => ({
           ...meal,
-          name: meal.name.trim(),
+          name: mealNameForTime(meal.time, lang),
           foods: meal.foods?.trim() || undefined,
           time: meal.time?.trim() || undefined,
         })),
@@ -161,12 +164,9 @@ export default function RecordEditModal({
               <div className="record-edit-meals">
                 {draft.meals.map((meal, index) => (
                   <div className="record-edit-meal" key={index}>
-                    <input
-                      aria-label={labels.mealName}
-                      placeholder={labels.mealName}
-                      value={meal.name}
-                      onChange={(event) => updateMeal(index, { name: event.target.value })}
-                    />
+                    <span className="record-edit-derived-meal-name">
+                      {mealNameForTime(meal.time, lang)}
+                    </span>
                     <input
                       aria-label={labels.foods}
                       placeholder={labels.foods}
