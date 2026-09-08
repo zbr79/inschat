@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SavedRecord } from "@/lib/types";
 import {
   addDemoGlucoseRecords,
@@ -10,9 +10,11 @@ import {
   removeDemoGlucoseRecords,
   updateGuestRecord,
 } from "@/lib/guestStore";
-import { pairTimeItems, readingPhase } from "@/lib/mealTime";
+import { pairTimeItems, parseFlexibleDateTime, readingPhase } from "@/lib/mealTime";
 import { isMealRelatedItem } from "@/lib/groupMeals";
 import { STR, useUiLang } from "@/lib/i18n";
+import ConcludeModal from "./ConcludeModal";
+import FullDayEditModal from "./FullDayEditModal";
 import GlucoseChart from "./GlucoseChart";
 import RecordEditModal, { type RecordEditDraft } from "./RecordEditModal";
 import {
@@ -20,8 +22,6 @@ import {
   filterGlucosePoints,
   monthKeyOf,
   monthLabel,
-  recordTimelineEntries,
-  type TimelineEntry,
   type TimelineRange,
 } from "@/lib/recordTimeline";
 
@@ -33,6 +33,12 @@ function rankClass(rank: string): string {
   return "none";
 }
 
+function displayMetricName(name: string, bloodSugarLabel: string): string {
+  return /^(血糖|胰岛素|glucose|insulin|blood glucose|blood sugar)$/i.test(name.trim())
+    ? bloodSugarLabel
+    : name;
+}
+
 function toSavedRecord(record: {
   id: string;
   title: string;
@@ -41,6 +47,8 @@ function toSavedRecord(record: {
   meals?: SavedRecord["meals"];
   sourceText?: string;
   savedAt: string;
+  recordedAt?: string;
+  sessionId?: string;
 }): SavedRecord {
   return {
     _id: record.id,
@@ -50,7 +58,9 @@ function toSavedRecord(record: {
     meals: record.meals,
     sourceText: record.sourceText,
     savedAt: record.savedAt,
-    datetime: null,
+    datetime: record.recordedAt ?? null,
+    recordedAt: record.recordedAt,
+    sessionId: record.sessionId,
   };
 }
 
@@ -78,7 +88,97 @@ function dayLabel(
   });
 }
 
-export default function RecordsPanel() {
+type MixedRecordEvent =
+  | {
+      kind: "reading";
+      item: SavedRecord["items"][number];
+      time?: string;
+      phase?: string;
+      ts: number;
+    }
+  | {
+      kind: "meal";
+      meal: NonNullable<SavedRecord["meals"]>[number];
+      ts: number;
+    };
+
+type TimelineDayRecord = {
+  record: SavedRecord;
+  events: MixedRecordEvent[];
+};
+
+type TimelineDayGroup = {
+  key: string;
+  label: string;
+  entries: TimelineDayRecord[];
+};
+
+type TimelineMonthGroup = {
+  key: string;
+  label: string;
+  days: TimelineDayGroup[];
+};
+
+function eventTimestamp(value: string | undefined, fallback: number): number {
+  if (!value) return fallback;
+  const parsed = parseFlexibleDateTime(value);
+  if (parsed) {
+    const ts = Date.parse(`${parsed.date}T${parsed.time}`);
+    if (Number.isFinite(ts)) return ts;
+  }
+  const direct = new Date(value).getTime();
+  return Number.isFinite(direct) ? direct : fallback;
+}
+
+function mixedRecordEvents(record: SavedRecord): MixedRecordEvent[] {
+  const fallback = eventTimestamp(
+    record.recordedAt ?? record.datetime ?? record.savedAt,
+    Date.now()
+  );
+  const readings: MixedRecordEvent[] = pairTimeItems(record.items)
+    .filter(({ item }) => !isMealRelatedItem(item.name))
+    .map(({ item, time, phase }) => ({
+      kind: "reading" as const,
+      item,
+      time,
+      phase,
+      ts: eventTimestamp(time, fallback),
+    }));
+  const meals: MixedRecordEvent[] = (record.meals ?? []).map((meal) => ({
+    kind: "meal" as const,
+    meal,
+    ts: eventTimestamp(meal.time, fallback),
+  }));
+  return [...readings, ...meals].sort((a, b) => {
+    if (a.ts !== b.ts) return a.ts - b.ts;
+    if (a.kind === b.kind) return 0;
+    return a.kind === "reading" ? -1 : 1;
+  });
+}
+
+function calendarDayLabel(dateKey: string, lang: "zh" | "en"): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString(
+    lang === "zh" ? "zh-CN" : "en-US",
+    { month: "long", day: "numeric" }
+  );
+}
+
+function displayEventTime(value: string | undefined, lang: "zh" | "en"): string {
+  if (!value) return "";
+  const parsed = parseFlexibleDateTime(value);
+  const ts = parsed
+    ? new Date(`2000-01-01T${parsed.time}`).getTime()
+    : new Date(value).getTime();
+  if (Number.isNaN(ts)) return value;
+  return new Date(ts).toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+export default function RecordsPanel({ fullReport = false }: { fullReport?: boolean }) {
   const [guest, setGuest] = useState<boolean | null>(null);
   const [records, setRecords] = useState<SavedRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -86,8 +186,21 @@ export default function RecordsPanel() {
   const [range, setRange] = useState<TimelineRange>("week");
   const [demoBusy, setDemoBusy] = useState(false);
   const [editingRecord, setEditingRecord] = useState<SavedRecord | null>(null);
+  const [editingDay, setEditingDay] = useState<TimelineDayGroup | null>(null);
   const lang = useUiLang();
   const t = STR[lang];
+  const editingResult = useMemo(
+    () =>
+      editingRecord
+        ? {
+            title: editingRecord.title,
+            summary: editingRecord.summary,
+            items: editingRecord.items,
+            meals: editingRecord.meals,
+          }
+        : null,
+    [editingRecord]
+  );
 
   const load = useCallback(async () => {
     if (guest === null) return;
@@ -169,6 +282,8 @@ export default function RecordsPanel() {
           items: draft.items,
           meals: draft.meals,
           sourceText: record.sourceText,
+          sessionId: record.sessionId,
+          recordedAt: record.recordedAt ?? record.datetime ?? record.savedAt,
         });
       } else {
         const response = await fetch(`/api/records?id=${encodeURIComponent(record._id)}`, {
@@ -180,6 +295,8 @@ export default function RecordsPanel() {
             items: draft.items,
             meals: draft.meals,
             sourceText: record.sourceText,
+            sessionId: record.sessionId,
+            recordedAt: record.recordedAt ?? record.datetime ?? record.savedAt,
           }),
         });
         const body = await response.json();
@@ -205,7 +322,7 @@ export default function RecordsPanel() {
   const loadDemo = () => {
     if (guest !== true || demoBusy) return;
     setDemoBusy(true);
-    addDemoGlucoseRecords(60);
+    addDemoGlucoseRecords(30);
     refreshGuestRecords();
     setDemoBusy(false);
   };
@@ -220,54 +337,79 @@ export default function RecordsPanel() {
 
   const hasDemoData =
     records?.some((record) => record._id.startsWith(DEMO_RECORD_PREFIX)) ?? false;
-  const entries: TimelineEntry[] = records ? recordTimelineEntries(records) : [];
   const glucosePoints = records
     ? filterGlucosePoints(extractGlucosePoints(records), range)
     : [];
-  const monthGroups: {
-    key: string;
-    label: string;
-    days: { key: string; label: string; entries: TimelineEntry[] }[];
-  }[] = [];
+  const monthGroups: TimelineMonthGroup[] = [];
   if (records) {
-    for (const entry of entries) {
-      const monthKey = monthKeyOf(entry.dateKey);
-      const lastMonth = monthGroups[monthGroups.length - 1];
-      const month =
-        lastMonth?.key === monthKey
-          ? lastMonth
-          : (() => {
-              const next = {
-                key: monthKey,
-                label: monthLabel(monthKey, lang),
-                days: [] as { key: string; label: string; entries: TimelineEntry[] }[],
-              };
-              monthGroups.push(next);
-              return next;
-            })();
-      const lastDay = month.days[month.days.length - 1];
-      if (lastDay && lastDay.key === entry.dateKey) {
-        lastDay.entries.push(entry);
-      } else {
-        month.days.push({
-          key: entry.dateKey,
-           label: dayLabel(entry.dateKey, lang, t),
-          entries: [entry],
-        });
+    const daysByKey = new Map<string, TimelineDayGroup>();
+    for (const record of records) {
+      const events = mixedRecordEvents(record);
+      const eventsByDay = new Map<string, MixedRecordEvent[]>();
+      for (const event of events) {
+        const key = dayKeyOf(new Date(event.ts).toISOString());
+        eventsByDay.set(key, [...(eventsByDay.get(key) ?? []), event]);
+      }
+      if (eventsByDay.size === 0) {
+        const fallback = eventTimestamp(
+          record.recordedAt ?? record.datetime ?? record.savedAt,
+          Date.now()
+        );
+        eventsByDay.set(dayKeyOf(new Date(fallback).toISOString()), []);
+      }
+      for (const [dayKey, dayEvents] of eventsByDay) {
+        const day =
+          daysByKey.get(dayKey) ??
+          (() => {
+            const next: TimelineDayGroup = {
+              key: dayKey,
+              label: dayLabel(dayKey, lang, t),
+              entries: [],
+            };
+            daysByKey.set(dayKey, next);
+            return next;
+          })();
+        day.entries.push({ record, events: dayEvents });
       }
     }
+    const sortedDays = [...daysByKey.values()].sort((a, b) => b.key.localeCompare(a.key));
+    for (const day of sortedDays) {
+      const monthKey = monthKeyOf(day.key);
+      const month =
+        monthGroups.find((candidate) => candidate.key === monthKey) ??
+        (() => {
+          const next: TimelineMonthGroup = {
+            key: monthKey,
+            label: monthLabel(monthKey, lang),
+            days: [],
+          };
+          monthGroups.push(next);
+          return next;
+        })();
+      day.entries.sort((a, b) => {
+        const aTs = a.events[0]?.ts ?? 0;
+        const bTs = b.events[0]?.ts ?? 0;
+        return bTs - aTs;
+      });
+      month.days.push(day);
+    }
+    monthGroups.sort((a, b) => b.key.localeCompare(a.key));
   }
 
   return (
     <div className="usage-page">
       <div className="records-page-head">
         <div>
-          <h2>{t["records.title"]}</h2>
+          <h2>{fullReport ? t["records.fullTitle"] : t["records.title"]}</h2>
           <p className="usage-sub">
-            {guest === true ? t["records.subGuest"] : t["records.subOwner"]}
+            {fullReport
+              ? t["records.fullSub"]
+              : guest === true
+                ? t["records.subGuest"]
+                : t["records.subOwner"]}
           </p>
         </div>
-        {guest === true && (
+        {guest === true && !fullReport && (
           <div className="records-demo-actions">
             <div className="records-demo-buttons">
               <button
@@ -306,7 +448,7 @@ export default function RecordsPanel() {
         </section>
       )}
 
-      {records !== null && records.length > 0 && (
+      {!fullReport && records !== null && records.length > 0 && (
         <GlucoseChart
           points={glucosePoints}
           range={range}
@@ -330,88 +472,46 @@ export default function RecordsPanel() {
         />
       )}
 
-      <div className="timeline">
+      <div className={`timeline${fullReport ? " full-report-log" : ""}`}>
         {monthGroups.map((month) => (
           <section key={month.key} className="timeline-month-group">
-            <h3 className="timeline-month">{month.label}</h3>
+            {!fullReport && <h3 className="timeline-month">{month.label}</h3>}
             {month.days.map((day) => (
               <div key={day.key} className="timeline-day-group">
-                <div className="timeline-day">{day.label}</div>
-                {day.entries.map(({ record }) => {
-              // Pair each reading with its own 时间 item FIRST (the time items
-              // are meal-related and would be filtered out otherwise), then
-              // drop meal-named rows.
-              const paired = pairTimeItems(record.items).filter(
-                ({ item }) => !isMealRelatedItem(item.name)
-              );
+                <div className="timeline-day-head">
+                  <div className="timeline-day">
+                    {fullReport ? calendarDayLabel(day.key, lang) : day.label}
+                  </div>
+                  {fullReport && (
+                    <button
+                      type="button"
+                      className="full-day-edit-trigger"
+                      onClick={() => setEditingDay(day)}
+                    >
+                      {t["records.edit"]}
+                    </button>
+                  )}
+                </div>
+                {day.entries
+                  .flatMap(({ record, events }) =>
+                    fullReport
+                      ? events.map((event) => ({ record, events: [event] }))
+                      : [{ record, events }]
+                  )
+                  .sort((a, b) =>
+                    fullReport
+                      ? (b.events[0]?.ts ?? 0) - (a.events[0]?.ts ?? 0)
+                      : 0
+                  )
+                  .map(({ record, events }, entryIndex) => {
                   return (
-                    <div key={record._id} className="timeline-entry">
+                    <div
+                      key={`${record._id}-${events[0]?.ts ?? "record"}-${entryIndex}`}
+                      className="timeline-entry"
+                    >
                       <span className="timeline-dot" aria-hidden="true" />
                       <div className="timeline-content">
-                  {paired.length > 0 && (
-                    <div className="timeline-readings">
-                      {paired.map(({ item, time, phase }, index) => {
-                        const derived = phase ?? readingPhase(time, lang);
-                        return (
-                          <span key={index} className="timeline-reading">
-                            <span className="timeline-reading-main">
-                              {item.name}
-                              {derived ? ` ${derived}` : ""}
-                              {item.value ? ` ${item.value}` : ""}
-                              {item.unit ? ` ${item.unit}` : ""}
-                            </span>
-                            {time && (
-                              <span className="timeline-reading-time">{time}</span>
-                            )}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                  {record.meals && record.meals.length > 0 ? (
-                    record.meals.map((meal, index) => (
-                      <div key={index} className="timeline-meal">
-                        <span className="meal-name">{meal.name}</span>
-                        {meal.time && (
-                          <span className="meal-time">{meal.time}</span>
-                        )}
-                        {(meal.dishes ?? []).length > 0 ? (
-                          <span className="dish-grid">
-                            {meal.dishes!.map((dish, dishIndex) => (
-                              <span
-                                key={dishIndex}
-                                className={`dish-box${dish.rank ? ` rank-${rankClass(dish.rank)}` : ""}`}
-                              >
-                                <span className="dish-box-name">{dish.name}</span>
-                                {dish.rank && (
-                                  <span className="dish-box-rank">{dish.rank}</span>
-                                )}
-                              </span>
-                            ))}
-                          </span>
-                        ) : (
-                          meal.foods && <span className="meal-foods">{meal.foods}</span>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    paired.length === 0 && (
-                      <ul className="conclusion-items">
-                        {record.items.map((item, index) => (
-                          <li key={index}>
-                            <span className="item-name">{item.name}</span>
-                            {item.value && (
-                              <span className="item-value">{item.value}</span>
-                            )}
-                            {item.unit && (
-                              <span className="item-unit">{item.unit}</span>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )
-                  )}
-                        <div className="record-actions">
+                        {!fullReport && <div className="record-actions">
                           <button
                             type="button"
                             className="record-edit-trigger"
@@ -425,41 +525,160 @@ export default function RecordsPanel() {
                             disabled={deleting !== null}
                             onClick={() => remove(record._id)}
                           >
-                            {deleting === record._id ? t["records.deleting"] : t["records.delete"]}
+                            {deleting === record._id
+                              ? t["records.deleting"]
+                              : t["records.delete"]}
                           </button>
-                        </div>
+                        </div>}
+                  {events.length > 0 ? (
+                    <div className="timeline-mixed-events">
+                      {events.map((event, index) => {
+                        if (event.kind === "reading") {
+                          const derived = fullReport
+                            ? ""
+                            : event.phase ?? readingPhase(event.time, lang);
+                          return (
+                            <span key={`reading-${index}`} className="timeline-reading">
+                              <span className="timeline-reading-main">
+                                {displayMetricName(event.item.name, t["records.glucose.label"])}
+                                {derived ? ` ${derived}` : ""}
+                                {event.item.value ? ` ${event.item.value}` : ""}
+                                {event.item.unit ? ` ${event.item.unit}` : ""}
+                              </span>
+                              {event.time && (
+                                <span className="timeline-reading-time">
+                                  {displayEventTime(event.time, lang)}
+                                </span>
+                              )}
+                            </span>
+                          );
+                        }
+                        const meal = event.meal;
+                        return (
+                          <div key={`meal-${index}`} className="timeline-meal">
+                            {!fullReport && <span className="meal-name">{meal.name}</span>}
+                            {meal.time && (
+                              <span className="meal-time">
+                                {displayEventTime(meal.time, lang)}
+                              </span>
+                            )}
+                            {(meal.dishes ?? []).length > 0 ? (
+                              <span className="dish-grid">
+                                {meal.dishes!.map((dish, dishIndex) => (
+                                  <span
+                                    key={dishIndex}
+                                    className={`dish-box${dish.rank ? ` rank-${rankClass(dish.rank)}` : ""}`}
+                                  >
+                                    <span className="dish-box-name">{dish.name}</span>
+                                    {dish.rank && !fullReport && (
+                                      <span className="dish-box-rank">{dish.rank}</span>
+                                    )}
+                                  </span>
+                                ))}
+                              </span>
+                            ) : (
+                              meal.foods && <span className="meal-foods">{meal.foods}</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <ul className="conclusion-items">
+                      {record.items.map((item, index) => (
+                        <li key={index}>
+                          <span className="item-name">
+                            {displayMetricName(item.name, t["records.glucose.label"])}
+                          </span>
+                          {item.value && <span className="item-value">{item.value}</span>}
+                          {item.unit && <span className="item-unit">{item.unit}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                       </div>
                     </div>
                   );
-                })}
+                  })}
               </div>
             ))}
           </section>
         ))}
       </div>
-      {editingRecord && (
-        <RecordEditModal
-          record={editingRecord}
+      {editingDay && (
+        <FullDayEditModal
+          dayLabel={calendarDayLabel(editingDay.key, lang)}
+          records={editingDay.entries.map(({ record }) => record)}
           labels={{
-            title: t["records.editTitle"],
+            title: t["records.fullDayTitle"],
             close: t["actions.cancel"],
-            reportTitle: t["records.field.title"],
-            summary: t["records.field.summary"],
-            data: t["records.field.data"],
-            name: t["records.field.name"],
-            value: t["records.field.value"],
-            unit: t["records.field.unit"],
-            meals: t["records.field.meals"],
-            mealName: t["records.field.mealName"],
-            foods: t["records.field.foods"],
-            time: t["records.field.time"],
-            cancel: t["actions.cancel"],
-            save: t["records.save"],
-            saving: t["records.saving"],
+            entry: t["records.fullDayEntry"],
+            edit: t["records.edit"],
           }}
-          onCancel={() => setEditingRecord(null)}
-          onSave={saveEditedRecord}
+          onClose={() => setEditingDay(null)}
+          onEdit={(record) => {
+            setEditingDay(null);
+            setEditingRecord(record);
+          }}
         />
+      )}
+      {editingRecord && (
+        fullReport ? (
+          <ConcludeModal
+            open
+            result={editingResult}
+            sourceText={editingRecord.sourceText ?? ""}
+            guest={guest === true}
+            recordId={editingRecord._id}
+            sessionId={editingRecord.sessionId}
+            onClose={() => setEditingRecord(null)}
+            onDelete={() => {
+              void remove(editingRecord._id);
+              setEditingRecord(null);
+            }}
+            onSaved={(edited, savedRecordId) => {
+              const id = savedRecordId ?? editingRecord._id;
+              setRecords((prev) =>
+                prev?.map((record) =>
+                  record._id === editingRecord._id
+                    ? {
+                        ...record,
+                        _id: id,
+                        title: edited.title,
+                        summary: edited.summary,
+                        items: edited.items,
+                        meals: edited.meals,
+                      }
+                    : record
+                ) ?? null
+              );
+              setError(null);
+            }}
+          />
+        ) : (
+          <RecordEditModal
+            record={editingRecord}
+            labels={{
+              title: t["records.editTitle"],
+              close: t["actions.cancel"],
+              reportTitle: t["records.field.title"],
+              summary: t["records.field.summary"],
+              data: t["records.field.data"],
+              name: t["records.field.name"],
+              value: t["records.field.value"],
+              unit: t["records.field.unit"],
+              meals: t["records.field.meals"],
+              mealName: t["records.field.mealName"],
+              foods: t["records.field.foods"],
+              time: t["records.field.time"],
+              cancel: t["actions.cancel"],
+              save: t["records.save"],
+              saving: t["records.saving"],
+            }}
+            onCancel={() => setEditingRecord(null)}
+            onSave={saveEditedRecord}
+          />
+        )
       )}
     </div>
   );

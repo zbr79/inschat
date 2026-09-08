@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Menu, X, SquarePen, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, Sparkles, ChevronDown, ChevronRight, Languages, Activity, Gauge, LogOut, ImageDown } from "lucide-react";
+import { Menu, X, SquarePen, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, Sparkles, ChevronDown, ChevronRight, Languages, Activity, FileText, Gauge, LogOut, ImageDown } from "lucide-react";
 import type { ChatSession } from "@/lib/types";
 import {
   clearGuestData,
@@ -514,17 +514,30 @@ export default function Sidebar() {
             </button>
           </div>
           {!recordsCollapsed && (
-            <Link
-              href="/records"
-              className={`sidebar-report-link${pathname === "/records" ? " active" : ""}`}
-              onClick={() => setMenuOpen(false)}
-              aria-current={pathname === "/records" ? "page" : undefined}
-            >
-              <Activity size={15} aria-hidden="true" />
-              <span className="sidebar-label sidebar-catalog-label">
-                {t["nav.reportTimeline"]}
-              </span>
-            </Link>
+            <>
+              <Link
+                href="/records"
+                className={`sidebar-report-link${pathname === "/records" ? " active" : ""}`}
+                onClick={() => setMenuOpen(false)}
+                aria-current={pathname === "/records" ? "page" : undefined}
+              >
+                <Activity size={15} aria-hidden="true" />
+                <span className="sidebar-label sidebar-catalog-label">
+                  {t["nav.reportTimeline"]}
+                </span>
+              </Link>
+              <Link
+                href="/records/full"
+                className={`sidebar-report-link${pathname === "/records/full" ? " active" : ""}`}
+                onClick={() => setMenuOpen(false)}
+                aria-current={pathname === "/records/full" ? "page" : undefined}
+              >
+                <FileText size={15} aria-hidden="true" />
+                <span className="sidebar-label sidebar-catalog-label">
+                  {t["nav.fullReport"]}
+                </span>
+              </Link>
+            </>
           )}
         </div>
       )}
