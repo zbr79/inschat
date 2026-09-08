@@ -10,7 +10,13 @@ import {
   removeDemoGlucoseRecords,
   updateGuestRecord,
 } from "@/lib/guestStore";
-import { pairTimeItems, parseFlexibleDateTime, readingPhase } from "@/lib/mealTime";
+import {
+  localizeReadingPhase,
+  mealNameForTime,
+  pairTimeItems,
+  parseFlexibleDateTime,
+  readingPhase,
+} from "@/lib/mealTime";
 import { isMealRelatedItem } from "@/lib/groupMeals";
 import { STR, useUiLang } from "@/lib/i18n";
 import ConcludeModal from "./ConcludeModal";
@@ -536,7 +542,8 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
                         if (event.kind === "reading") {
                           const derived = fullReport
                             ? ""
-                            : event.phase ?? readingPhase(event.time, lang);
+                            : localizeReadingPhase(event.phase, lang) ??
+                              readingPhase(event.time, lang);
                           return (
                             <span key={`reading-${index}`} className="timeline-reading">
                               <span className="timeline-reading-main">
@@ -556,7 +563,11 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
                         const meal = event.meal;
                         return (
                           <div key={`meal-${index}`} className="timeline-meal">
-                            {!fullReport && <span className="meal-name">{meal.name}</span>}
+                            {!fullReport && (
+                              <span className="meal-name">
+                                {mealNameForTime(meal.time, lang)}
+                              </span>
+                            )}
                             {meal.time && (
                               <span className="meal-time">
                                 {displayEventTime(meal.time, lang)}
@@ -610,15 +621,37 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
           dayLabel={calendarDayLabel(editingDay.key, lang)}
           records={editingDay.entries.map(({ record }) => record)}
           labels={{
-            title: t["records.fullDayTitle"],
             close: t["actions.cancel"],
-            entry: t["records.fullDayEntry"],
-            edit: t["records.edit"],
           }}
           onClose={() => setEditingDay(null)}
-          onEdit={(record) => {
-            setEditingDay(null);
-            setEditingRecord(record);
+          guest={guest === true}
+          onSaved={(record, edited, savedRecordId) => {
+            const id = savedRecordId ?? record._id;
+            const updated = {
+              ...record,
+              _id: id,
+              title: edited.title,
+              summary: edited.summary,
+              items: edited.items,
+              meals: edited.meals,
+            };
+            setRecords((prev) =>
+              prev?.map((current) => (current._id === record._id ? updated : current)) ??
+              null
+            );
+            setEditingDay((day) =>
+              day
+                ? {
+                    ...day,
+                    entries: day.entries.map((entry) =>
+                      entry.record._id === record._id
+                        ? { ...entry, record: updated }
+                        : entry
+                    ),
+                  }
+                : null
+            );
+            setError(null);
           }}
         />
       )}
@@ -632,10 +665,6 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
             recordId={editingRecord._id}
             sessionId={editingRecord.sessionId}
             onClose={() => setEditingRecord(null)}
-            onDelete={() => {
-              void remove(editingRecord._id);
-              setEditingRecord(null);
-            }}
             onSaved={(edited, savedRecordId) => {
               const id = savedRecordId ?? editingRecord._id;
               setRecords((prev) =>

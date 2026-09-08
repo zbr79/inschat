@@ -365,6 +365,168 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 ### Disproved
 - Border-only coloring did not sufficiently match the referenced role-card visual language.
 
+## 2026-09-07 — Remove Full report entry picker layer
+### Solved
+- Removed the intermediate Entry/Edit selection modal from the day editor flow.
+- The day editor now opens directly and displays every record for that day, including readings, meals, dishes, values, units, and event times.
+- Kept records grouped as separate cards so the next editing pass can add controls without hiding any day data.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- The new day modal is currently a complete day display; record-level editing controls will be added in the next pass.
+### Disproved
+- A separate entry picker was not necessary for understanding the day's records.
+
+## 2026-09-07 — Match day editor cards to session report cards
+### Solved
+- Replaced the custom day-modal rows with the same report-card structure used by the chat conclusion editor.
+- Readings now use the report card header/value layout, and meals use the report dish-row layout with rank badges.
+- Kept every event visible while removing the extra custom grouping headings.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- The cards currently mirror the report editor's visual structure; inline editing behavior remains the next step.
+### Disproved
+- A separate gray list layout was not visually consistent with the chat session report editor.
+
+## 2026-09-07 — Reuse ConcludeModal for Full report editing
+### Solved
+- Added an embedded mode to the existing `ConcludeModal` instead of maintaining a second report-card renderer.
+- Full report day editing now uses the same inline controls, autosave behavior, rank controls, and delete action as chat-session reports.
+- The day modal renders every day's record through the shared component.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- The shared component still edits each underlying record independently within the day container.
+### Disproved
+- Duplicating the report-card markup in `FullDayEditModal` would have kept chat and Full report behavior synchronized.
+
+## 2026-09-07 — Move reading values into the report-card header
+### Solved
+- Moved the blood-sugar value and unit onto the first card line after the blood-sugar label and phase.
+- Kept the event time at the end of that same line to reduce vertical space in the shared modal.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Very long phase labels may wrap on narrow mobile widths.
+### Disproved
+- A separate second row for the blood-sugar number was not needed in the report editor.
+
+## 2026-09-07 — Remove modal-level report deletion control
+### Solved
+- Removed the top-right trash action from the shared report modal.
+- Kept the per-card delete controls for individual readings, meals, and dishes.
+- Reduced shared report-card spacing and removed the extra gap between embedded Full report cards.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Deleting an entire underlying report entry is no longer available from the report modal.
+### Disproved
+- A modal-level trash icon was not necessary when each report card already has its own delete control.
+
+## 2026-09-07 — Abbreviate rank badges and tighten embedded cards
+### Solved
+- English dish ranks now display as `L`, `M`, and `H`; Chinese ranks remain localized.
+- Embedded Full report timestamps now show time only, avoiding long date strings in the card header.
+- Reduced the remaining gap between embedded report cards.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- The stored rank values remain full words for data compatibility; only their display is abbreviated.
+### Disproved
+- Full date strings and full English rank words were necessary in the compact embedded editor.
+
+## 2026-09-07 — Normalize embedded report wrapper spacing
+### Solved
+- Removed inherited 24px modal padding from each embedded record wrapper.
+- Reset embedded wrapper margins and applied one consistent gap between report cards.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Card content height still varies naturally with the number of dishes or readings.
+### Disproved
+- The inconsistent visual gaps were caused by record timestamps or source-record grouping.
+
+## 2026-09-07 — Normalize reading phase language
+### Solved
+- Added shared phase localization across the report editor, Records timeline, and chat summary.
+- English stored phases such as `before breakfast` now display as `早餐前` in Chinese UI and `Before breakfast` in English UI.
+- Selector values and inserted phase items now follow the active language instead of mixing languages.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Existing stored records retain their original canonical phase text until they are edited and saved.
+### Disproved
+- The mixed-language display was not caused by the selected time; it came from rendering stored phase text without localization.
+
+## 2026-09-07 — Scale report modal surfaces
+### Solved
+- Scaled the shared report editor and Full report day modal to 80% of their previous visual size.
+- Scaled the modal contents together so report-card proportions remain unchanged.
+- Left the nested time picker at its normal scale.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Very small mobile viewports may need a separate scale adjustment later.
+### Disproved
+- Shrinking individual text and controls independently would have preserved the excessive modal footprint.
+
+## 2026-09-07 — Derive meal names from time
+### Solved
+- Removed meal-name editing from both report editor paths.
+- Demo meals no longer insert Breakfast/Lunch/Dinner names.
+- Meal labels are generated from meal time in the active language and re-derived before saving.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Existing saved records may still contain old meal-name text internally, but it is no longer editable or displayed as the source of truth.
+### Disproved
+- Meal names should not be user-entered data when the timestamp already determines the meal category.
+
+## 2026-09-07 — Enlarge modal text without enlarging the window
+### Solved
+- Increased report-modal text sizes by approximately 20% while keeping the existing modal dimensions and scale.
+- Allowed card headers to wrap when needed so larger text stays inside the modal.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Dense cards with many controls may still wrap on narrow screens, but no content should overflow horizontally.
+### Disproved
+- Increasing the modal window itself was necessary to improve text readability.
+
+## 2026-09-07 — Scale modal icons with enlarged text
+### Solved
+- Increased edit, delete, close, and day-modal icons by approximately 20% alongside the text.
+- Kept the modal window dimensions unchanged.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- Enlarging text without scaling its associated controls would have left the modal visually unbalanced.
+
+## 2026-09-07 — Show red dish delete control on row hover
+### Solved
+- Dish trash icons now turn red with a light red background when the dish row is hovered.
+- The existing focus and icon-hover behavior remains available.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- Revealing the icon in muted gray did not provide sufficient destructive-action feedback.
+
+## 2026-09-07 — Use the date as the day editor title
+### Solved
+- Replaced the Full report day editor title with the selected calendar date.
+- Removed the duplicate “Edit day” label and secondary date line.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- A generic editor title added useful context when the date itself already identifies the card.
+
 ## 2026-09-06 — Suppress transient streaming trailing whitespace
 
 ### Solved

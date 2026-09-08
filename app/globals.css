@@ -483,7 +483,7 @@ body {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(0.8);
   z-index: 71;
   width: min(600px, calc(100vw - 32px));
   max-height: calc(100dvh - 80px);
@@ -595,29 +595,11 @@ body {
   background: rgba(0, 0, 0, 0.08);
 }
 
-.conclude-modal-delete {
-  width: 30px;
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: #d93025;
-  cursor: pointer;
-}
-
-.conclude-modal-delete:hover,
-.conclude-modal-delete:focus-visible {
-  background: rgba(217, 48, 37, 0.1);
-}
-
 .conclude-section {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px;
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 
 /* catalog card header: the catalog name + phase live together on this row */
@@ -656,14 +638,16 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.conclude-value-cluster {
-  flex: 1;
+.conclude-inline-reading-value {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  /* align the number row with the catalog name (trash 28px + gap 8px) */
-  margin-left: 36px;
+  gap: 6px;
+  flex: 0 1 auto;
+}
+
+.conclude-inline-reading-value .conclude-inline-value {
+  flex: 0 1 auto;
 }
 
 /* ---- inline editors: every field is editable, hover reveals the pen ---- */
@@ -811,6 +795,11 @@ body {
 .conclude-dish-row:hover .conclude-dish-remove,
 .conclude-dish-remove:focus-visible {
   opacity: 1;
+}
+
+.conclude-dish-row:hover .conclude-dish-remove {
+  color: #d93025;
+  background: rgba(217, 48, 37, 0.1);
 }
 
 /* dish rows: delete left, name grows, rank badge at the right edge */
@@ -3041,14 +3030,99 @@ span.conclude-rank-badge {
   top: 50%;
   left: 50%;
   z-index: 121;
-  width: min(460px, calc(100vw - 32px));
+  width: min(720px, calc(100vw - 32px));
   max-height: calc(100dvh - 48px);
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(0.8);
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--bg);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24);
+}
+
+.conclude-modal-embedded {
+  position: static;
+  width: auto;
+  max-height: none;
+  transform: none;
+  display: block;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.conclude-modal .conclude-modal-title {
+  font-size: 24px;
+}
+
+.conclude-modal .conclude-glucose-label,
+.conclude-modal .conclude-inline-phase {
+  font-size: 18px;
+}
+
+.conclude-modal .conclude-inline-value,
+.conclude-modal .conclude-view-value {
+  font-size: 18px;
+}
+
+.conclude-modal .conclude-inline-unit,
+.conclude-modal .conclude-inline-time,
+.conclude-modal .conclude-inline-meal-time,
+.conclude-modal .conclude-view-unit {
+  font-size: 16px;
+}
+
+.conclude-modal .conclude-inline-meal-name,
+.conclude-modal .conclude-view-meal-name,
+.conclude-modal .conclude-inline-dish-name,
+.conclude-modal .conclude-inline-foods {
+  font-size: 17px;
+}
+
+.conclude-modal .conclude-rank-badge {
+  font-size: 16px;
+}
+
+.conclude-modal .edit-pen {
+  width: 13px;
+  height: 13px;
+}
+
+.conclude-modal .conclude-card-remove svg {
+  width: 17px;
+  height: 17px;
+}
+
+.conclude-modal .conclude-dish-remove svg {
+  width: 16px;
+  height: 16px;
+}
+
+.conclude-modal .conclude-modal-close svg {
+  width: 19px;
+  height: 19px;
+}
+
+.conclude-modal .conclude-catalog-head,
+.conclude-modal .conclude-meal-head {
+  flex-wrap: wrap;
+}
+
+.full-day-edit-list .conclude-section {
+  margin-bottom: 4px;
+}
+
+.full-day-edit-list > .conclude-modal-embedded {
+  margin: 0;
+  padding: 0;
+}
+
+.full-day-edit-list .conclude-modal-embedded .conclude-section:last-of-type {
+  margin-bottom: 0;
 }
 
 .full-day-edit-head {
@@ -3090,41 +3164,16 @@ span.conclude-rank-badge {
   color: var(--text);
 }
 
+.full-day-edit-head > button svg {
+  width: 20px;
+  height: 20px;
+}
+
 .full-day-edit-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
   padding: 14px 18px 18px;
-}
-
-.full-day-edit-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  color: var(--text);
-  font-size: 13px;
-}
-
-.full-day-edit-row + .full-day-edit-row {
-  border-top: 1px solid var(--border);
-}
-
-.full-day-edit-row button {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 5px 11px;
-  background: var(--bg);
-  color: var(--text);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.full-day-edit-row button:hover {
-  background: var(--bg-soft);
 }
 
 .record-edit-backdrop {
@@ -3236,8 +3285,17 @@ span.conclude-rank-badge {
 .record-edit-item,
 .record-edit-meal {
   display: grid;
-  grid-template-columns: 1.2fr 1fr 0.8fr;
+  grid-template-columns: 1fr 1fr;
   gap: 7px;
+}
+
+.record-edit-derived-meal-name {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .record-edit-field input:focus,
