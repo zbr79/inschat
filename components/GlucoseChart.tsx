@@ -7,7 +7,6 @@ import {
   type TimelineRange,
 } from "@/lib/recordTimeline";
 
-type ChartType = "bar" | "line";
 type ViewMode = "timeline" | "daily";
 
 interface GlucoseChartProps {
@@ -16,7 +15,6 @@ interface GlucoseChartProps {
   onRangeChange: (range: TimelineRange) => void;
   labels: {
     title: string;
-    subtitle: string;
     range: string;
     day: string;
     week: string;
@@ -24,8 +22,6 @@ interface GlucoseChartProps {
     year: string;
     all: string;
     empty: string;
-    bar: string;
-    line: string;
     timeline: string;
     daily: string;
   };
@@ -50,7 +46,6 @@ export default function GlucoseChart({
   labels,
   lang,
 }: GlucoseChartProps) {
-  const [chartType, setChartType] = useState<ChartType>("line");
   const [viewMode, setViewMode] = useState<ViewMode>("timeline");
   const innerWidth = WIDTH - PADDING.left - PADDING.right;
   const innerHeight = HEIGHT - PADDING.top - PADDING.bottom;
@@ -66,9 +61,6 @@ export default function GlucoseChart({
   };
   const y = (value: number) =>
     PADDING.top + ((max - value) / (max - min)) * innerHeight;
-  const baseline = y(0);
-  const barWidth = Math.min(18, Math.max(2, (innerWidth / Math.max(points.length, 1)) * 0.72));
-  const showBarValues = points.length <= 40;
   const gridValues = [max, max / 2, 0];
   const linePoints = points.map((point) => `${x(point.ts)},${y(point.value)}`).join(" ");
   const dailyGroups = Array.from(
@@ -99,7 +91,6 @@ export default function GlucoseChart({
       <div className="glucose-chart-head">
         <div>
           <h3>{labels.title}</h3>
-          <p>{labels.subtitle}</p>
         </div>
         <div className="glucose-chart-controls">
           <div className="glucose-chart-types" role="group" aria-label={labels.title}>
@@ -120,26 +111,6 @@ export default function GlucoseChart({
               {labels.daily}
             </button>
           </div>
-          {viewMode === "timeline" && (
-            <div className="glucose-chart-types" role="group" aria-label={labels.title}>
-            <button
-              type="button"
-              className={chartType === "bar" ? "active" : ""}
-              aria-pressed={chartType === "bar"}
-              onClick={() => setChartType("bar")}
-            >
-              {labels.bar}
-            </button>
-            <button
-              type="button"
-              className={chartType === "line" ? "active" : ""}
-              aria-pressed={chartType === "line"}
-              onClick={() => setChartType("line")}
-            >
-              {labels.line}
-            </button>
-            </div>
-          )}
           <label className="glucose-range">
             <span>{labels.range}</span>
             <select
@@ -165,7 +136,7 @@ export default function GlucoseChart({
             className="glucose-chart"
             viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
             role="img"
-            aria-label={`${labels.title}: ${points.length} ${labels.subtitle}`}
+            aria-label={`${labels.title}: ${points.length}`}
           >
             {gridValues.map((value) => (
               <g key={value}>
@@ -223,7 +194,7 @@ export default function GlucoseChart({
                   </text>
                 ))}
               </>
-            ) : chartType === "line" ? (
+            ) : (
               <>
                 <polyline points={linePoints} className="glucose-line" />
                 {points.map((point) => (
@@ -241,43 +212,6 @@ export default function GlucoseChart({
                     </title>
                   </circle>
                 ))}
-              </>
-            ) : (
-              <>
-                {points.map((point) => (
-                  <g key={point.id}>
-                    <rect
-                      x={x(point.ts) - barWidth / 2}
-                      y={y(point.value)}
-                      width={barWidth}
-                      height={Math.max(1, baseline - y(point.value))}
-                      rx="4"
-                      className="glucose-bar"
-                    />
-                    {showBarValues && (
-                      <text
-                        x={x(point.ts)}
-                        y={y(point.value) - 8}
-                        textAnchor="middle"
-                        className="glucose-bar-value"
-                      >
-                        {point.value}
-                      </text>
-                    )}
-                    <title>
-                      {point.value}
-                      {point.unit ? ` ${point.unit}` : ""} ·{" "}
-                      {new Date(point.ts).toLocaleString(lang === "zh" ? "zh-CN" : "en-US")}
-                    </title>
-                  </g>
-                ))}
-                <line
-                  x1={PADDING.left}
-                  x2={WIDTH - PADDING.right}
-                  y1={baseline}
-                  y2={baseline}
-                  className="glucose-baseline"
-                />
               </>
             )}
             {viewMode === "timeline" && (

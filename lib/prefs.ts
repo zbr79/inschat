@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { TimelineRange } from "./recordTimeline";
 
 const KEY = "inschat_insulin_mode";
 const EVENT = "inschat-insulin-mode";
@@ -111,4 +112,33 @@ export function useReasoningEffort(): [
     return () => window.removeEventListener(REASONING_EVENT, handler);
   }, []);
   return [level, setReasoningEffort];
+}
+
+const GLUCOSE_RANGE_KEY = "inschat_glucose_range";
+
+function isTimelineRange(value: string | null): value is TimelineRange {
+  return (
+    value === "day" ||
+    value === "week" ||
+    value === "quarter" ||
+    value === "year" ||
+    value === "all"
+  );
+}
+
+export function getGlucoseRange(): TimelineRange | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = window.localStorage.getItem(GLUCOSE_RANGE_KEY);
+    return isTimelineRange(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setGlucoseRange(range: TimelineRange): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(GLUCOSE_RANGE_KEY, range);
+  } catch {}
 }
