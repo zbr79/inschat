@@ -214,76 +214,176 @@ function localDateKey(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function demoRecordContent(date: Date, dayIndex: number): {
+function demoRecordContent(date: Date, dayIndex: number, safeDays: number): {
   items: ConcludeItem[];
   meals: ConcludeMeal[];
 } {
   const key = localDateKey(date);
-  const wave = Math.sin(dayIndex * 0.62) * 8 + Math.cos(dayIndex * 0.19) * 4;
+  type DemoRank = "low" | "medium" | "high";
+  type DemoMealPlan = {
+    time: string;
+    dishes: Array<{ name: string; rank: DemoRank }>;
+  };
+  const spikeIndex = Math.max(1, safeDays - 5);
+  const wave = Math.round(
+    Math.sin(dayIndex * 0.62) * 5 + Math.cos(dayIndex * 0.19) * 3
+  );
   const items: ConcludeItem[] = [];
-  const addReading = (
-    hour: string,
-    glucose: number,
-    insulin: number,
-    phase: string
-  ) => {
+  const addReading = (hour: string, glucose: number) => {
     items.push(
-      { name: "insulin", value: String(Math.round(insulin)), unit: "mg/dL" },
-      { name: "phase", value: phase },
-      { name: "time", value: `${key} ${hour}` },
       { name: "glucose", value: String(Math.round(glucose)), unit: "mg/dL" },
-      { name: "phase", value: phase },
       { name: "time", value: `${key} ${hour}` }
     );
   };
 
-  const meals: ConcludeMeal[] = [
+  const regularMenus: DemoMealPlan[][] = [
+    [
+      {
+        time: "07:20",
+        dishes: [
+          { name: "小米粥", rank: "low" },
+          { name: "水煮鸡蛋", rank: "low" },
+        ],
+      },
+      {
+        time: "12:10",
+        dishes: [
+          { name: "糙米饭", rank: "medium" },
+          { name: "清蒸鲈鱼", rank: "low" },
+          { name: "西兰花", rank: "low" },
+        ],
+      },
+      {
+        time: "18:30",
+        dishes: [
+          { name: "荞麦面", rank: "medium" },
+          { name: "番茄炒鸡蛋", rank: "low" },
+          { name: "清炒菠菜", rank: "low" },
+        ],
+      },
+    ],
+    [
+      {
+        time: "07:40",
+        dishes: [
+          { name: "无糖豆浆", rank: "low" },
+          { name: "全麦馒头", rank: "medium" },
+          { name: "凉拌黄瓜", rank: "low" },
+        ],
+      },
+      {
+        time: "12:00",
+        dishes: [
+          { name: "杂粮饭", rank: "medium" },
+          { name: "香煎鸡胸肉", rank: "medium" },
+          { name: "蒜蓉西兰花", rank: "low" },
+        ],
+      },
+      {
+        time: "18:20",
+        dishes: [
+          { name: "日式荞麦面", rank: "medium" },
+          { name: "烤三文鱼", rank: "low" },
+          { name: "生菜沙拉", rank: "low" },
+        ],
+      },
+    ],
+    [
+      {
+        time: "07:30",
+        dishes: [
+          { name: "鸡蛋灌饼", rank: "medium" },
+          { name: "无糖豆浆", rank: "low" },
+        ],
+      },
+      {
+        time: "12:10",
+        dishes: [
+          { name: "牛肉河粉", rank: "medium" },
+          { name: "清炒上海青", rank: "low" },
+          { name: "海带汤", rank: "low" },
+        ],
+      },
+      {
+        time: "18:30",
+        dishes: [
+          { name: "糙米饭", rank: "medium" },
+          { name: "清蒸虾", rank: "low" },
+          { name: "凉拌木耳", rank: "low" },
+        ],
+      },
+    ],
+  ];
+  const spikeMenu: DemoMealPlan[] = [
     {
-      name: "",
-      time: `${key} 07:30`,
-      dishes: (dayIndex % 2 === 0
-        ? ["Oatmeal", "Egg"]
-        : ["Toast"]
-      ).map((name) => ({ name, rank: "medium" })),
+      time: "07:20",
+      dishes: [
+        { name: "小米粥", rank: "low" },
+        { name: "茶叶蛋", rank: "low" },
+      ],
     },
     {
-      name: "",
-      time: `${key} 12:15`,
-      dishes: (dayIndex % 2 === 0
-        ? ["Rice bowl", "Chicken"]
-        : ["Noodles", "Vegetables", "Fruit"]
-      ).map((name) => ({ name, rank: "medium" })),
+      time: "12:10",
+      dishes: [
+        { name: "白米饭", rank: "medium" },
+        { name: "红烧肉", rank: "high" },
+        { name: "清炒空心菜", rank: "low" },
+      ],
     },
     {
-      name: "",
-      time: `${key} 18:45`,
-      dishes: (dayIndex % 2 === 0
-        ? ["Soup", "Fish", "Greens"]
-        : ["Rice", "Chicken", "Salad", "Fruit"]
-      ).map((name) => ({ name, rank: "medium" })),
+      time: "18:30",
+      dishes: [
+        { name: "韩式炸鸡", rank: "high" },
+        { name: "辣炒年糕", rank: "high" },
+        { name: "甜辣酱", rank: "high" },
+      ],
     },
   ];
+  const recoveryMenu: DemoMealPlan[] = [
+    {
+      time: "07:20",
+      dishes: [
+        { name: "无糖豆浆", rank: "low" },
+        { name: "水煮鸡蛋", rank: "low" },
+      ],
+    },
+    {
+      time: "12:10",
+      dishes: [
+        { name: "杂粮饭", rank: "medium" },
+        { name: "清蒸鲈鱼", rank: "low" },
+        { name: "西兰花", rank: "low" },
+      ],
+    },
+    {
+      time: "18:30",
+      dishes: [
+        { name: "荞麦面", rank: "medium" },
+        { name: "清炒菠菜", rank: "low" },
+        { name: "凉拌黄瓜", rank: "low" },
+      ],
+    },
+  ];
+  const menu =
+    dayIndex === spikeIndex - 1
+      ? spikeMenu
+      : dayIndex === spikeIndex
+        ? recoveryMenu
+        : regularMenus[dayIndex % regularMenus.length];
+  const meals: ConcludeMeal[] = menu.map(({ time, dishes }) => ({
+    name: "",
+    time: `${key} ${time}`,
+    dishes,
+  }));
 
-  addReading("07:30", 94 + wave, 96 + wave * 0.6, "before breakfast");
-  addReading("12:15", 108 + wave * 0.8, 103 + wave * 0.4, "before lunch");
-  addReading("18:45", 118 + wave * 1.1, 112 + wave * 0.7, "before dinner");
-
-  if (dayIndex % 3 === 0) {
-    meals.push({
-      name: "",
-      time: `${key} 15:45`,
-      dishes: [{ name: "Yogurt", rank: "low" }, { name: "Nuts", rank: "low" }],
-    });
-    addReading("15:45", 126 + wave * 0.5, 108 + wave * 0.4, "afternoon");
-  }
-  if (dayIndex % 7 === 5) {
-    meals.push({
-      name: "",
-      time: `${key} 23:00`,
-      dishes: [{ name: "Milk", rank: "low" }],
-    });
-    addReading("23:00", 132 + wave * 0.4, 116 + wave * 0.4, "late night");
-  }
+  const hasLowExample =
+    dayIndex % 9 === 4 || dayIndex === Math.max(0, safeDays - 2);
+  const morning = hasLowExample ? 108 : 116 + wave;
+  const lunch = 119 + wave + (dayIndex % 11 === 6 ? 8 : 0);
+  const dinner = dayIndex === spikeIndex ? 180 : 122 + wave;
+  addReading("07:30", morning);
+  addReading("11:30", lunch);
+  addReading("17:30", dinner);
 
   return { items, meals };
 }
@@ -298,11 +398,11 @@ export function addDemoGlucoseRecords(days = 30): number {
     const date = new Date(today);
     date.setDate(today.getDate() - offset);
     const dateKey = localDateKey(date);
-    const content = demoRecordContent(date, safeDays - 1 - offset);
+    const content = demoRecordContent(date, safeDays - 1 - offset, safeDays);
     demoRecords.push({
       id: `${DEMO_RECORD_PREFIX}${dateKey}`,
-      title: `Demo daily report · ${dateKey}`,
-      summary: "Synthetic one-month report with meals, glucose, insulin, and timestamps.",
+      title: "",
+      summary: "",
       items: content.items,
       meals: content.meals,
       savedAt: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59).toISOString(),

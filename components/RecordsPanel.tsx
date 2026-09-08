@@ -4,8 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { SavedRecord } from "@/lib/types";
 import {
   addDemoGlucoseRecords,
-  deleteGuestRecord,
   DEMO_RECORD_PREFIX,
+  deleteGuestRecord,
   listGuestRecords,
   removeDemoGlucoseRecords,
   updateGuestRecord,
@@ -19,11 +19,13 @@ import {
 } from "@/lib/mealTime";
 import { isMealRelatedItem } from "@/lib/groupMeals";
 import { STR, useUiLang } from "@/lib/i18n";
+import { getGlucoseRange, setGlucoseRange } from "@/lib/prefs";
 import ConcludeModal from "./ConcludeModal";
 import DatePickerModal from "./DatePickerModal";
 import FullDayEditModal from "./FullDayEditModal";
 import GlucoseChart from "./GlucoseChart";
 import RecordEditModal, { type RecordEditDraft } from "./RecordEditModal";
+import RecordInsights from "./RecordInsights";
 import ReportTransferControls from "./ReportTransferControls";
 import {
   extractGlucosePoints,
@@ -191,14 +193,24 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
   const [records, setRecords] = useState<SavedRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [range, setRange] = useState<TimelineRange>("week");
   const [demoBusy, setDemoBusy] = useState(false);
+  const [range, setRange] = useState<TimelineRange>("week");
   const [editingRecord, setEditingRecord] = useState<SavedRecord | null>(null);
   const [editingDay, setEditingDay] = useState<TimelineDayGroup | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const lang = useUiLang();
   const t = STR[lang];
+  useEffect(() => {
+    const storedRange = getGlucoseRange();
+    if (storedRange) setRange(storedRange);
+  }, []);
+
+  const handleRangeChange = useCallback((nextRange: TimelineRange) => {
+    setRange(nextRange);
+    setGlucoseRange(nextRange);
+  }, []);
+
   const editingResult = useMemo(
     () =>
       editingRecord
@@ -329,24 +341,32 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
     setError(null);
   };
 
+  const hasDemoData = records?.some((record) =>
+    record._id.startsWith(DEMO_RECORD_PREFIX)
+  ) ?? false;
+
   const loadDemo = () => {
-    if (guest !== true || demoBusy) return;
+    if (demoBusy || guest !== true) return;
     setDemoBusy(true);
-    addDemoGlucoseRecords(30);
-    refreshGuestRecords();
-    setDemoBusy(false);
+    try {
+      addDemoGlucoseRecords(30);
+      refreshGuestRecords();
+    } finally {
+      setDemoBusy(false);
+    }
   };
 
   const removeDemo = () => {
-    if (guest !== true || demoBusy) return;
+    if (demoBusy || guest !== true) return;
     setDemoBusy(true);
-    removeDemoGlucoseRecords();
-    refreshGuestRecords();
-    setDemoBusy(false);
+    try {
+      removeDemoGlucoseRecords();
+      refreshGuestRecords();
+    } finally {
+      setDemoBusy(false);
+    }
   };
 
-  const hasDemoData =
-    records?.some((record) => record._id.startsWith(DEMO_RECORD_PREFIX)) ?? false;
   const glucosePoints = records
     ? filterGlucosePoints(extractGlucosePoints(records), range)
     : [];
@@ -424,35 +444,24 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
       <div className="records-page-head">
         <div>
           <h2>{fullReport ? t["records.fullTitle"] : t["records.title"]}</h2>
-          {!fullReport && (
-            <p className="usage-sub">
-              {guest === true ? t["records.subGuest"] : t["records.subOwner"]}
-            </p>
-          )}
         </div>
-        {guest === true && !fullReport && (
+        {!fullReport && guest === true && (
           <div className="records-demo-actions">
             <div className="records-demo-buttons">
-              <button
-                type="button"
-                className="records-demo-load"
-                disabled={demoBusy}
-                onClick={loadDemo}
-              >
-                {t["records.demo.load"]}
+              <button type="button" onClick={loadDemo} disabled={demoBusy}>
+                {demoBusy ? t["records.demo.loading"] : t["records.demo.load"]}
               </button>
               {hasDemoData && (
                 <button
                   type="button"
                   className="records-demo-remove"
-                  disabled={demoBusy}
                   onClick={removeDemo}
+                  disabled={demoBusy}
                 >
                   {t["records.demo.remove"]}
                 </button>
               )}
             </div>
-            <span>{t["records.demo.hint"]}</span>
           </div>
         )}
       </div>
@@ -521,14 +530,30 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
       )}
 
       {!fullReport && records !== null && records.length > 0 && (
+        <RecordInsights
+          records={records}
+          lang={lang}
+          range={range}
+          labels={{
+            title: t["records.insights.title"],
+            period: t[`records.glucose.${range}`],
+            highestGlucose: t["records.insights.highestGlucose"],
+            lowestGlucose: t["records.insights.lowestGlucose"],
+            biggestJump: t["records.insights.biggestJump"],
+            biggestDecrease: t["records.insights.biggestDecrease"],
+            noData: t["records.insights.noData"],
+            noMeals: t["records.insights.noMeals"],
+          }}
+        />
+      )}
+      {!fullReport && records !== null && records.length > 0 && (
         <GlucoseChart
           points={glucosePoints}
           range={range}
-          onRangeChange={setRange}
+          onRangeChange={handleRangeChange}
           lang={lang}
           labels={{
             title: t["records.glucose.title"],
-            subtitle: t["records.glucose.subtitle"],
             range: t["records.glucose.range"],
             day: t["records.glucose.day"],
             week: t["records.glucose.week"],
@@ -536,25 +561,20 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
             year: t["records.glucose.year"],
             all: t["records.glucose.all"],
             empty: t["records.glucose.empty"],
-            bar: t["records.glucose.bar"],
-            line: t["records.glucose.line"],
             timeline: t["records.glucose.timeline"],
             daily: t["records.glucose.daily"],
           }}
         />
       )}
 
-      <div className={`timeline${fullReport ? " full-report-log" : ""}`}>
-        {visibleMonthGroups.map((month) => (
-          <section key={month.key} className="timeline-month-group">
-            {!fullReport && <h3 className="timeline-month">{month.label}</h3>}
-            {month.days.map((day) => (
-              <div key={day.key} className="timeline-day-group">
-                <div className="timeline-day-head">
-                  <div className="timeline-day">
-                    {fullReport ? calendarDayLabel(day.key, lang) : day.label}
-                  </div>
-                  {fullReport && (
+      {fullReport && (
+        <div className="timeline full-report-log">
+          {visibleMonthGroups.map((month) => (
+            <section key={month.key} className="timeline-month-group">
+              {month.days.map((day) => (
+                <div key={day.key} className="timeline-day-group">
+                  <div className="timeline-day-head">
+                    <div className="timeline-day">{calendarDayLabel(day.key, lang)}</div>
                     <button
                       type="button"
                       className="full-day-edit-trigger"
@@ -562,9 +582,8 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
                     >
                       {t["records.edit"]}
                     </button>
-                  )}
-                </div>
-                {day.entries
+                  </div>
+                  {day.entries
                   .flatMap(({ record, events }) =>
                     fullReport
                       ? events.map((event) => ({ record, events: [event] }))
@@ -715,11 +734,12 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
                     </div>
                   );
                   })}
-              </div>
-            ))}
-          </section>
-        ))}
-      </div>
+                </div>
+              ))}
+            </section>
+          ))}
+        </div>
+      )}
       {fullReport && selectedDate && visibleMonthGroups.length === 0 && (
         <section className="usage-card records-date-empty">
           <span className="usage-title">{t["records.dateEmpty"]}</span>
