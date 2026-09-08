@@ -20,9 +20,11 @@ import {
 import { isMealRelatedItem } from "@/lib/groupMeals";
 import { STR, useUiLang } from "@/lib/i18n";
 import ConcludeModal from "./ConcludeModal";
+import DatePickerModal from "./DatePickerModal";
 import FullDayEditModal from "./FullDayEditModal";
 import GlucoseChart from "./GlucoseChart";
 import RecordEditModal, { type RecordEditDraft } from "./RecordEditModal";
+import ReportTransferControls from "./ReportTransferControls";
 import {
   extractGlucosePoints,
   filterGlucosePoints,
@@ -193,6 +195,8 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
   const [demoBusy, setDemoBusy] = useState(false);
   const [editingRecord, setEditingRecord] = useState<SavedRecord | null>(null);
   const [editingDay, setEditingDay] = useState<TimelineDayGroup | null>(null);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const lang = useUiLang();
   const t = STR[lang];
   const editingResult = useMemo(
@@ -401,19 +405,30 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
     }
     monthGroups.sort((a, b) => b.key.localeCompare(a.key));
   }
+  const visibleMonthGroups = selectedDate
+    ? monthGroups
+        .map((month) => ({
+          ...month,
+          days: month.days.filter((day) => day.key === selectedDate),
+        }))
+        .filter((month) => month.days.length > 0)
+    : monthGroups;
+  const recordCounts = Object.fromEntries(
+    monthGroups.flatMap((month) =>
+      month.days.map((day) => [day.key, day.entries.length] as const)
+    )
+  );
 
   return (
     <div className="usage-page">
       <div className="records-page-head">
         <div>
           <h2>{fullReport ? t["records.fullTitle"] : t["records.title"]}</h2>
-          <p className="usage-sub">
-            {fullReport
-              ? t["records.fullSub"]
-              : guest === true
-                ? t["records.subGuest"]
-                : t["records.subOwner"]}
-          </p>
+          {!fullReport && (
+            <p className="usage-sub">
+              {guest === true ? t["records.subGuest"] : t["records.subOwner"]}
+            </p>
+          )}
         </div>
         {guest === true && !fullReport && (
           <div className="records-demo-actions">
@@ -441,6 +456,57 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
           </div>
         )}
       </div>
+      {fullReport && records !== null && (
+        <div className="full-report-tools">
+          <div className="records-date-filter">
+            <div className="records-date-filter-controls">
+              <div className="records-date-picker">
+                <button
+                  type="button"
+                  className="records-date-trigger"
+                  onClick={() => setDatePickerOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-expanded={datePickerOpen}
+                >
+                  {selectedDate || t["records.dateFilter"]}
+                </button>
+              </div>
+              {selectedDate && (
+                <button type="button" onClick={() => setSelectedDate("")}>
+                  {t["records.dateClear"]}
+                </button>
+              )}
+            </div>
+          </div>
+          <ReportTransferControls
+            records={records}
+            guest={guest}
+            onImported={load}
+            labels={{
+              export: t["records.export"],
+              import: t["records.import"],
+              importing: t["records.importing"],
+              imported: (count) => t["records.imported"].replace("{count}", String(count)),
+              error: t["records.transferError"],
+            }}
+          />
+        </div>
+      )}
+      {fullReport && (
+        <DatePickerModal
+          open={datePickerOpen}
+          value={selectedDate}
+          locale={lang === "zh" ? "zh-CN" : "en-US"}
+          recordCounts={recordCounts}
+          labels={{
+            title: t["records.datePickerTitle"],
+            today: t["records.dateToday"],
+            cancel: t["records.dateCancel"],
+          }}
+          onClose={() => setDatePickerOpen(false)}
+          onSelect={setSelectedDate}
+        />
+      )}
 
       {error && <p className="conclusion-error">{error}</p>}
 
@@ -479,7 +545,7 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
       )}
 
       <div className={`timeline${fullReport ? " full-report-log" : ""}`}>
-        {monthGroups.map((month) => (
+        {visibleMonthGroups.map((month) => (
           <section key={month.key} className="timeline-month-group">
             {!fullReport && <h3 className="timeline-month">{month.label}</h3>}
             {month.days.map((day) => (
@@ -540,14 +606,43 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
                     <div className="timeline-mixed-events">
                       {events.map((event, index) => {
                         if (event.kind === "reading") {
-                          const derived = fullReport
-                            ? ""
-                            : localizeReadingPhase(event.phase, lang) ??
-                              readingPhase(event.time, lang);
+                          const derived =
+                            localizeReadingPhase(event.phase, lang) ??
+                            readingPhase(event.time, lang);
+                          if (fullReport) {
+                            return (
+                              <div
+                                key={`reading-${index}`}
+                                className="timeline-full-event"
+                              >
+                                <span className="timeline-full-title">
+                                  {displayMetricName(
+                                    event.item.name,
+                                    t["records.glucose.label"]
+                                  )}
+                                  {derived ? ` · ${derived}` : ""}
+                                </span>
+                                <span className="timeline-reading">
+                                  <span className="timeline-reading-main">
+                                    {event.item.value ? `${event.item.value}` : "—"}
+                                    {event.item.unit ? ` ${event.item.unit}` : ""}
+                                  </span>
+                                  {event.time && (
+                                    <span className="timeline-reading-time">
+                                      {displayEventTime(event.time, lang)}
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          }
                           return (
                             <span key={`reading-${index}`} className="timeline-reading">
                               <span className="timeline-reading-main">
-                                {displayMetricName(event.item.name, t["records.glucose.label"])}
+                                {displayMetricName(
+                                  event.item.name,
+                                  t["records.glucose.label"]
+                                )}
                                 {derived ? ` ${derived}` : ""}
                                 {event.item.value ? ` ${event.item.value}` : ""}
                                 {event.item.unit ? ` ${event.item.unit}` : ""}
@@ -561,13 +656,8 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
                           );
                         }
                         const meal = event.meal;
-                        return (
-                          <div key={`meal-${index}`} className="timeline-meal">
-                            {!fullReport && (
-                              <span className="meal-name">
-                                {mealNameForTime(meal.time, lang)}
-                              </span>
-                            )}
+                        const mealContent = (
+                          <>
                             {meal.time && (
                               <span className="meal-time">
                                 {displayEventTime(meal.time, lang)}
@@ -590,7 +680,21 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
                             ) : (
                               meal.foods && <span className="meal-foods">{meal.foods}</span>
                             )}
-                          </div>
+                          </>
+                        );
+                        const mealTitle = mealNameForTime(meal.time, lang);
+                        return (
+                          fullReport ? (
+                            <div key={`meal-${index}`} className="timeline-full-event">
+                              <span className="timeline-full-title">{mealTitle}</span>
+                              <div className="timeline-meal">{mealContent}</div>
+                            </div>
+                          ) : (
+                            <div key={`meal-${index}`} className="timeline-meal">
+                              <span className="meal-name">{mealTitle}</span>
+                              {mealContent}
+                            </div>
+                          )
                         );
                       })}
                     </div>
@@ -616,6 +720,11 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
           </section>
         ))}
       </div>
+      {fullReport && selectedDate && visibleMonthGroups.length === 0 && (
+        <section className="usage-card records-date-empty">
+          <span className="usage-title">{t["records.dateEmpty"]}</span>
+        </section>
+      )}
       {editingDay && (
         <FullDayEditModal
           dayLabel={calendarDayLabel(editingDay.key, lang)}

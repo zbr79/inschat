@@ -527,6 +527,90 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 ### Disproved
 - A generic editor title added useful context when the date itself already identifies the card.
 
+## 2026-09-07 — Show derived titles in Full report timeline
+### Solved
+- Full report meal cards now show time-derived titles such as 午餐 and 晚餐.
+- Blood-sugar cards now show a title combining the metric and localized phase, such as 血糖 · 午餐前.
+- Titles use the same active-language derivation as the editor.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Records without a parseable time fall back to the generic localized meal label or omit the phase suffix.
+### Disproved
+- Hiding meal and phase labels made the chronological Full report cards sufficiently identifiable.
+
+## 2026-09-07 — Move timeline titles outside event cards
+### Solved
+- Full report meal and blood-sugar titles now sit above their gray event cards.
+- Kept values, dishes, units, and times inside the cards.
+- Made the left timeline dot explicitly black and layered it above the vertical line.
+- Started the line at the dot edge so it no longer runs through the dot.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- Placing the title inside each card made the event hierarchy unnecessarily dense.
+
+## 2026-09-07 — Align Full report timeline connector
+### Solved
+- Offset the Full report connector below the dot's actual position after card padding.
+- Preserved the last event as the day timeline endpoint without a trailing line.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- The connector was not randomly extending above the dot; it was using the unpadded entry coordinate.
+
+## 2026-09-07 — Extend connector through the final Full report event
+### Solved
+- Kept the connector visible below the final event dot as requested.
+- All Full report timeline events now render the same connector treatment.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- The final connector intentionally continues through the bottom padding of the day card.
+### Disproved
+- Treating the last dot as a special endpoint did not match the requested timeline appearance.
+
+## 2026-09-07 — Add Full report date filter
+### Solved
+- Added a date picker above the Full report timeline.
+- Selecting a date now shows only that day's timeline card, with a clear action to restore all dates.
+- Added an explicit empty state when the selected date has no records.
+### Verified
+- Confirmed the production build and selected-date empty state during the final verification pass.
+### Unresolved
+- The filter is a single-date selector rather than a date-range selector.
+### Disproved
+- Requiring users to scroll through the entire account log was not necessary for finding a known date.
+
+## 2026-09-07 — Add Full report export and import
+### Solved
+- Moved date filtering above the first timeline card and removed the Full report description text.
+- Replaced the native empty date placeholder with a date-picker trigger button.
+- Added JSON export for the complete report.
+- Added JSON import that appends validated records for guest storage and authenticated accounts.
+- Removed duplicate date-filter text and anchored the calendar input to the visible date control.
+- Added distinct blue export and green import icons/buttons.
+- Replaced the unreliable native date picker with a centered calendar modal.
+- Added month navigation, localized weekday/month labels, Today, Cancel, Escape, and date selection actions.
+- Removed the modal backdrop blur and recorded a permanent no-blur project rule in `AGENTS.md`.
+- Added light-blue date backgrounds and accessible record counts for dates that contain saved records.
+### Verified
+- `npm run build` passed.
+- PM2 restarted successfully and the local Full report route returned HTTP 200.
+- Browser smoke test confirmed the controls precede the first card, the page description is removed, JSON export downloads, and guest JSON import appends a second report.
+- Final browser smoke test confirmed one visible date label and two transfer icons.
+- Browser smoke test confirmed the calendar modal is centered, opens from the single date control, and closes after selecting a date.
+- Verified the modal backdrop uses a solid translucent overlay without any blur effect.
+- Browser smoke test confirmed record-bearing dates receive the light-blue background and count label.
+### Unresolved
+- Imported records append to the existing report; duplicate detection is not performed.
+### Disproved
+- A page-level description and a native empty date input were not necessary for the Full report controls.
+
 ## 2026-09-06 — Suppress transient streaming trailing whitespace
 
 ### Solved
