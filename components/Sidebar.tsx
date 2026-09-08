@@ -7,20 +7,16 @@ import { Menu, X, SquarePen, Search, PanelLeft, Pin, PinOff, Settings, User, Mor
 import type { ChatSession } from "@/lib/types";
 import {
   clearGuestData,
-  deleteGuestRecord,
   deleteGuestSession,
-  listGuestRecords,
   listGuestSessions,
   pinGuestSession,
   renameGuestSession,
-  updateGuestRecord,
 } from "@/lib/guestStore";
 import { STR, useUiLang, setUiLang } from "@/lib/i18n";
 import SearchModal from "./SearchModal";
 import AuthModal from "./AuthModal";
 import ConfirmModal from "./ConfirmModal";
 import { useInsulinMode, useCompressImages } from "@/lib/prefs";
-import type { SavedRecord } from "@/lib/types";
 
 interface MeUser {
   _id: string;
@@ -73,7 +69,6 @@ export default function Sidebar() {
   const [deleteDataOpen, setDeleteDataOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authNonce, setAuthNonce] = useState(0);
-  const [records, setRecords] = useState<SavedRecord[] | null>(null);
   const [insulinMode, toggleInsulinMode] = useInsulinMode();
   const [compressImages, setCompressImages] = useCompressImages();
   const [menuFor, setMenuFor] = useState<{
@@ -83,13 +78,6 @@ export default function Sidebar() {
   } | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameText, setRenameText] = useState("");
-  const [recordMenuFor, setRecordMenuFor] = useState<{
-    id: string;
-    top: number;
-    left: number;
-  } | null>(null);
-  const [recordRenamingId, setRecordRenamingId] = useState<string | null>(null);
-  const [recordRenameText, setRecordRenameText] = useState("");
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     try {
@@ -120,8 +108,6 @@ export default function Sidebar() {
       setMenuOpen(false);
       setMenuFor(null);
       setRenamingId(null);
-      setRecordMenuFor(null);
-      setRecordRenamingId(null);
       setDeleteDataOpen(false);
     };
     window.addEventListener("keydown", onKey);
@@ -174,25 +160,8 @@ export default function Sidebar() {
         .then((response) => response.json())
         .then((body: { sessions: ChatSession[] }) => setSessions(body.sessions))
         .catch(() => {});
-      fetch("/api/records")
-        .then((response) => response.json())
-        .then((body: { records: SavedRecord[] }) => setRecords(body.records))
-        .catch(() => {});
     } else {
       setGuestSessions(listGuestSessions());
-      setRecords(
-        listGuestRecords().map((record) => ({
-          _id: record.id,
-          title: record.title,
-          summary: record.summary,
-          items: record.items,
-          meals: record.meals,
-          sourceText: record.sourceText,
-          savedAt: record.savedAt,
-          datetime: null,
-          pinned: record.pinned,
-        }))
-      );
     }
   }, [authChecked, user]);
 
@@ -265,88 +234,6 @@ export default function Sidebar() {
     } catch {}
   };
 
-  const removeRecord = async (id: string) => {
-    if (deleting) return;
-    setDeleting(id);
-    setRecordMenuFor(null);
-    try {
-      if (user) {
-        const response = await fetch(`/api/records?id=${encodeURIComponent(id)}`, {
-          method: "DELETE",
-        });
-        if (!response.ok) throw new Error("delete record failed");
-      } else {
-        deleteGuestRecord(id);
-      }
-      setRecords((prev) => prev?.filter((record) => record._id !== id) ?? null);
-    } catch {} finally {
-      setDeleting(null);
-    }
-  };
-
-  const renameRecord = async (id: string) => {
-    const title = recordRenameText.trim();
-    const record = records?.find((item) => item._id === id);
-    setRecordMenuFor(null);
-    setRecordRenamingId(null);
-    if (!title || !record) return;
-    const patch = {
-      title,
-      summary: record.summary,
-      items: record.items,
-      meals: record.meals,
-      sourceText: record.sourceText,
-    };
-    try {
-      if (user) {
-        const response = await fetch(`/api/records?id=${encodeURIComponent(id)}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(patch),
-        });
-        if (!response.ok) throw new Error("rename record failed");
-      } else {
-        updateGuestRecord(id, patch);
-      }
-      setRecords((prev) =>
-        prev?.map((item) => (item._id === id ? { ...item, title } : item)) ?? null
-      );
-    } catch {}
-  };
-
-  const toggleRecordPin = async (record: SavedRecord) => {
-    const pinned = !record.pinned;
-    setRecordMenuFor(null);
-    const patch = {
-      title: record.title,
-      summary: record.summary,
-      items: record.items,
-      meals: record.meals,
-      sourceText: record.sourceText,
-      pinned,
-    };
-    try {
-      if (user) {
-        const response = await fetch(`/api/records?id=${encodeURIComponent(record._id)}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(patch),
-        });
-        if (!response.ok) throw new Error("pin record failed");
-      } else {
-        updateGuestRecord(record._id, patch);
-      }
-      setRecords((prev) =>
-        prev
-          ?.map((item) => (item._id === record._id ? { ...item, pinned } : item))
-          .sort(
-            (a, b) =>
-              Number(b.pinned ?? false) - Number(a.pinned ?? false) ||
-              b.savedAt.localeCompare(a.savedAt)
-          ) ?? null
-      );
-    } catch {}
-  };
 
   const logout = async () => {
     try {
@@ -476,108 +363,6 @@ export default function Sidebar() {
       )}
     </div>
   );
-
-  const renderRecordRow = (record: SavedRecord) => {
-    const { _id: id, title, pinned = false } = record;
-    return (
-      <div key={id} className={`session-row${pinned ? " pinned" : ""}`}>
-        {recordRenamingId === id ? (
-          <input
-            type="text"
-            className="rename-input"
-            value={recordRenameText}
-            autoFocus
-            onFocus={(event) => {
-              event.target.setSelectionRange(0, 0);
-              event.target.scrollLeft = 0;
-            }}
-            onChange={(event) => setRecordRenameText(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") renameRecord(id);
-              if (event.key === "Escape") setRecordRenamingId(null);
-            }}
-            onBlur={() => renameRecord(id)}
-            aria-label={t["nav.rename"]}
-          />
-        ) : (
-          <Link
-            href="/records"
-            className="session-link"
-            title={title}
-            onClick={() => setMenuOpen(false)}
-          >
-            <FitTitle title={title} />
-          </Link>
-        )}
-        <button
-          type="button"
-          className="session-more"
-          aria-label={t["nav.more"]}
-          title={t["nav.more"]}
-          onClick={(event) => {
-            if (recordMenuFor?.id === id) {
-              setRecordMenuFor(null);
-              return;
-            }
-            const rect = event.currentTarget.getBoundingClientRect();
-            const menuWidth = 150;
-            const left =
-              rect.right + 6 + menuWidth > window.innerWidth
-                ? rect.left - menuWidth - 6
-                : rect.right + 6;
-            const top = Math.max(8, Math.min(rect.top, window.innerHeight - 130));
-            setRecordMenuFor({ id, top, left });
-            setRecordRenamingId(null);
-          }}
-        >
-          <MoreHorizontal size={15} />
-        </button>
-        {recordMenuFor?.id === id && (
-          <>
-            <div
-              className="row-menu-backdrop"
-              onClick={() => setRecordMenuFor(null)}
-              aria-hidden="true"
-            />
-            <div
-              className="row-menu"
-              style={{ top: recordMenuFor.top, left: recordMenuFor.left }}
-            >
-              <button
-                type="button"
-                className="row-menu-item"
-                onClick={() => {
-                  setRecordRenamingId(id);
-                  setRecordRenameText(title);
-                  setRecordMenuFor(null);
-                }}
-              >
-                <Pencil size={14} />
-                {t["nav.rename"]}
-              </button>
-              <button
-                type="button"
-                className="row-menu-item"
-                onClick={() => toggleRecordPin(record)}
-              >
-                {pinned ? <PinOff size={14} /> : <Pin size={14} />}
-                {pinned ? t["nav.unpin"] : t["nav.pin"]}
-              </button>
-              <button
-                type="button"
-                className="row-menu-item danger"
-                disabled={deleting !== null}
-                onClick={() => removeRecord(id)}
-              >
-                <Trash2 size={14} />
-                {t["nav.delete"]}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    );
-  };
 
   return (
     <>
@@ -729,13 +514,17 @@ export default function Sidebar() {
             </button>
           </div>
           {!recordsCollapsed && (
-            <div className="session-list">
-              {records === null && <p className="session-hint">{t["nav.loading"]}</p>}
-              {records !== null && records.length === 0 && (
-                <p className="session-hint">{t["records.empty"]}</p>
-              )}
-              {records?.map((record) => renderRecordRow(record))}
-            </div>
+            <Link
+              href="/records"
+              className={`sidebar-report-link${pathname === "/records" ? " active" : ""}`}
+              onClick={() => setMenuOpen(false)}
+              aria-current={pathname === "/records" ? "page" : undefined}
+            >
+              <Activity size={15} aria-hidden="true" />
+              <span className="sidebar-label sidebar-catalog-label">
+                {t["nav.reportTimeline"]}
+              </span>
+            </Link>
           )}
         </div>
       )}
@@ -910,7 +699,6 @@ export default function Sidebar() {
         onConfirm={() => {
           clearGuestData();
           setGuestSessions([]);
-          setRecords([]);
           setDeleteDataOpen(false);
           setSettingsOpen(false);
           if (currentSession) router.replace("/");

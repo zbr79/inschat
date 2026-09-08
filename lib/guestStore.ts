@@ -34,6 +34,7 @@ export interface GuestRecord {
 
 const SESSIONS_KEY = "inschat_guest_sessions";
 const RECORDS_KEY = "inschat_guest_records";
+export const DEMO_RECORD_PREFIX = "demo-glucose-";
 
 function newId(): string {
   return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -171,6 +172,60 @@ export function listGuestRecords(): GuestRecord[] {
       Number(b.pinned ?? false) - Number(a.pinned ?? false) ||
       b.savedAt.localeCompare(a.savedAt)
   );
+}
+
+function localDateKey(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function demoReadingItems(date: Date, dayIndex: number): ConcludeItem[] {
+  const key = localDateKey(date);
+  const wave = Math.sin(dayIndex * 0.62) * 8 + Math.cos(dayIndex * 0.19) * 4;
+  const readings = [
+    { hour: "07:30", value: 92 + wave },
+    { hour: "09:15", value: 128 + wave * 1.25 },
+    { hour: "15:30", value: 104 - wave * 0.65 },
+    { hour: "17:30", value: 142 + wave * 1.4 },
+  ];
+  return readings.flatMap(({ hour, value }) => [
+    { name: "glucose", value: String(Math.round(value)), unit: "mg/dL" },
+    { name: "time", value: `${key} ${hour}` },
+  ]);
+}
+
+export function addDemoGlucoseRecords(days = 60): number {
+  if (typeof window === "undefined") return 0;
+  const safeDays = Math.max(1, Math.min(days, 180));
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const demoRecords: GuestRecord[] = [];
+  for (let offset = safeDays - 1; offset >= 0; offset -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - offset);
+    const dateKey = localDateKey(date);
+    demoRecords.push({
+      id: `${DEMO_RECORD_PREFIX}${dateKey}`,
+      title: `Demo glucose · ${dateKey}`,
+      summary: "Synthetic demo data: four glucose readings for chart testing.",
+      items: demoReadingItems(date, safeDays - 1 - offset),
+      savedAt: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59).toISOString(),
+      pinned: false,
+    });
+  }
+  const records = readJson<GuestRecord[]>(RECORDS_KEY, []).filter(
+    (record) => !record.id.startsWith(DEMO_RECORD_PREFIX)
+  );
+  return writeJson(RECORDS_KEY, [...demoRecords, ...records]) ? demoRecords.length : 0;
+}
+
+export function removeDemoGlucoseRecords(): number {
+  if (typeof window === "undefined") return 0;
+  const records = readJson<GuestRecord[]>(RECORDS_KEY, []);
+  const remaining = records.filter((record) => !record.id.startsWith(DEMO_RECORD_PREFIX));
+  const removed = records.length - remaining.length;
+  writeJson(RECORDS_KEY, remaining);
+  return removed;
 }
 
 export function addGuestRecord(input: {
