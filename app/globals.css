@@ -2132,6 +2132,179 @@ span.conclude-rank-badge {
   margin-top: 18px;
 }
 
+.record-insights {
+  margin-top: 14px;
+}
+
+.record-insights-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.record-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.record-insight-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--bg-soft);
+}
+
+.record-insight-glucose {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.record-insight-stat + .record-insight-stat {
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.record-insight-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.record-insight-label,
+.record-insight-meals > span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.record-insight-card-head .record-insight-label {
+  min-width: 0;
+  flex: 1;
+}
+
+.record-insight-value-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.record-insight-value-row strong {
+  margin-top: 0;
+}
+
+.record-insight-increase {
+  color: #dc2626;
+  font-size: 0.8em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.record-insight-decrease {
+  color: #2e7d32;
+  font-size: 0.8em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.record-insight-unit {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.record-insight-card strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.record-insight-value-row strong {
+  margin-top: 0;
+}
+
+.record-insight-card small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.record-insight-card .record-insight-date {
+  flex: 0 0 auto;
+  margin-top: 0;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.record-insight-meals {
+  margin-top: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.record-insight-meals em {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: normal;
+}
+
+.record-insight-reverse {
+  margin-top: 10px;
+}
+
+.record-insight-reverse-foods {
+  margin-top: 10px;
+}
+
+.record-insight-foods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 0;
+}
+
+.record-insight-food-bubble {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--text) !important;
+  font-size: 11px !important;
+  line-height: 1.2;
+}
+
+.record-insight-food-bubble.rank-low {
+  border-color: #a5d6a7;
+  background: #e8f5e9;
+  color: #2e7d32 !important;
+}
+
+.record-insight-food-bubble.rank-mid {
+  border-color: #ffe082;
+  background: #fff8e1;
+  color: #f9a825 !important;
+}
+
+.record-insight-food-bubble.rank-high {
+  border-color: #ef9a9a;
+  background: #ffebee;
+  color: #c62828 !important;
+}
+
 .glucose-chart-head {
   display: flex;
   align-items: flex-start;
@@ -2226,22 +2399,6 @@ span.conclude-rank-badge {
   font-size: 11px;
 }
 
-.glucose-bar {
-  fill: #60a5fa;
-  opacity: 0.86;
-}
-
-.glucose-bar:hover {
-  fill: #2563eb;
-  opacity: 1;
-}
-
-.glucose-bar-value {
-  fill: var(--text) !important;
-  font-size: 10px !important;
-  font-weight: 600;
-}
-
 .glucose-line {
   fill: none;
   stroke: #2563eb;
@@ -2263,11 +2420,6 @@ span.conclude-rank-badge {
   fill: var(--bg);
   stroke: #2563eb;
   stroke-width: 2.5;
-}
-
-.glucose-baseline {
-  stroke: var(--text-muted);
-  stroke-width: 1.25;
 }
 
 .glucose-chart-empty {
@@ -2934,6 +3086,10 @@ span.conclude-rank-badge {
 
   .glucose-chart-controls {
     justify-content: flex-start;
+  }
+
+  .record-insights-grid {
+    grid-template-columns: 1fr;
   }
 
   .record-edit-item,

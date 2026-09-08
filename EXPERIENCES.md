@@ -611,6 +611,42 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 ### Disproved
 - A page-level description and a native empty date input were not necessary for the Full report controls.
 
+## 2026-09-07 — Simplify the Brief report page
+### Solved
+- Renamed the timeline page and sidebar entry to `简报` in Chinese.
+- Removed guest/owner descriptions, demo data controls, demo preview text, and the glucose chart subtitle.
+- Removed the detailed record timeline list from the Brief report page while keeping the glucose chart.
+### Verified
+- `npm run build` passed.
+- PM2 restarted successfully and `/records` returned HTTP 200.
+- Browser smoke test confirmed the chart remains visible while the detailed timeline, edit, and delete controls are absent.
+### Unresolved
+- The Full report page remains separately labeled `完整报告`.
+### Disproved
+- The removed descriptions and demo-preview controls were not necessary for the Brief report view.
+
+## 2026-09-07 — Add 30-day report insights
+### Solved
+- Removed the bar-chart mode and kept the glucose chart as line/daily views.
+- Added a 30-day insights section for highest blood sugar, lowest blood sugar, and the largest same-phase glucose difference across consecutive day pairs.
+- Added deduplicated meals for both dates in the winning consecutive pair.
+- Changed meal details to show only the higher-glucose day.
+- Rendered that day's foods as rank-colored bubbles.
+- Changed the display labels from insulin to blood sugar without changing stored record names.
+- Kept meal categories and food bubbles on one row, ordered from high impact to low impact.
+### Verified
+- `npm run build` passed.
+- PM2 restarted successfully and `/records` returned HTTP 200.
+- Browser smoke test confirmed consecutive day pairs are compared, with older non-adjacent days excluded.
+- Browser smoke test confirmed the largest pair shows `105 → 130` for `晚餐前` and duplicate meals are collapsed.
+- Browser smoke test confirmed only the higher-glucose day's foods are shown with low/medium/high green, yellow, and red bubbles.
+- Browser smoke test confirmed highest/lowest metrics display blood sugar labels and foods order high → medium → low.
+### Unresolved
+- Insights require parseable numeric glucose readings, timestamps, and explicit phase tags.
+- If fewer than two tagged days exist, the phase comparison has no result.
+### Disproved
+- A bar-chart toggle was not needed alongside the new summary metrics.
+
 ## 2026-09-06 — Suppress transient streaming trailing whitespace
 
 ### Solved
@@ -2129,5 +2165,226 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - PM2 restarted and the app returned HTTP 200.
 ### Unresolved
 - n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Match insights to chart interval
+### Solved
+- Connected the Brief report insights to the Glucose Chart interval selector.
+- Replaced the fixed 30-day window with matching 1-day, 7-day, 3-month, 1-year, or all-record windows.
+- Made the insights heading show the selected interval and removed stale 30-day wording from the metric labels.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the 7-day summary excluded an older high reading, while All records included it and updated the period label.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Move insight dates to card header
+### Solved
+- Moved the highest and lowest glucose dates into the top-right area of their insight cards.
+- Kept the metric label and value grouped in the card's main content area.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the dates render at the card's top-right corner.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Persist chart interval selection
+### Solved
+- Added a validated local-storage preference for the selected glucose chart interval.
+- Restored the saved 1-day, 7-day, 3-month, 1-year, or all-record choice after refreshing the Brief report.
+### Verified
+- `npm run build` passed.
+- Guest browser probing selected the 3-month interval, confirmed the storage key, refreshed the page, and confirmed the selector remained on 3 months.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- The preference is browser-local; no account settings endpoint currently exists for cross-device synchronization.
+### Disproved
+- n/a
+
+## 2026-09-08 — Combine glucose summary cards
+### Solved
+- Changed the insights layout from three cards to two columns.
+- Combined highest and lowest blood sugar into one card with stacked top and bottom sections.
+- Kept the biggest-difference insight as the second card.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed two outer cards, two stacked glucose sections, and a separate difference card.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Clarify biggest increase card
+### Solved
+- Renamed the comparison title to Biggest increase / 最大升幅.
+- Added a yearless date range in the card header with an arrow, such as September 6th → September 7th.
+- Kept the phase and increase amount below the glucose values and retained the meal details.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the title, ordinal date range, glucose values, phase, and meal section.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Remove meal heading and date
+### Solved
+- Removed the “Foods on the higher-glucose day” / “血糖较高当天吃了什么” heading from the biggest-increase card.
+- Removed the separate higher-glucose date line while preserving meal categories and food bubbles.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the meal heading and separate date are absent while the comparison details remain.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Format increase as lower-to-higher
+### Solved
+- Changed the biggest-increase value display to put the phase first, then the lower reading, higher reading, and upward delta.
+- Example: `Before breakfast 115 → 120 (↑ 5 mg/dL)`.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed a chronological decrease is displayed as the requested lower-to-higher increase.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — De-emphasize glucose units
+### Solved
+- Moved highest and lowest glucose units to smaller gray text aligned at the lower-right of each value section.
+- Changed comparison dates to compact numeric month/day format, such as `9/3 → 9/4`.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed both units remain visible at the right edge and comparison dates contain no year.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Compact highest and lowest dates
+### Solved
+- Changed the highest and lowest glucose dates to numeric month/day format, such as `9/30`.
+- Kept comparison dates in the same compact format.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed all insight dates render as month/day values without year or month names.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Put comparison phase in title
+### Solved
+- Changed the comparison title to include the localized phase, such as `Highest increase · Before dinner`.
+- Removed the phase and unit from the main value string.
+- Kept the value as lower → higher with the parenthetical increase, while moving the unit to the shared bottom-right unit treatment.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the title, `115 → 120 (↑ 5)` value, and separate `mg/dL` unit.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Use red triangle for increase
+### Solved
+- Removed parentheses around the increase delta.
+- Replaced the upward arrow with a small red triangle and red delta text, such as `▲ 5`.
+- Left the unit in the separate bottom-right unit position.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the indicator renders as `▲ 5` in red with no parentheses.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Aggregate comparison-day food bubbles
+### Solved
+- Removed meal-category labels from the comparison food display.
+- Switched the food source to all meals from the earlier day in the two-day comparison.
+- Flattened and sorted foods by impact, showing high-impact bubbles first, then medium-impact bubbles.
+- Excluded low-impact foods and moved the divider below the bubble row.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed four bubbles in high/high/medium/medium order, no low-impact bubble, no meal label, and a bottom divider.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- Unranked foods are excluded along with low-impact foods so the display stays limited to high and medium impact.
+### Disproved
+- n/a
+
+## 2026-09-08 — Cap foods and add decrease comparison
+### Solved
+- Limited both food lists to a maximum of three bubbles.
+- Added a separated decrease section showing higher → lower glucose with a green down triangle and the same unit/date treatment.
+- Added up to three low-impact green foods from the paired comparison day to the decrease section.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed three upper high/medium foods, three lower low-impact foods, matching dates, and the decrease section below the divider.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Tighten summary and move chart below
+### Solved
+- Reduced insight card padding, section gaps, and divider spacing.
+- Reordered the Brief report so the summary appears above the glucose chart.
+- Left the Full Report timeline order unchanged.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the summary renders before the chart and the stacked summary-section gap is 10px.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Replace demo data with Chinese timestamp-driven records
+### Solved
+- Replaced English synthetic dishes with detailed Chinese, Korean, and Asian dishes using meaningful high/medium/low impact ranks.
+- Removed demo record titles, summaries, and explicit phase fields; phases are now derived from entered timestamps.
+- Ensured each demo day has one glucose reading per time slot without duplicate same-phase readings.
+- Added a planned approximately 120 mg/dL baseline, occasional 108 mg/dL lows, and a 180 mg/dL spike after a high-impact meal day.
+- Updated insight phase matching to derive the phase from reading time when no stored phase exists.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed timestamp-only readings produce the derived “Before dinner” phase and both increase/decrease comparison values.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- The visible demo-data controls remain removed from the Brief report; this update changes the existing guest-store demo generator for callers that use it.
+### Disproved
+- The first browser probe assumed one comparison title and failed because the new card correctly has both increase and decrease titles; the probe was corrected to target the first title.
+
+## 2026-09-08 — Restore example data controls
+### Solved
+- Restored guest-only Load example data and Remove example data buttons.
+- Added a recent 108 mg/dL example so low data appears in the generated report.
+- Added Chinese and English labels for the controls.
+### Verified
+- `npm run build` passed.
+- Guest browser probing clicked Load example data and confirmed 30 records, blank titles, no stored phase fields, one reading per derived phase, 108 and 180 examples, CJK dish names, and the Remove example data button.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- The controls remain guest-only; authenticated accounts continue to use server records.
 ### Disproved
 - n/a
