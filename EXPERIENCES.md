@@ -2388,3 +2388,30 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - The controls remain guest-only; authenticated accounts continue to use server records.
 ### Disproved
 - n/a
+
+## 2026-09-08 — Add compact high-impact food summary
+### Solved
+- Added a third stacked section below Lowest blood sugar in the left summary card.
+- Aggregated high and medium-impact foods across the selected interval.
+- Sorted foods by impact, then occurrence count, and limited the list to five bubbles with counts.
+- Kept low-impact foods out of this dangerous-food list.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the third section is below Lowest blood sugar and displays counted high/medium foods with a maximum of five.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Remove visible food counts
+### Solved
+- Kept occurrence frequency for internal ranking but removed all visible `×1`/`×2` counts from food bubbles.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed dangerous-food bubbles contain names only.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a

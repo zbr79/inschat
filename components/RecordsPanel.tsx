@@ -541,6 +541,7 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
             lowestGlucose: t["records.insights.lowestGlucose"],
             biggestJump: t["records.insights.biggestJump"],
             biggestDecrease: t["records.insights.biggestDecrease"],
+            dangerousFoods: t["records.insights.dangerousFoods"],
             noData: t["records.insights.noData"],
             noMeals: t["records.insights.noMeals"],
           }}

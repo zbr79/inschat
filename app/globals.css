@@ -2268,6 +2268,18 @@ span.conclude-rank-badge {
   margin-top: 10px;
 }
 
+.record-insight-dangerous-stat .record-insight-foods {
+  margin-top: 8px;
+}
+
+.record-insight-empty {
+  display: block;
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: normal;
+}
+
 .record-insight-foods {
   display: flex;
   flex-wrap: wrap;
