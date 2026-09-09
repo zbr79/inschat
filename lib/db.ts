@@ -271,10 +271,54 @@ export async function appendReportEntry(
     pinned: false,
   };
   const db = await getDb();
-  await db.collection<AccountReportDoc>("account_reports").updateOne(
-    { _id: report._id },
-    { $push: { entries: entry }, $set: { updatedAt: now } }
-  );
+  const reports = db.collection<AccountReportDoc>("account_reports");
+  if (input.sessionId) {
+    const set: Record<string, unknown> = {
+      "entries.$[entry].title": input.title,
+      "entries.$[entry].summary": input.summary,
+      "entries.$[entry].items": input.items,
+      "entries.$[entry].meals": input.meals ?? null,
+      "entries.$[entry].sourceText": input.sourceText ?? null,
+      updatedAt: now,
+    };
+    if (input.recordedAt !== undefined) {
+      set["entries.$[entry].recordedAt"] = recordedAt;
+      set["entries.$[entry].datetime"] = recordedAt;
+    }
+    const updated = await reports.findOneAndUpdate(
+      { _id: report._id, "entries.sessionId": input.sessionId },
+      { $set: set },
+      {
+        arrayFilters: [{ "entry.sessionId": input.sessionId }],
+        returnDocument: "after",
+      }
+    );
+    const updatedEntry = updated?.entries.find(
+      (candidate) => candidate.sessionId === input.sessionId
+    );
+    if (updatedEntry) return toSavedReportEntry(updatedEntry);
+
+    const inserted = await reports.findOneAndUpdate(
+      { _id: report._id, "entries.sessionId": { $ne: input.sessionId } },
+      { $push: { entries: entry }, $set: { updatedAt: now } },
+      { returnDocument: "after" }
+    );
+    const insertedEntry = inserted?.entries.find(
+      (candidate) => candidate.sessionId === input.sessionId
+    );
+    if (insertedEntry) return toSavedReportEntry(insertedEntry);
+
+    const raced = await reports.findOne({ _id: report._id });
+    const racedEntry = raced?.entries.find(
+      (candidate) => candidate.sessionId === input.sessionId
+    );
+    if (racedEntry) return toSavedReportEntry(racedEntry);
+  } else {
+    await reports.updateOne(
+      { _id: report._id },
+      { $push: { entries: entry }, $set: { updatedAt: now } }
+    );
+  }
   return toSavedReportEntry(entry);
 }
 
@@ -513,8 +557,59 @@ interface MessageDoc {
   text: string;
   images?: ChatImage[];
   model?: string;
+  trying?: string;
   elapsed?: number;
   createdAt: Date;
+  status?: "pending" | "complete" | "failed" | "done";
+  startedAt?: Date;
+  updatedAt?: Date;
+  processSteps?: string[];
+}
+
+const MAX_MESSAGE_TEXT = 100_000;
+// Model messages stream server-side heartbeats every 10 s while a run is
+// live; a pending doc untouched for this long has missed ~9 beats, so the
+// process that owned it is gone.
+const PENDING_STALE_MS = 90_000;
+
+// A pending doc whose heartbeat went stale has no live handler left. If it
+// streamed an answer, that answer is real — only the finalizer died — so
+// close it as complete rather than flagging a complete reply "interrupted".
+function stalePendingOutcome(doc: { text?: string }): {
+  status: "complete" | "failed";
+  text: string;
+} {
+  if (doc.text?.trim()) return { status: "complete", text: doc.text };
+  return {
+    status: "failed",
+    text: "[Interrupted — the server stopped before finishing this reply.]",
+  };
+}
+
+const MAX_PROCESS_STEPS = 80;
+const MAX_PROCESS_STEP_LEN = 180;
+
+function sanitizeProcessSteps(steps: string[] | undefined): string[] | undefined {
+  if (!steps?.length) return undefined;
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of steps) {
+    if (typeof raw !== "string") continue;
+    const clean = raw.replace(/^\s*\u2192\s+/, "").trim().slice(0, MAX_PROCESS_STEP_LEN);
+    if (!clean || seen.has(clean)) continue;
+    seen.add(clean);
+    out.push(clean);
+    if (out.length >= MAX_PROCESS_STEPS) break;
+  }
+  return out.length ? out : undefined;
+}
+
+/** Normalize agent "done" to inschat "complete" for shared Mongo docs. */
+function normalizeStatus(
+  status: MessageDoc["status"] | undefined
+): StoredMessage["status"] | undefined {
+  if (status === "done") return "complete";
+  return status;
 }
 
 function toChatSession(doc: SessionDoc): ChatSession {
@@ -535,8 +630,13 @@ function toStoredMessage(doc: MessageDoc): StoredMessage {
     text: doc.text,
     images: doc.images,
     model: doc.model,
+    trying: doc.trying,
     elapsed: doc.elapsed,
     createdAt: doc.createdAt.toISOString(),
+    status: normalizeStatus(doc.status),
+    startedAt: doc.startedAt?.toISOString(),
+    updatedAt: doc.updatedAt?.toISOString(),
+    processSteps: doc.processSteps,
   };
 }
 
@@ -579,6 +679,25 @@ export async function getSessionWithMessages(
     .find({ sessionId: new ObjectId(id) })
     .sort({ createdAt: 1 })
     .toArray();
+  // Safety net: a server restart kills detached runs, leaving their pending
+  // docs orphaned. Anything whose heartbeat went stale is closed here ?
+  // complete when an answer was streamed, failed only when nothing was.
+  const cutoff = Date.now() - PENDING_STALE_MS;
+  for (const doc of docs) {
+    if (doc.status !== "pending") continue;
+    if ((doc.updatedAt ?? doc.createdAt).getTime() > cutoff) continue;
+    const outcome = stalePendingOutcome(doc);
+    const now = new Date();
+    await db
+      .collection<MessageDoc>("messages")
+      .updateOne(
+        { _id: doc._id },
+        { $set: { status: outcome.status, text: outcome.text, updatedAt: now } }
+      );
+    doc.status = outcome.status;
+    doc.text = outcome.text;
+    doc.updatedAt = now;
+  }
   return {
     session: toChatSession(session),
     messages: docs.map(toStoredMessage),
@@ -633,6 +752,7 @@ export async function appendMessage(
     text: string;
     images?: ChatImage[];
     model?: string;
+    trying?: string;
     elapsed?: number;
   }
 ): Promise<StoredMessage | null> {
@@ -645,8 +765,11 @@ export async function appendMessage(
     text: input.text,
     images: input.images,
     model: input.model,
+    trying: input.trying,
     elapsed: input.elapsed,
     createdAt: now,
+    status: "complete",
+    updatedAt: now,
   };
   await db.collection<MessageDoc>("messages").insertOne(doc);
   const updated = await db
@@ -657,6 +780,175 @@ export async function appendMessage(
     );
   if (updated.matchedCount === 0) return null;
   return toStoredMessage(doc);
+}
+
+export async function startPendingMessage(
+  userId: string,
+  sessionId: string,
+  input: { messageId?: string; startedAt?: Date }
+): Promise<StoredMessage | null> {
+  if (!ObjectId.isValid(sessionId)) return null;
+  const db = await getDb();
+  const now = input.startedAt ?? new Date();
+  const session = await db.collection<SessionDoc>("sessions").findOne({
+    _id: new ObjectId(sessionId),
+    userId: new ObjectId(userId),
+  });
+  if (!session) return null;
+  const doc: MessageDoc = {
+    _id: input.messageId && ObjectId.isValid(input.messageId)
+      ? new ObjectId(input.messageId)
+      : undefined,
+    sessionId: new ObjectId(sessionId),
+    role: "model",
+    text: "",
+    createdAt: now,
+    startedAt: now,
+    updatedAt: now,
+    status: "pending",
+  };
+  const result = await db.collection<MessageDoc>("messages").insertOne(doc);
+  await db.collection<SessionDoc>("sessions").updateOne(
+    { _id: new ObjectId(sessionId), userId: new ObjectId(userId) },
+    { $set: { updatedAt: now } }
+  );
+  return toStoredMessage({ ...doc, _id: result.insertedId });
+}
+
+export async function updatePendingMessage(
+  userId: string,
+  sessionId: string,
+  messageId: string,
+  patch: {
+    text: string;
+    model?: string;
+    trying?: string;
+    elapsed?: number;
+    status?: "pending" | "complete" | "failed";
+    processSteps?: string[];
+  }
+): Promise<StoredMessage | null> {
+  if (!ObjectId.isValid(sessionId) || !ObjectId.isValid(messageId)) return null;
+  const now = new Date();
+  const db = await getDb();
+  const session = await db.collection<SessionDoc>("sessions").findOne({
+    _id: new ObjectId(sessionId),
+    userId: new ObjectId(userId),
+  });
+  if (!session) return null;
+  const status = patch.status ?? "pending";
+  const set: Record<string, unknown> = {
+    text: patch.text.slice(0, MAX_MESSAGE_TEXT),
+    status,
+    updatedAt: now,
+  };
+  if (patch.model !== undefined) set.model = patch.model;
+  if (patch.trying !== undefined) set.trying = patch.trying;
+  if (patch.elapsed !== undefined) set.elapsed = patch.elapsed;
+  if (patch.processSteps !== undefined) {
+    const steps = sanitizeProcessSteps(patch.processSteps);
+    if (steps) set.processSteps = steps;
+  }
+  // Progress heartbeats must not clobber a finalized message.
+  const filter: Record<string, unknown> = {
+    _id: new ObjectId(messageId),
+    sessionId: new ObjectId(sessionId),
+    role: "model",
+  };
+  if (status === "pending") filter.status = "pending";
+  const result = await db
+    .collection<MessageDoc>("messages")
+    .findOneAndUpdate(filter, { $set: set }, { returnDocument: "after" });
+  if (!result) return null;
+  await db.collection<SessionDoc>("sessions").updateOne(
+    { _id: new ObjectId(sessionId), userId: new ObjectId(userId) },
+    { $set: { updatedAt: now } }
+  );
+  return toStoredMessage(result);
+}
+
+// Client-driven finalize: the browser received a complete answer, so close
+// the placeholder even if the handler died before its own finalize. Filtered
+// to status "pending". Client text only wins when longer than last heartbeat.
+export async function finalizePendingMessage(
+  userId: string,
+  sessionId: string,
+  messageId: string,
+  input: { text?: string; elapsed?: number }
+): Promise<boolean> {
+  if (
+    !ObjectId.isValid(userId) ||
+    !ObjectId.isValid(sessionId) ||
+    !ObjectId.isValid(messageId)
+  ) {
+    return false;
+  }
+  const db = await getDb();
+  const owned = await db
+    .collection<SessionDoc>("sessions")
+    .findOne(
+      { _id: new ObjectId(sessionId), userId: new ObjectId(userId) },
+      { projection: { _id: 1 } }
+    );
+  if (!owned) return false;
+  const doc = await db
+    .collection<MessageDoc>("messages")
+    .findOne(
+      { _id: new ObjectId(messageId), sessionId: new ObjectId(sessionId), status: "pending" },
+      { projection: { text: 1 } }
+    );
+  if (!doc) return false;
+  const set: Record<string, unknown> = { status: "complete", updatedAt: new Date() };
+  if (input.elapsed !== undefined) set.elapsed = input.elapsed;
+  if (
+    typeof input.text === "string" &&
+    input.text.trim() &&
+    input.text.length > (doc.text?.length ?? 0)
+  ) {
+    set.text = input.text.slice(0, MAX_MESSAGE_TEXT);
+  }
+  const result = await db
+    .collection<MessageDoc>("messages")
+    .updateOne({ _id: doc._id, status: "pending" }, { $set: set });
+  return result.matchedCount > 0;
+}
+
+export async function getSessionMessage(
+  userId: string,
+  sessionId: string,
+  messageId: string
+): Promise<StoredMessage | null> {
+  if (!ObjectId.isValid(sessionId) || !ObjectId.isValid(messageId)) return null;
+  const db = await getDb();
+  const session = await db.collection<SessionDoc>("sessions").findOne({
+    _id: new ObjectId(sessionId),
+    userId: new ObjectId(userId),
+  });
+  if (!session) return null;
+  let message = await db.collection<MessageDoc>("messages").findOne({
+    _id: new ObjectId(messageId),
+    sessionId: new ObjectId(sessionId),
+  });
+  if (!message) return null;
+  if (
+    message.status === "pending" &&
+    Date.now() - (message.updatedAt ?? message.createdAt).getTime() > PENDING_STALE_MS
+  ) {
+    const outcome = stalePendingOutcome(message);
+    message =
+      (await db.collection<MessageDoc>("messages").findOneAndUpdate(
+        { _id: message._id, status: "pending" },
+        {
+          $set: {
+            status: outcome.status,
+            text: outcome.text,
+            updatedAt: new Date(),
+          },
+        },
+        { returnDocument: "after" }
+      )) ?? message;
+  }
+  return toStoredMessage(message);
 }
 
 // Revert: keep the first `keep` messages of the session, delete the rest.

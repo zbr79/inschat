@@ -6,6 +6,9 @@ const MODEL_PREFIX = `${MARK}MODEL:`;
 const TRYING_PREFIX = `${MARK}TRYING:`;
 const LIMIT_PREFIX = `${MARK}LIMIT:`;
 const FREE_PREFIX = `${MARK}FREE:`;
+// No-op chunk pushed while tools/models run silently so proxies
+// never see an idle connection and drop it. Stripped by the parser.
+const KEEP_PREFIX = `${MARK}KEEP:`;
 
 export function encodeModelMarker(model: string): string {
   return `${MODEL_PREFIX}${model}${MARK}`;
@@ -25,6 +28,10 @@ export function encodeFreeMarker(): string {
   return `${FREE_PREFIX}${MARK}`;
 }
 
+export function encodeKeepMarker(): string {
+  return `${KEEP_PREFIX}${MARK}`;
+}
+
 interface Parsed {
   text: string;
   model?: string;
@@ -38,6 +45,7 @@ function markerValue(inner: string): { model?: string; trying?: string; limit?: 
   if (inner.startsWith("TRYING:")) return { trying: inner.slice(7) };
   if (inner.startsWith("LIMIT:")) return { limit: inner.slice(6) };
   if (inner.startsWith("FREE:")) return { free: true };
+  if (inner.startsWith("KEEP:")) return {};
   return {};
 }
 
@@ -80,7 +88,8 @@ export class ModelMarkerParser {
         tail.startsWith(MODEL_PREFIX) ||
         tail.startsWith(TRYING_PREFIX) ||
         tail.startsWith(LIMIT_PREFIX) ||
-        tail.startsWith(FREE_PREFIX)
+        tail.startsWith(FREE_PREFIX) ||
+        tail.startsWith(KEEP_PREFIX)
       ) {
         const close = tail.indexOf(MARK, 1);
         if (close === -1) {
@@ -101,7 +110,8 @@ export class ModelMarkerParser {
         MODEL_PREFIX.startsWith(tail) ||
         TRYING_PREFIX.startsWith(tail) ||
         LIMIT_PREFIX.startsWith(tail) ||
-        FREE_PREFIX.startsWith(tail)
+        FREE_PREFIX.startsWith(tail) ||
+        KEEP_PREFIX.startsWith(tail)
       ) {
         // Partial marker start split across chunks — wait for more.
         this.buffer = tail;

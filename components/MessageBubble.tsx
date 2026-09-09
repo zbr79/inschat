@@ -20,6 +20,7 @@ interface Message {
   streaming?: boolean;
   failed?: boolean;
   model?: string;
+  hideModelMeta?: boolean;
   trying?: string;
   elapsed?: number;
 }
@@ -291,7 +292,7 @@ export default function MessageBubble({
                     {renderButtons(true, message)}
                   </div>
                 )}
-                {!message.failed && message.model && (
+                {!message.failed && message.model && !message.hideModelMeta && (
                   <div className={`model-meta${message.streaming ? " live" : ""}`}>
                     {!message.streaming && message.elapsed !== undefined && (
                       <span>{formatElapsed(message.elapsed)}s · </span>
