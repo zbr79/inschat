@@ -24,6 +24,7 @@ import ConcludeModal from "./ConcludeModal";
 import DatePickerModal from "./DatePickerModal";
 import FullDayEditModal from "./FullDayEditModal";
 import GlucoseChart from "./GlucoseChart";
+import GlucoseRangeControl from "./GlucoseRangeControl";
 import RecordEditModal, { type RecordEditDraft } from "./RecordEditModal";
 import RecordInsights from "./RecordInsights";
 import ReportTransferControls from "./ReportTransferControls";
@@ -32,6 +33,7 @@ import {
   filterGlucosePoints,
   monthKeyOf,
   monthLabel,
+  type GlucosePoint,
   type TimelineRange,
 } from "@/lib/recordTimeline";
 
@@ -367,6 +369,14 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
     }
   };
 
+  const toggleDemo = () => {
+    if (hasDemoData) {
+      removeDemo();
+    } else {
+      loadDemo();
+    }
+  };
+
   const glucosePoints = records
     ? filterGlucosePoints(extractGlucosePoints(records), range)
     : [];
@@ -438,6 +448,15 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
       month.days.map((day) => [day.key, day.entries.length] as const)
     )
   );
+  const daysByKey = new Map(
+    monthGroups.flatMap((month) => month.days.map((day) => [day.key, day] as const))
+  );
+  const openDayForPoint = (point: GlucosePoint) => {
+    const day = daysByKey.get(dayKeyOf(new Date(point.ts).toISOString()));
+    if (!day) return;
+    setEditingDay(day);
+    setError(null);
+  };
 
   return (
     <div className="usage-page">
@@ -445,23 +464,38 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
         <div>
           <h2>{fullReport ? t["records.fullTitle"] : t["records.title"]}</h2>
         </div>
-        {!fullReport && guest === true && (
-          <div className="records-demo-actions">
-            <div className="records-demo-buttons">
-              <button type="button" onClick={loadDemo} disabled={demoBusy}>
-                {demoBusy ? t["records.demo.loading"] : t["records.demo.load"]}
-              </button>
-              {hasDemoData && (
-                <button
-                  type="button"
-                  className="records-demo-remove"
-                  onClick={removeDemo}
-                  disabled={demoBusy}
-                >
-                  {t["records.demo.remove"]}
-                </button>
-              )}
-            </div>
+        {!fullReport && (
+          <div className="records-page-actions">
+            <GlucoseRangeControl
+              range={range}
+              onRangeChange={handleRangeChange}
+              labels={{
+                range: t["records.glucose.range"],
+                day: t["records.glucose.day"],
+                week: t["records.glucose.week"],
+                quarter: t["records.glucose.quarter"],
+                year: t["records.glucose.year"],
+                all: t["records.glucose.all"],
+              }}
+            />
+            {guest === true && (
+              <div className="records-demo-actions">
+                <div className="records-demo-buttons">
+                  <button
+                    type="button"
+                    className={hasDemoData ? "records-demo-remove" : undefined}
+                    onClick={toggleDemo}
+                    disabled={demoBusy}
+                  >
+                    {demoBusy
+                      ? t["records.demo.loading"]
+                      : hasDemoData
+                        ? t["records.demo.remove"]
+                        : t["records.demo.load"]}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -551,19 +585,11 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
         <GlucoseChart
           points={glucosePoints}
           range={range}
-          onRangeChange={handleRangeChange}
+          onPointClick={openDayForPoint}
           lang={lang}
           labels={{
             title: t["records.glucose.title"],
-            range: t["records.glucose.range"],
-            day: t["records.glucose.day"],
-            week: t["records.glucose.week"],
-            quarter: t["records.glucose.quarter"],
-            year: t["records.glucose.year"],
-            all: t["records.glucose.all"],
             empty: t["records.glucose.empty"],
-            timeline: t["records.glucose.timeline"],
-            daily: t["records.glucose.daily"],
           }}
         />
       )}
