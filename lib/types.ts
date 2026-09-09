@@ -89,8 +89,15 @@ export interface StoredMessage {
   text: string;
   images?: ChatImage[];
   model?: string;
+  trying?: string;
   elapsed?: number;
   createdAt: string;
+  /** Write "complete"; accept "done" (agent) when reading shared Mongo docs. */
+  status?: "pending" | "complete" | "failed" | "done";
+  startedAt?: string;
+  updatedAt?: string;
+  /** Transcript trail (Ran/Read/Edited / trying labels, no leading arrow). */
+  processSteps?: string[];
 }
 
 export const MAX_MESSAGES = 20;

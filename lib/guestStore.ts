@@ -3,12 +3,18 @@
 import type { ChatImage, ConcludeItem, ConcludeMeal, SessionConclusion } from "./types";
 
 export interface GuestMessage {
+  id?: string;
   role: "user" | "model";
   text: string;
   images?: ChatImage[];
   imageKeys?: string[];
   model?: string;
+  trying?: string;
   elapsed?: number;
+  status?: "pending" | "complete" | "failed";
+  startedAt?: number;
+  updatedAt?: number;
+  processSteps?: string[];
 }
 
 export interface GuestSession {
@@ -107,7 +113,48 @@ export function appendGuestMessage(sessionId: string, message: GuestMessage): vo
   const sessions = readJson<GuestSession[]>(SESSIONS_KEY, []);
   const target = sessions.find((session) => session.id === sessionId);
   if (!target) return;
-  target.messages.push(message);
+  const now = Date.now();
+  target.messages.push({
+    ...message,
+    id: message.id ?? newId(),
+    status: message.status ?? "complete",
+    updatedAt: now,
+  });
+  target.updatedAt = now;
+  writeSessions(sessions);
+}
+
+export function startGuestPendingMessage(
+  sessionId: string,
+  messageId = newId()
+): string | null {
+  const sessions = readJson<GuestSession[]>(SESSIONS_KEY, []);
+  const target = sessions.find((session) => session.id === sessionId);
+  if (!target) return null;
+  const now = Date.now();
+  target.messages.push({
+    id: messageId,
+    role: "model",
+    text: "",
+    status: "pending",
+    startedAt: now,
+    updatedAt: now,
+  });
+  target.updatedAt = now;
+  writeSessions(sessions);
+  return messageId;
+}
+
+export function updateGuestMessage(
+  sessionId: string,
+  messageId: string,
+  patch: Pick<GuestMessage, "text" | "model" | "elapsed" | "status" | "processSteps">
+): void {
+  const sessions = readJson<GuestSession[]>(SESSIONS_KEY, []);
+  const target = sessions.find((session) => session.id === sessionId);
+  const message = target?.messages.find((candidate) => candidate.id === messageId);
+  if (!target || !message) return;
+  Object.assign(message, patch, { updatedAt: Date.now() });
   target.updatedAt = Date.now();
   writeSessions(sessions);
 }
@@ -435,6 +482,24 @@ export function addGuestRecord(input: {
   recordedAt?: string;
 }): GuestRecord {
   const now = new Date().toISOString();
+  const records = readGuestReport().entries;
+  const existingIndex = input.sessionId
+    ? records.findIndex((record) => record.sessionId === input.sessionId)
+    : -1;
+  if (existingIndex >= 0) {
+    const existing = records[existingIndex];
+    const updated: GuestRecord = {
+      ...existing,
+      ...input,
+      id: existing.id,
+      savedAt: existing.savedAt,
+      recordedAt: input.recordedAt ?? existing.recordedAt ?? now,
+      pinned: existing.pinned ?? false,
+    };
+    records[existingIndex] = updated;
+    writeGuestReport(records);
+    return updated;
+  }
   const record: GuestRecord = {
     ...input,
     id: newId(),
@@ -442,7 +507,6 @@ export function addGuestRecord(input: {
     recordedAt: input.recordedAt ?? now,
     pinned: false,
   };
-  const records = readGuestReport().entries;
   if (writeGuestReport([record, ...records])) return record;
   const slim = [record, ...records].map((r, index) =>
     index > 20 ? { ...r, sourceText: undefined } : r
