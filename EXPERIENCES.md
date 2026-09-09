@@ -2415,3 +2415,103 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - n/a
 ### Disproved
 - n/a
+
+## 2026-09-08 — Simplify glucose chart hover details
+### Solved
+- Removed the Daily pattern chart mode and its toggle.
+- Removed visible chart dots while preserving larger transparent hover targets.
+- Added native hover/focus tooltips with the exact glucose value, unit, and timestamp.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed no Daily pattern toggle, no visible dots, and tooltip titles for each chart point.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Replace chart hover targets with real tooltip
+### Solved
+- Replaced the native SVG title-only behavior with a positioned tooltip that appears on mouse hover and keyboard focus.
+- Removed the crosshair cursor and focus square styling.
+- Tooltip now shows the exact value, unit, and timestamp beside the hovered reading.
+### Verified
+- `npm run build` passed.
+- Guest browser probing hovered a chart reading and confirmed the visible tooltip, pointer cursor, and no outline.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- Native SVG titles alone were insufficient for the requested hover behavior because they did not provide a reliable visible tooltip.
+
+## 2026-09-08 — Move glucose range control to page header
+### Solved
+- Moved the time-range selector out of the glucose chart card.
+- Added a centered page-level range control in the Brief report header.
+- Kept the existing range state and persistence so the selector continues to control insights and chart filtering together.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the selector is centered in the page header, absent from the chart card, and changes from All records to Last 7 days.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Open full-day editor from glucose readings
+### Solved
+- Made each glucose checkpoint clickable from the Brief report chart.
+- Resolved the clicked reading to its calendar day and opened the existing full-day editor.
+- The editor includes that day’s records, glucose readings, meals, and food details.
+- Added Enter and Space keyboard activation for chart checkpoints.
+### Verified
+- `npm run build` passed.
+- Guest browser probing clicked a glucose checkpoint and confirmed the full-day modal opened with the expected date, glucose value, and meal dish.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Consolidate Brief report controls
+### Solved
+- Removed the visible range label so only the accessible dropdown remains.
+- Moved the page controls to the right side of the Brief report header.
+- Consolidated guest example-data actions into one toggle button.
+- The button now switches between Load example data and Remove example data without duplicate controls.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed no visible range label, right-aligned controls, exactly one demo button, and correct Load/Remove label switching.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Increase chart date-axis frequency
+### Solved
+- Replaced the chart’s start/end-only date labels with multiple interval-aware ticks.
+- Added five ticks for day/week views, four for the three-month view, five for the yearly view, and six for all records.
+- Uses time labels for short ranges and date labels for longer ranges.
+- Added small axis tick marks to make each date position clear.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed four quarterly labels (`Jun 9`, `Jul 9`, `Aug 9`, `Sep 9`), five yearly labels, and six all-record labels.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- Day/week probes with the seeded timestamps filtered to an empty chart, so their tick labels were not rendered in that specific probe; the component is configured for five ticks when readings exist.
+### Disproved
+- n/a
+
+## 2026-09-08 — Use numeric chart dates
+### Solved
+- Changed longer-range chart date labels from localized month names to universal numeric month/day values such as `9/2`.
+- Kept time formatting for short day-range labels.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed quarterly labels render as numeric values such as `6/9`, `7/9`, `8/9`, and `9/9`.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
