@@ -7,23 +7,13 @@ import {
   type TimelineRange,
 } from "@/lib/recordTimeline";
 
-type ViewMode = "timeline" | "daily";
-
 interface GlucoseChartProps {
   points: GlucosePoint[];
   range: TimelineRange;
-  onRangeChange: (range: TimelineRange) => void;
+  onPointClick: (point: GlucosePoint) => void;
   labels: {
     title: string;
-    range: string;
-    day: string;
-    week: string;
-    quarter: string;
-    year: string;
-    all: string;
     empty: string;
-    timeline: string;
-    daily: string;
   };
   lang: "zh" | "en";
 }
@@ -31,22 +21,54 @@ interface GlucoseChartProps {
 const WIDTH = 720;
 const HEIGHT = 280;
 const PADDING = { top: 24, right: 24, bottom: 42, left: 44 };
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-function formatDate(ts: number, lang: "zh" | "en"): string {
-  return new Date(ts).toLocaleDateString(lang === "zh" ? "zh-CN" : "en-US", {
-    month: "short",
-    day: "numeric",
+function axisTickCount(range: TimelineRange): number {
+  if (range === "day" || range === "week") return 5;
+  if (range === "quarter") return 4;
+  if (range === "year") return 5;
+  return 6;
+}
+
+function axisTickTimestamps(
+  start: number,
+  end: number,
+  range: TimelineRange
+): number[] {
+  const count = axisTickCount(range);
+  if (start === end) return [start];
+  return Array.from({ length: count }, (_, index) => {
+    const fraction = index / (count - 1);
+    return start + (end - start) * fraction;
   });
+}
+
+function formatAxisTick(ts: number, span: number, lang: "zh" | "en"): string {
+  const locale = lang === "zh" ? "zh-CN" : "en-US";
+  if (span <= 2 * DAY_MS) {
+    return new Date(ts).toLocaleTimeString(locale, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+  const date = new Date(ts);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function pointLabel(point: GlucosePoint, lang: "zh" | "en"): string {
+  return `${point.value}${point.unit ? ` ${point.unit}` : ""} · ${new Date(
+    point.ts
+  ).toLocaleString(lang === "zh" ? "zh-CN" : "en-US")}`;
 }
 
 export default function GlucoseChart({
   points,
   range,
-  onRangeChange,
+  onPointClick,
   labels,
   lang,
 }: GlucoseChartProps) {
-  const [viewMode, setViewMode] = useState<ViewMode>("timeline");
+  const [hoveredPoint, setHoveredPoint] = useState<GlucosePoint | null>(null);
   const innerWidth = WIDTH - PADDING.left - PADDING.right;
   const innerHeight = HEIGHT - PADDING.top - PADDING.bottom;
   const values = points.map((point) => point.value);
@@ -63,28 +85,7 @@ export default function GlucoseChart({
     PADDING.top + ((max - value) / (max - min)) * innerHeight;
   const gridValues = [max, max / 2, 0];
   const linePoints = points.map((point) => `${x(point.ts)},${y(point.value)}`).join(" ");
-  const dailyGroups = Array.from(
-    points.reduce((groups, point) => {
-      const date = new Date(point.ts);
-      const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-      const group = groups.get(key) ?? [];
-      group.push(point);
-      groups.set(key, group);
-      return groups;
-    }, new Map<string, GlucosePoint[]>()).values()
-  );
-  const dailyX = (ts: number) => {
-    const date = new Date(ts);
-    const minutes =
-      date.getHours() * 60 + date.getMinutes() + date.getSeconds() / 60;
-    return PADDING.left + (minutes / 1440) * innerWidth;
-  };
-  const formatHour = (hour: number) =>
-    lang === "zh"
-      ? `${hour}:00`
-      : new Date(2000, 0, 1, hour).toLocaleTimeString("en-US", {
-          hour: "numeric",
-        });
+  const axisTicks = axisTickTimestamps(bounds.start, bounds.end, range);
 
   return (
     <section className="usage-card glucose-chart-card">
@@ -92,46 +93,32 @@ export default function GlucoseChart({
         <div>
           <h3>{labels.title}</h3>
         </div>
-        <div className="glucose-chart-controls">
-          <div className="glucose-chart-types" role="group" aria-label={labels.title}>
-            <button
-              type="button"
-              className={viewMode === "timeline" ? "active" : ""}
-              aria-pressed={viewMode === "timeline"}
-              onClick={() => setViewMode("timeline")}
-            >
-              {labels.timeline}
-            </button>
-            <button
-              type="button"
-              className={viewMode === "daily" ? "active" : ""}
-              aria-pressed={viewMode === "daily"}
-              onClick={() => setViewMode("daily")}
-            >
-              {labels.daily}
-            </button>
-          </div>
-          <label className="glucose-range">
-            <span>{labels.range}</span>
-            <select
-              value={range}
-              aria-label={labels.range}
-              onChange={(event) => onRangeChange(event.target.value as TimelineRange)}
-            >
-              <option value="day">{labels.day}</option>
-              <option value="week">{labels.week}</option>
-              <option value="quarter">{labels.quarter}</option>
-              <option value="year">{labels.year}</option>
-              <option value="all">{labels.all}</option>
-            </select>
-          </label>
-        </div>
       </div>
 
       {points.length === 0 ? (
         <p className="glucose-chart-empty">{labels.empty}</p>
       ) : (
         <div className="glucose-chart-frame">
+          {hoveredPoint && (
+            <div
+              className="glucose-chart-tooltip"
+              role="status"
+              style={{
+                left: `${(x(hoveredPoint.ts) / WIDTH) * 100}%`,
+                top: `${(y(hoveredPoint.value) / HEIGHT) * 100}%`,
+              }}
+            >
+              <strong>
+                {hoveredPoint.value}
+                {hoveredPoint.unit ? ` ${hoveredPoint.unit}` : ""}
+              </strong>
+              <span>
+                {new Date(hoveredPoint.ts).toLocaleString(
+                  lang === "zh" ? "zh-CN" : "en-US"
+                )}
+              </span>
+            </div>
+          )}
           <svg
             className="glucose-chart"
             viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
@@ -152,78 +139,55 @@ export default function GlucoseChart({
                 </text>
               </g>
             ))}
-            {viewMode === "daily" ? (
-              <>
-                {dailyGroups.map((dayPoints, index) => (
-                  <g key={dayPoints[0]?.id ?? index}>
-                    {dayPoints.length > 1 && (
-                      <polyline
-                        points={dayPoints
-                          .map((point) => `${dailyX(point.ts)},${y(point.value)}`)
-                          .join(" ")}
-                        className="glucose-daily-line"
-                      />
-                    )}
-                    {dayPoints.map((point) => (
-                      <circle
-                        key={point.id}
-                        cx={dailyX(point.ts)}
-                        cy={y(point.value)}
-                        r="3.5"
-                        className="glucose-point"
-                      >
-                        <title>
-                          {point.value}
-                          {point.unit ? ` ${point.unit}` : ""} ·{" "}
-                          {new Date(point.ts).toLocaleString(
-                            lang === "zh" ? "zh-CN" : "en-US"
-                          )}
-                        </title>
-                      </circle>
-                    ))}
-                  </g>
-                ))}
-                {[0, 6, 12, 18, 24].map((hour) => (
-                  <text
-                    key={hour}
-                    x={PADDING.left + (hour / 24) * innerWidth}
-                    y={HEIGHT - 12}
-                    textAnchor={hour === 0 ? "start" : hour === 24 ? "end" : "middle"}
-                  >
-                    {formatHour(hour === 24 ? 0 : hour)}
-                  </text>
-                ))}
-              </>
-            ) : (
-              <>
-                <polyline points={linePoints} className="glucose-line" />
-                {points.map((point) => (
-                  <circle
-                    key={point.id}
-                    cx={x(point.ts)}
-                    cy={y(point.value)}
-                    r="4"
-                    className="glucose-point"
-                  >
-                    <title>
-                      {point.value}
-                      {point.unit ? ` ${point.unit}` : ""} ·{" "}
-                      {new Date(point.ts).toLocaleString(lang === "zh" ? "zh-CN" : "en-US")}
-                    </title>
-                  </circle>
-                ))}
-              </>
-            )}
-            {viewMode === "timeline" && (
-              <>
-                <text x={PADDING.left} y={HEIGHT - 12}>
-                  {formatDate(bounds.start, lang)}
+            <polyline points={linePoints} className="glucose-line" />
+            {points.map((point) => (
+              <circle
+                key={point.id}
+                cx={x(point.ts)}
+                cy={y(point.value)}
+                r="10"
+                className="glucose-hover-target"
+                tabIndex={0}
+                role="img"
+                aria-label={pointLabel(point, lang)}
+                onMouseEnter={() => setHoveredPoint(point)}
+                onMouseLeave={() => setHoveredPoint(null)}
+                onFocus={() => setHoveredPoint(point)}
+                onBlur={() => setHoveredPoint(null)}
+                onClick={() => onPointClick(point)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onPointClick(point);
+                  }
+                }}
+              >
+              </circle>
+            ))}
+            {axisTicks.map((ts, index) => (
+              <g key={ts}>
+                <line
+                  x1={x(ts)}
+                  x2={x(ts)}
+                  y1={HEIGHT - PADDING.bottom}
+                  y2={HEIGHT - PADDING.bottom + 4}
+                  className="glucose-axis-tick"
+                />
+                <text
+                  x={x(ts)}
+                  y={HEIGHT - 12}
+                  textAnchor={
+                    index === 0
+                      ? "start"
+                      : index === axisTicks.length - 1
+                        ? "end"
+                        : "middle"
+                  }
+                >
+                  {formatAxisTick(ts, timeSpan, lang)}
                 </text>
-                <text x={WIDTH - PADDING.right} y={HEIGHT - 12} textAnchor="end">
-                  {formatDate(bounds.end, lang)}
-                </text>
-              </>
-            )}
+              </g>
+            ))}
           </svg>
         </div>
       )}

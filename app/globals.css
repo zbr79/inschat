@@ -2354,43 +2354,37 @@ span.conclude-rank-badge {
   font: inherit;
 }
 
-.glucose-chart-controls {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+.glucose-chart-frame {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+  margin-top: 14px;
 }
 
-.glucose-chart-types {
-  display: inline-flex;
+.glucose-chart-tooltip {
+  position: absolute;
+  z-index: 2;
+  display: grid;
   gap: 2px;
-  padding: 2px;
-  border-radius: 9px;
-  background: var(--bg-soft);
-}
-
-.glucose-chart-types button {
-  border: none;
+  transform: translate(-50%, calc(-100% - 10px));
+  pointer-events: none;
+  border: 1px solid var(--border);
   border-radius: 7px;
-  padding: 5px 8px;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.glucose-chart-types button:hover,
-.glucose-chart-types button.active {
+  padding: 6px 8px;
   background: var(--bg);
   color: var(--text);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
-.glucose-chart-frame {
-  width: 100%;
-  overflow: hidden;
-  margin-top: 14px;
+.glucose-chart-tooltip strong {
+  font-size: 12px;
+}
+
+.glucose-chart-tooltip span {
+  color: var(--text-muted);
 }
 
 .glucose-chart {
@@ -2411,6 +2405,11 @@ span.conclude-rank-badge {
   font-size: 11px;
 }
 
+.glucose-axis-tick {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
 .glucose-line {
   fill: none;
   stroke: #2563eb;
@@ -2419,19 +2418,16 @@ span.conclude-rank-badge {
   stroke-width: 2.5;
 }
 
-.glucose-daily-line {
-  fill: none;
-  stroke: #60a5fa;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.25;
-  opacity: 0.28;
+.glucose-hover-target {
+  fill: transparent;
+  stroke: transparent;
+  cursor: pointer;
+  outline: none;
+  pointer-events: all;
 }
 
-.glucose-point {
-  fill: var(--bg);
-  stroke: #2563eb;
-  stroke-width: 2.5;
+.glucose-hover-target:focus {
+  outline: none;
 }
 
 .glucose-chart-empty {
@@ -2441,10 +2437,17 @@ span.conclude-rank-badge {
 }
 
 .records-page-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 18px;
+}
+
+.records-page-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -3086,18 +3089,22 @@ span.conclude-rank-badge {
 }
 
 @media (max-width: 640px) {
-  .glucose-chart-head {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 10px;
-  }
-
   .glucose-range {
     justify-content: space-between;
   }
 
-  .glucose-chart-controls {
+  .records-page-head {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .records-page-actions {
     justify-content: flex-start;
+  }
+
+  .records-page-actions,
+  .records-page-actions .records-demo-actions {
+    width: 100%;
   }
 
   .record-insights-grid {
