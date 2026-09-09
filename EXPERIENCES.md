@@ -2556,3 +2556,161 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - n/a
 ### Disproved
 - n/a
+
+## 2026-09-08 — Automatically persist completed conclusions
+### Solved
+- Automatically save structured health conclusions to Full report when a chat response completes.
+- Added guest session-keyed upsert behavior so repeated conclusions update one local report.
+- Added authenticated session-keyed MongoDB upsert behavior to prevent duplicate report entries.
+- Link the saved report ID back to the chat session so the existing editor opens the persisted report.
+- Added a non-empty title fallback for conclusions that omit a title.
+### Verified
+- `npm run build` passed.
+- Guest end-to-end browser testing completed a health-mode chat and confirmed one report entry with a session ID, glucose item, session record ID, and stored conclusion without manual modal saving.
+- PM2 restarted and the chat route returned HTTP 200.
+### Unresolved
+- Free-form chats that do not produce a structured `<CONCLUDE>` conclusion remain chat-only; automatically converting arbitrary free-form text into health records would create unstructured report entries.
+### Disproved
+- The initial probe appeared to show no report because it inspected the deprecated `inschat_guest_records` key; the active store is `inschat_guest_report`, which the follow-up end-to-end probe confirmed.
+
+## 2026-09-08 — Match sidebar icon to application icon
+### Solved
+- Replaced the sidebar’s separate Lucide Sparkles mark with the shared `/icon.svg` application icon.
+- Added sizing and overflow styles so the sidebar uses the same dark background and white mark as the app icon.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the sidebar renders `/icon.svg` at 28×28 with the image loaded.
+- PM2 restarted and the chat route returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-09 — Persist chat runs across refresh
+### Solved
+- Added a durable pending model-message anchor before generation starts, with throttled progress writes, a heartbeat, completion/failure status, and stale-run closure.
+- Changed server streaming so a disconnected browser only detaches the response writer; the model generator continues and finalizes the same message.
+- Added guest run snapshots and local pending-message IDs, plus client polling that resumes the existing run without issuing a second chat request.
+- Restored structured health conclusions when a resumed response finishes with a `<CONCLUDE>` payload, so refresh does not produce an apparently empty completed bubble.
+- Kept the UI stable by updating only the existing pending bubble when polled data changes, rather than replacing the whole transcript or appending duplicate model messages.
+### Verified
+- `npm run build` passed.
+- PM2 restarted only for `inschat`; the app returned HTTP 200 with the new production build.
+- An early poll returned the same run as `status: "pending"` and a later poll returned `status: "complete"` with the final text.
+- A guest stream was intentionally disconnected and then polled successfully; the existing run reached `status: "complete"` with its final text.
+- A real browser probe on the main `/` chat refreshed during generation, restored two bubbles, and later displayed the completed response.
+### Unresolved
+- Guest run snapshots use MongoDB when configured and fall back to process memory when it is unavailable; the fallback cannot survive a full server/process restart.
+### Disproved
+- Treating the browser's streaming React state as the source of truth was the root failure: refreshing discarded the only partial transcript and the server stopped at the failed enqueue.
+
+## 2026-09-09 — Complete InsChat refresh resume loop
+
+### Solved
+- Re-checked the live tree before editing and kept the work scoped to Issue 1; no OpenCode-session persistence changes were made.
+- Added full authenticated-session resume polling against `/api/sessions/:id` and full guest resume polling against `/api/guest-runs/:id`, both updating the existing message in place.
+- Restored persisted `processSteps` and the active pending trail after refresh, while keeping the composer in sending/stop state until the server reports completion or failure.
+- Kept `X-Run-Persisted` and `X-Run-Message-Id` response headers, guest MongoDB snapshots, detached streaming, heartbeats, and stale pending finalization in the deployed path.
+
+### Verified
+- `npm run build` passed after the resume-loop fix.
+- Restarted only PM2 app `inschat`; `pm2 logs inschat --lines 50 --nostream` showed the new server ready without startup-blocking errors.
+- Live guest QA created a new chat, refreshed during a pending run, restored the trail and Stop generating control, then reached the completed answer without a second POST.
+
+### Unresolved
+- Signed-in QA was not run because no test credentials were provided; the authenticated path was build-verified and wired to the shared session/message store.
+- Guest durability still depends on MongoDB being available; the documented in-memory fallback cannot survive a full process restart.
+
+### Disproved
+- A single initial guest-run fetch was insufficient: it could restore the first snapshot but did not reliably keep the refreshed UI synchronized while the detached run continued. Continuous guest resume polling fixed that gap.
+
+## 2026-09-09 — Smooth resumed response updates
+
+### Solved
+- Changed refresh polling to target the exact pending message using `sessionId` and `messageId`, instead of refetching and remapping the entire session.
+- Reduced resume polling and server progress snapshots to 500ms.
+- Suppressed React updates when the persisted message snapshot has not changed, while retaining the existing message identity and process trail.
+
+### Verified
+- `npm run build` passed.
+- PM2 restarted only for `inschat`.
+- Live guest QA showed the restored Stop generating state and answer lengths increasing across successive 500ms samples after refresh, then settled successfully.
+
+### Unresolved
+- The resumed view is still persistence-backed polling rather than a replayable token stream; cadence is bounded by database progress writes.
+
+### Disproved
+- Polling the full session every 2.5 seconds produced the reported blocky post-refresh experience even though persistence itself worked.
+
+## 2026-09-09 — Allow live resume polling through nginx
+
+### Solved
+- Found that the public nginx site explicitly rejected `GET /api/chat` with `405 Not Allowed`, so the browser could only display the initial restored snapshot.
+- Updated only the InsChat nginx `/api/chat` method allow-list to include `GET`.
+- Added no-store response headers and a per-poll cache-buster so pending snapshots cannot be reused by a proxy.
+
+### Verified
+- `nginx -t` passed and nginx reloaded successfully.
+- Public `GET https://inschat.renstoolbox.com/api/chat?...` now reaches Next.js and returns JSON `404` for an unknown run instead of nginx `405`.
+- Public live QA refreshed a guest response mid-run; poll responses returned `200 pending` with increasing text lengths, the Stop generating control stayed visible, and the run settled successfully.
+
+### Unresolved
+- The authenticated public path still needs a real signed-in QA run with user-provided test credentials.
+
+### Disproved
+- The React poller was not the primary live failure. It was running, but nginx blocked every resume request before the request reached the application.
+
+## 2026-09-09 — Match refreshed replies to live typing
+
+### Solved
+- Removed internal process arrows and model names from assistant bubble content.
+- Hid the model-name footer while retaining the completed elapsed-time display.
+- Changed pending hydration to start with a clean thinking state, then reveal persisted response text through a short typing queue as polling receives new snapshots.
+- Kept polling and final status synchronization independent from the visual typing queue so completion is not lost while text catches up.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Public QA refreshed after answer text had started; successive 300ms samples increased in length, contained no arrow or model name, and the run settled successfully.
+
+### Unresolved
+- The refreshed path remains persistence-backed rather than a literal replay of every original token.
+
+### Disproved
+- Rendering each persisted snapshot directly as the bubble text made refresh visibly different from the normal live stream and exposed internal `→ model` metadata.
+
+## 2026-09-09 — Restore model metadata after resumed replies
+
+### Solved
+- Restored the bottom-right model label for normal live and completed replies.
+- Kept the label hidden only for a refreshed pending reply while its typing queue is catching up.
+- The model label becomes visible again when the resumed text reaches its settled state.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Public UI probe confirmed a completed reply displays `1.2s · Qwen3.8 Flash` in the bottom-right metadata area.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Removing the model metadata block globally was too broad; it fixed the refresh artifact but also removed intended normal-response context.
+
+## 2026-09-09 — Resume from the last persisted characters
+
+### Solved
+- Kept the latest persisted assistant text visible during refresh instead of clearing the pending bubble to zero.
+- Seeded the resumed typing queue from that stored text, so only newly persisted characters are animated afterward.
+- Preserved the pending process state and completion synchronization while resuming from the stored position.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Public QA measured 56 characters before refresh, then continued from 102, 142, 249, 319, and later samples without returning to zero; the run settled successfully.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Clearing the hydrated pending text was unnecessary and caused every refresh to visually replay the answer from the beginning.

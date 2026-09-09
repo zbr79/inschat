@@ -9,6 +9,7 @@ export interface ChatRequest {
   mode?: "preset" | "free";
   reasoning?: "max" | "medium" | "low";
   sessionId?: string;
+  pendingMessageId?: string;
 }
 
 function parseImage(raw: unknown, index: number): ChatImage {
@@ -110,5 +111,19 @@ export function parseChatBody(body: unknown): ChatRequest {
     sessionId = rawSessionId;
   }
 
-  return { messages, timeZone, language, mode, reasoning, sessionId };
+  const rawPendingMessageId = (body as { pendingMessageId?: unknown }).pendingMessageId;
+  let pendingMessageId: string | undefined;
+  if (rawPendingMessageId !== undefined) {
+    if (
+      typeof rawPendingMessageId !== "string" ||
+      rawPendingMessageId.length === 0 ||
+      rawPendingMessageId.length > 128 ||
+      /[\r\n]/.test(rawPendingMessageId)
+    ) {
+      throw new ChatValidationError('"pendingMessageId" is invalid.');
+    }
+    pendingMessageId = rawPendingMessageId;
+  }
+
+  return { messages, timeZone, language, mode, reasoning, sessionId, pendingMessageId };
 }
