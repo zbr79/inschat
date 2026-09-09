@@ -465,37 +465,35 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
           <h2>{fullReport ? t["records.fullTitle"] : t["records.title"]}</h2>
         </div>
         {!fullReport && (
-          <div className="records-page-actions">
-            <GlucoseRangeControl
-              range={range}
-              onRangeChange={handleRangeChange}
-              labels={{
-                range: t["records.glucose.range"],
-                day: t["records.glucose.day"],
-                week: t["records.glucose.week"],
-                quarter: t["records.glucose.quarter"],
-                year: t["records.glucose.year"],
-                all: t["records.glucose.all"],
-              }}
-            />
-            {guest === true && (
-              <div className="records-demo-actions">
-                <div className="records-demo-buttons">
-                  <button
-                    type="button"
-                    className={hasDemoData ? "records-demo-remove" : undefined}
-                    onClick={toggleDemo}
-                    disabled={demoBusy}
-                  >
-                    {demoBusy
-                      ? t["records.demo.loading"]
-                      : hasDemoData
-                        ? t["records.demo.remove"]
-                        : t["records.demo.load"]}
-                  </button>
-                </div>
-              </div>
-            )}
+          <GlucoseRangeControl
+            range={range}
+            onRangeChange={handleRangeChange}
+            labels={{
+              range: t["records.glucose.range"],
+              day: t["records.glucose.day"],
+              week: t["records.glucose.week"],
+              quarter: t["records.glucose.quarter"],
+              year: t["records.glucose.year"],
+              all: t["records.glucose.all"],
+            }}
+          />
+        )}
+        {!fullReport && guest === true && (
+          <div className="records-demo-actions">
+            <div className="records-demo-buttons">
+              <button
+                type="button"
+                className={hasDemoData ? "records-demo-remove" : undefined}
+                onClick={toggleDemo}
+                disabled={demoBusy}
+              >
+                {demoBusy
+                  ? t["records.demo.loading"]
+                  : hasDemoData
+                    ? t["records.demo.remove"]
+                    : t["records.demo.load"]}
+              </button>
+            </div>
           </div>
         )}
       </div>
