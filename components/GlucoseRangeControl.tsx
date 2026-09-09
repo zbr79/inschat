@@ -20,21 +20,30 @@ export default function GlucoseRangeControl({
   onRangeChange,
   labels,
 }: GlucoseRangeControlProps) {
+  const options: Array<{ value: TimelineRange; label: string }> = [
+    { value: "day", label: labels.day },
+    { value: "week", label: labels.week },
+    { value: "quarter", label: labels.quarter },
+    { value: "year", label: labels.year },
+    { value: "all", label: labels.all },
+  ];
+
   return (
     <div className="records-range-control">
-      <label className="glucose-range">
-        <select
-          value={range}
-          aria-label={labels.range}
-          onChange={(event) => onRangeChange(event.target.value as TimelineRange)}
-        >
-          <option value="day">{labels.day}</option>
-          <option value="week">{labels.week}</option>
-          <option value="quarter">{labels.quarter}</option>
-          <option value="year">{labels.year}</option>
-          <option value="all">{labels.all}</option>
-        </select>
-      </label>
+      <div className="records-range-tabs" role="tablist" aria-label={labels.range}>
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="tab"
+            aria-selected={range === option.value}
+            className={range === option.value ? "active" : ""}
+            onClick={() => onRangeChange(option.value)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

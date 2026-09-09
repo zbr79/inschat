@@ -2515,3 +2515,44 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - n/a
 ### Disproved
 - n/a
+
+## 2026-09-08 — Replace range dropdown with tabs
+### Solved
+- Replaced the Brief report interval dropdown with five localized tabs: one day, seven days, three months, one year, and all records.
+- Preserved the selected range in local storage.
+- Added selected-tab semantics with `role="tablist"`, `role="tab"`, and `aria-selected`.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed five tabs, no select element, correct localized English labels, active-tab switching, and persisted `quarter` selection.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Shorten Chinese range tabs
+### Solved
+- Simplified Chinese interval labels to `1天`, `7天`, `3个月`, `1年`, and `全部`.
+- Kept the English labels unchanged.
+### Verified
+- `npm run build` passed.
+- Guest browser probing with Chinese UI confirmed the compact labels and no dropdown.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Place range tabs beside page title
+### Solved
+- Positioned the range tabs immediately to the right of the Brief report title.
+- Kept the guest demo toggle separate at the far right of the header.
+- Preserved the stacked layout on narrow screens.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the tabs begin directly after the page title with an 18px gap and all five tabs render.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a

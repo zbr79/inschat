@@ -2335,23 +2335,39 @@ span.conclude-rank-badge {
   font-size: 12px;
 }
 
-.glucose-range {
+.records-range-tabs {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
-  font-size: 12px;
-  white-space: nowrap;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 3px;
+  overflow-x: auto;
+  background: var(--bg-soft);
 }
 
-.glucose-range select {
-  min-height: 30px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0 8px;
+.records-range-tabs button {
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.records-range-tabs button:hover,
+.records-range-tabs button.active {
   background: var(--bg);
   color: var(--text);
-  font: inherit;
+}
+
+.records-range-tabs button.active {
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
 }
 
 .glucose-chart-frame {
@@ -2438,21 +2454,21 @@ span.conclude-rank-badge {
 
 .records-page-head {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto auto minmax(0, 1fr);
   align-items: center;
   gap: 18px;
 }
 
-.records-page-actions {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
+.records-range-control {
+  justify-self: start;
 }
 
 .records-page-head h2 {
   margin-top: 0;
+}
+
+.records-page-head > .records-demo-actions {
+  justify-self: end;
 }
 
 .full-report-tools {
@@ -3089,21 +3105,13 @@ span.conclude-rank-badge {
 }
 
 @media (max-width: 640px) {
-  .glucose-range {
-    justify-content: space-between;
-  }
-
   .records-page-head {
     grid-template-columns: 1fr;
     align-items: stretch;
   }
 
-  .records-page-actions {
-    justify-content: flex-start;
-  }
-
-  .records-page-actions,
-  .records-page-actions .records-demo-actions {
+  .records-page-head > .records-demo-actions {
+    justify-self: start;
     width: 100%;
   }
 
