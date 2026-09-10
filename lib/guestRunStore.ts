@@ -1,4 +1,10 @@
-import { getDb } from "./db";
+import { getDb, updatePendingMessage } from "./db";
+
+interface GuestRunBinding {
+  userId: string;
+  sessionId: string;
+  messageId: string;
+}
 
 export interface GuestRunSnapshot {
   sessionId: string;
@@ -11,6 +17,7 @@ export interface GuestRunSnapshot {
   startedAt: number;
   updatedAt: number;
   processSteps?: string[];
+  binding?: GuestRunBinding;
 }
 
 interface GuestRunDoc {
@@ -24,6 +31,7 @@ interface GuestRunDoc {
   startedAt: Date;
   updatedAt: Date;
   processSteps?: string[];
+  binding?: GuestRunBinding;
 }
 
 const runs = new Map<string, GuestRunSnapshot>();
@@ -87,7 +95,25 @@ function toSnapshot(doc: GuestRunDoc): GuestRunSnapshot {
     startedAt: doc.startedAt.getTime(),
     updatedAt: doc.updatedAt.getTime(),
     processSteps: doc.processSteps,
+    binding: doc.binding,
   };
+}
+
+async function syncBoundRun(run: GuestRunSnapshot): Promise<void> {
+  if (!run.binding) return;
+  await updatePendingMessage(
+    run.binding.userId,
+    run.binding.sessionId,
+    run.binding.messageId,
+    {
+      text: run.text,
+      model: run.model,
+      trying: run.trying,
+      elapsed: run.elapsed,
+      status: run.status,
+      processSteps: run.processSteps,
+    }
+  ).catch(() => null);
 }
 
 export async function startGuestRun(
@@ -155,7 +181,22 @@ export async function updateGuestRun(
   };
   runs.set(key(sessionId, messageId), next);
   await savePersistedRun(next);
+  await syncBoundRun(next);
   return { ...next };
+}
+
+export async function bindGuestRun(
+  sessionId: string,
+  messageId: string,
+  binding: GuestRunBinding
+): Promise<boolean> {
+  const run = await getGuestRun(sessionId, messageId);
+  if (!run) return false;
+  const next = { ...run, binding };
+  runs.set(key(sessionId, messageId), next);
+  await savePersistedRun(next);
+  await syncBoundRun(next);
+  return true;
 }
 
 export async function getGuestRun(
@@ -230,6 +271,7 @@ export async function finalizePendingGuestRun(
   };
   runs.set(key(sessionId, run.messageId), next);
   await savePersistedRun(next);
+  await syncBoundRun(next);
   return true;
 }
 
@@ -266,6 +308,7 @@ async function savePersistedRun(run: GuestRunSnapshot): Promise<void> {
             elapsed: run.elapsed,
             status: run.status,
             processSteps: run.processSteps,
+            binding: run.binding,
             startedAt: new Date(run.startedAt),
             updatedAt: new Date(run.updatedAt),
           },

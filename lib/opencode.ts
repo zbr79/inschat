@@ -593,20 +593,21 @@ export async function* streamChat(
   language?: "zh" | "en",
   freeMode = false,
   reasoning: "max" | "medium" | "low" = "medium",
-  sessionId?: string
+  sessionId?: string,
+  includeImages = false
 ): AsyncGenerator<string> {
   const lastMessage = messages[messages.length - 1];
-  const hasImage = (lastMessage?.images?.length ?? 0) > 0;
+  const hasImage = includeImages
+    ? messages.some((message) => (message.images?.length ?? 0) > 0)
+    : (lastMessage?.images?.length ?? 0) > 0;
   const useTools = !hasImage;
   const requestId = Math.random().toString(36).slice(2, 8);
   let chain = getChatChain(hasImage);
   const systemOverride = freeMode
     ? getSystemPrompt(timeZone, language, true)
     : undefined;
-  // Text-only sends must not pass earlier photo parts to text models — the
-  // free gateway rejects image content (404 "No endpoints for image").
-  // Mirror the agent transcript's "[photo attached]" marker so the model
-  // still knows a photo was part of the conversation.
+  // Ordinary text sends must not pass earlier photo parts to text models.
+  // Report turns opt in so the session report can analyze earlier local photos.
   const sourceMessages = hasImage
     ? messages
     : messages.map((message) =>

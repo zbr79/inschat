@@ -61,14 +61,22 @@ export async function POST(
 
   let role: "user" | "model";
   let text: string;
-  let images: { mimeType: string; data: string }[] | undefined;
+  let imageKeys: string[] | undefined;
   let model: string | undefined;
   let elapsed: number | undefined;
   try {
-    const { role: rawRole, text: rawText, images: rawImages, model: rawModel, elapsed: rawElapsed } = body as {
+    const {
+      role: rawRole,
+      text: rawText,
+      images: rawImages,
+      imageKeys: rawImageKeys,
+      model: rawModel,
+      elapsed: rawElapsed,
+    } = body as {
       role?: unknown;
       text?: unknown;
       images?: unknown;
+      imageKeys?: unknown;
       model?: unknown;
       elapsed?: unknown;
     };
@@ -81,20 +89,17 @@ export async function POST(
     }
     text = rawText;
     if (rawImages !== undefined && rawImages !== null) {
-      if (!Array.isArray(rawImages) || rawImages.length > 3) {
-        throw new Error('"images" must be an array of at most 3 images.');
+      throw new Error('"images" are local-only; send imageKeys instead.');
+    }
+    if (rawImageKeys !== undefined && rawImageKeys !== null) {
+      if (
+        !Array.isArray(rawImageKeys) ||
+        rawImageKeys.length > 3 ||
+        rawImageKeys.some((key) => typeof key !== "string" || key.length > 200)
+      ) {
+        throw new Error('"imageKeys" must contain at most 3 valid local keys.');
       }
-      images = rawImages.map((rawImage) => {
-        if (
-          typeof rawImage !== "object" ||
-          rawImage === null ||
-          typeof (rawImage as { mimeType?: unknown }).mimeType !== "string" ||
-          typeof (rawImage as { data?: unknown }).data !== "string"
-        ) {
-          throw new Error('"images" contains an invalid image.');
-        }
-        return rawImage as { mimeType: string; data: string };
-      });
+      imageKeys = rawImageKeys as string[];
     }
     if (rawModel !== undefined && rawModel !== null) {
       if (typeof rawModel !== "string" || rawModel.length > 100) {
@@ -116,7 +121,13 @@ export async function POST(
   }
 
   try {
-    const message = await appendMessage(auth._id, id, { role, text, images, model, elapsed });
+    const message = await appendMessage(auth._id, id, {
+      role,
+      text,
+      imageKeys,
+      model,
+      elapsed,
+    });
     if (!message) {
       return Response.json({ error: "Session not found." }, { status: 404 });
     }

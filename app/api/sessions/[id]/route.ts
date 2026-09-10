@@ -21,7 +21,8 @@ function parseConclusion(body: unknown): SessionConclusion | null {
   if (!raw || typeof raw !== "object") {
     throw new Error('"conclusion" must be an object or null.');
   }
-  const { title, summary, items, sourceText } = raw as Record<string, unknown>;
+  const { title, summary, items, sourceText, imageKeys: rawImageKeys } =
+    raw as Record<string, unknown>;
   if (typeof title !== "string" || !title) {
     throw new Error('"conclusion.title" must be a non-empty string.');
   }
@@ -30,6 +31,14 @@ function parseConclusion(body: unknown): SessionConclusion | null {
   }
   if (!Array.isArray(items)) {
     throw new Error('"conclusion.items" must be an array.');
+  }
+  if (
+    rawImageKeys !== undefined &&
+    (!Array.isArray(rawImageKeys) ||
+      rawImageKeys.length > 100 ||
+      rawImageKeys.some((key) => typeof key !== "string" || key.length > 300))
+  ) {
+    throw new Error('"conclusion.imageKeys" is invalid.');
   }
   const cleanItems = items.map((item, index) => {
     if (!item || typeof item !== "object") {
@@ -84,6 +93,8 @@ function parseConclusion(body: unknown): SessionConclusion | null {
     items: cleanItems,
     meals,
     sourceText: typeof sourceText === "string" ? sourceText : undefined,
+    imageKeys:
+      Array.isArray(rawImageKeys) ? [...new Set(rawImageKeys as string[])] : undefined,
   };
 }
 

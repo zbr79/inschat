@@ -27,6 +27,7 @@ import GlucoseChart from "./GlucoseChart";
 import GlucoseRangeControl from "./GlucoseRangeControl";
 import RecordEditModal, { type RecordEditDraft } from "./RecordEditModal";
 import RecordInsights from "./RecordInsights";
+import RecordImages from "./RecordImages";
 import ReportTransferControls from "./ReportTransferControls";
 import {
   extractGlucosePoints,
@@ -58,6 +59,7 @@ function toSavedRecord(record: {
   items: SavedRecord["items"];
   meals?: SavedRecord["meals"];
   sourceText?: string;
+  imageKeys?: string[];
   savedAt: string;
   recordedAt?: string;
   sessionId?: string;
@@ -69,6 +71,7 @@ function toSavedRecord(record: {
     items: record.items,
     meals: record.meals,
     sourceText: record.sourceText,
+    imageKeys: record.imageKeys,
     savedAt: record.savedAt,
     datetime: record.recordedAt ?? null,
     recordedAt: record.recordedAt,
@@ -230,6 +233,7 @@ export default function RecordsPanel({
             summary: editingRecord.summary,
             items: editingRecord.items,
             meals: editingRecord.meals,
+            imageKeys: editingRecord.imageKeys,
           }
         : null,
     [editingRecord]
@@ -323,6 +327,7 @@ export default function RecordsPanel({
           items: draft.items,
           meals: draft.meals,
           sourceText: record.sourceText,
+          imageKeys: record.imageKeys,
           sessionId: record.sessionId,
           recordedAt: record.recordedAt ?? record.datetime ?? record.savedAt,
         });
@@ -336,6 +341,7 @@ export default function RecordsPanel({
             items: draft.items,
             meals: draft.meals,
             sourceText: record.sourceText,
+            imageKeys: record.imageKeys,
             sessionId: record.sessionId,
             recordedAt: record.recordedAt ?? record.datetime ?? record.savedAt,
           }),
@@ -731,12 +737,30 @@ export default function RecordsPanel({
                         return (
                           showFull ? (
                             <div key={`meal-${index}`} className="timeline-full-event">
-                              <span className="timeline-full-title">{mealTitle}</span>
+                              <span className="timeline-full-title">
+                                {mealTitle}
+                                <RecordImages
+                                  imageKeys={record.imageKeys}
+                                  unavailableLabel={t["records.imageUnavailable"]}
+                                  imageAlt={t["records.imageAlt"]}
+                                  buttonLabel={t["records.imageButton"]}
+                                  closeLabel={t["records.imageClose"]}
+                                />
+                              </span>
                               <div className="timeline-meal">{mealContent}</div>
                             </div>
                           ) : (
                             <div key={`meal-${index}`} className="timeline-meal">
-                              <span className="meal-name">{mealTitle}</span>
+                              <span className="meal-name">
+                                {mealTitle}
+                                <RecordImages
+                                  imageKeys={record.imageKeys}
+                                  unavailableLabel={t["records.imageUnavailable"]}
+                                  imageAlt={t["records.imageAlt"]}
+                                  buttonLabel={t["records.imageButton"]}
+                                  closeLabel={t["records.imageClose"]}
+                                />
+                              </span>
                               {mealContent}
                             </div>
                           )
@@ -856,6 +880,7 @@ export default function RecordsPanel({
             guest={guest === true}
             recordId={editingRecord._id}
             sessionId={editingRecord.sessionId}
+            imageKeys={editingRecord.imageKeys}
             onClose={() => setEditingRecord(null)}
             onSaved={(edited, savedRecordId) => {
               const id = savedRecordId ?? editingRecord._id;

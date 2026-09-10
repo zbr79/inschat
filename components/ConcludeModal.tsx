@@ -7,6 +7,7 @@ import { addGuestRecord, updateGuestRecord } from "@/lib/guestStore";
 import { STR, useUiLang } from "@/lib/i18n";
 import { formatDateTimeDisplay, formatDateTimeNoYear, localizeReadingPhase, mealNameForTime, READING_PHASES, readingPhase, parseFlexibleDateTime } from "@/lib/mealTime";
 import { Calendar, Clock, Pencil, Trash2, X } from "lucide-react";
+import RecordImages from "./RecordImages";
 
 const RANK_CYCLE: Record<string, string[]> = {
   zh: ["低", "中", "高"],
@@ -338,6 +339,7 @@ export default function ConcludeModal({
   guest = false,
   recordId = null,
   sessionId,
+  imageKeys,
   embedded = false,
   onClose,
   onSaved,
@@ -348,6 +350,7 @@ export default function ConcludeModal({
   guest?: boolean;
   recordId?: string | null;
   sessionId?: string | null;
+  imageKeys?: string[];
   embedded?: boolean;
   onClose: () => void;
   onSaved: (edited: ConcludeResult, savedRecordId: string | null) => void;
@@ -601,6 +604,7 @@ closeRef.current = () => {
       summary: result.summary,
       items: builtItems,
       meals: savedMeals.length ? savedMeals : undefined,
+      imageKeys: imageKeys ?? result.imageKeys,
     };
     try {
       let savedId: string | null = recordId;
@@ -612,6 +616,7 @@ closeRef.current = () => {
             items: edited.items,
             meals: edited.meals,
             sourceText,
+            imageKeys: edited.imageKeys,
             sessionId: sessionId ?? undefined,
           });
         } else {
@@ -621,6 +626,7 @@ closeRef.current = () => {
             items: edited.items,
             meals: edited.meals,
             sourceText,
+            imageKeys: edited.imageKeys,
             sessionId: sessionId ?? undefined,
           });
           savedId = record.id;
@@ -637,6 +643,7 @@ closeRef.current = () => {
               items: edited.items,
               meals: edited.meals,
               sourceText,
+              imageKeys: edited.imageKeys,
               sessionId: sessionId ?? undefined,
             }),
           }
@@ -742,6 +749,16 @@ closeRef.current = () => {
           </button>
         </div>}
 
+        {meals.length === 0 && imageKeys && imageKeys.length > 0 && (
+          <RecordImages
+            imageKeys={imageKeys}
+            unavailableLabel={t["records.imageUnavailable"]}
+            imageAlt={t["records.imageAlt"]}
+            buttonLabel={t["records.imageButton"]}
+            closeLabel={t["records.imageClose"]}
+          />
+        )}
+
         {(() => {
         // Order meals, insulin and glucose readings by time: same time →
         // food (meal) first, then insulin, then glucose; different times →
@@ -800,6 +817,13 @@ closeRef.current = () => {
                     <Trash2 size={14} />
                   </button>
                   <span className="conclude-inline-meal-name">{meal.name}</span>
+                  <RecordImages
+                    imageKeys={imageKeys}
+                    unavailableLabel={t["records.imageUnavailable"]}
+                    imageAlt={t["records.imageAlt"]}
+                    buttonLabel={t["records.imageButton"]}
+                    closeLabel={t["records.imageClose"]}
+                  />
                   <InlineTime
                     value={meal.time ?? ""}
                     lang={lang}
