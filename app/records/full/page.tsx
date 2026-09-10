@@ -1,5 +1,5 @@
-import RecordsPanel from "@/components/RecordsPanel";
+import { redirect } from "next/navigation";
 
 export default function FullReportPage() {
-  return <RecordsPanel fullReport />;
+  redirect("/records");
 }
