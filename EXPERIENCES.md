@@ -2849,3 +2849,185 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Disproved
 - Requiring users to click only the small guest icon was not an adequate login affordance.
+
+## 2026-09-09 — Simplify application metadata
+
+### Solved
+- Changed the browser/application metadata title to simply “InsChat”.
+- Removed the extra insulin and glucose tracker title and description text.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Live homepage returned `200` and rendered `<title>InsChat`.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The longer product descriptor was not wanted as part of the application name.
+
+## 2026-09-09 — Merge brief and full records views
+
+### Solved
+- Combined the brief insights/chart and full report tools/timeline into one `/records` page.
+- Replaced the sidebar Records folder and two child links with one Records button above the account footer.
+- Kept `/records/full` as a compatibility redirect to `/records`.
+- Removed the unused brief/full navigation labels.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200`.
+- `/records/full` redirected to `/records`.
+
+### Unresolved
+- Full guest and signed-in visual QA was not run in a browser session.
+
+### Disproved
+- Separate sidebar entries were necessary after the two records views were merged into one page.
+
+## 2026-09-09 — Place Records above the account footer
+
+### Solved
+- Moved the single Records link outside the `.sidebar-foot` container.
+- Records now sits directly above the bottom account/guest bar instead of inside it.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual spacing QA remains pending.
+
+### Disproved
+- Placing the Records link inside the footer did not satisfy the requested above-footer layout.
+
+## 2026-09-09 — Make the Records entry visibly clickable
+
+### Solved
+- Redesigned the above-footer Records link as an always-visible bordered button.
+- Switched the icon to a report/document icon and kept the label “Records”.
+- The button no longer depends on hover to communicate that it is clickable.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- A plain sidebar link with hover feedback was not obvious enough as the entry point to the full report.
+
+## 2026-09-09 — Match Records button to insulin mode styling
+
+### Solved
+- Applied the insulin-mode gradient-border accent to the Records button.
+- Reduced the button padding and text size so it is compact.
+- Removed the gray button treatment while keeping the control visibly clickable.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- The larger gray bordered treatment did not match the insulin-mode visual language.
+
+## 2026-09-09 — Paginate the Records timeline
+
+### Solved
+- Moved the full-report date selector below the timeline.
+- Limited the timeline to the newest seven days initially.
+- Added a button that appends up to 30 more days per click.
+- Added English and Chinese labels for the incremental timeline control.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA was blocked because the browser probe could not connect to the local app URL.
+
+### Disproved
+- Rendering every historical timeline day immediately made the records page unnecessarily long.
+
+## 2026-09-09 — Improve Records button typography
+
+### Solved
+- Kept the existing Records button border and accent colors.
+- Removed the inherited sidebar-label padding from the Records text.
+- Matched the label color to the button accent and refined its weight, spacing, and line height.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- The generic sidebar label styling made the Records text look misaligned and muted inside the accent button.
+
+## 2026-09-09 — Refine Records range controls
+
+### Solved
+- Replaced the raw time-range tabs with a labeled segmented control.
+- Added clearer active-state contrast, spacing, borders, and mobile overflow behavior.
+- Moved Import and Export controls ahead of the time-range selector at the top of the Records page.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- The unlabeled, lightly bordered range tabs did not provide enough visual hierarchy.
+
+## 2026-09-09 — Simplify Records header controls
+
+### Solved
+- Removed the visible Time range label.
+- Removed the gray range-control background and replaced it with a lighter border.
+- Aligned Import and Export to the right side of the Records header.
+- Preserved a stacked layout on mobile.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- The gray range-control container and left-positioned transfer actions did not match the requested header hierarchy.
+
+## 2026-09-09 — Order Records header actions
+
+### Solved
+- Ordered the header actions as Export, Import, then Load example.
+- Placed Load example at the far right of the guest header.
+- Kept Import and Export grouped immediately to its left.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- Placing Load example before the transfer actions left the guest action order visually backwards.

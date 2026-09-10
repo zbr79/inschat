@@ -64,7 +64,6 @@ export default function Sidebar() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarScrolled, setSidebarScrolled] = useState(false);
   const [chatsCollapsed, setChatsCollapsed] = useState(false);
-  const [recordsCollapsed, setRecordsCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteDataOpen, setDeleteDataOpen] = useState(false);
   const [clearAccountDataOpen, setClearAccountDataOpen] = useState(false);
@@ -508,53 +507,18 @@ export default function Sidebar() {
           )}
         </div>
       )}
+        </div>
       {authChecked && (
-        <div className="session-nav">
-          <div className="session-label-row">
-            <button
-              type="button"
-              className="catalog-toggle"
-              onClick={() => setRecordsCollapsed((value) => !value)}
-              aria-expanded={!recordsCollapsed}
-              title={t["nav.records"]}
-            >
-              <span className="sidebar-label sidebar-catalog-label">{t["nav.records"]}</span>
-              <ChevronDown
-                size={14}
-                className={`catalog-chevron${recordsCollapsed ? " collapsed" : ""}`}
-                aria-hidden="true"
-              />
-            </button>
-          </div>
-          {!recordsCollapsed && (
-            <>
-              <Link
-                href="/records"
-                className={`sidebar-report-link${pathname === "/records" ? " active" : ""}`}
-                onClick={() => setMenuOpen(false)}
-                aria-current={pathname === "/records" ? "page" : undefined}
-              >
-                <Activity size={15} aria-hidden="true" />
-                <span className="sidebar-label sidebar-catalog-label">
-                  {t["nav.reportTimeline"]}
-                </span>
-              </Link>
-              <Link
-                href="/records/full"
-                className={`sidebar-report-link${pathname === "/records/full" ? " active" : ""}`}
-                onClick={() => setMenuOpen(false)}
-                aria-current={pathname === "/records/full" ? "page" : undefined}
-              >
-                <FileText size={15} aria-hidden="true" />
-                <span className="sidebar-label sidebar-catalog-label">
-                  {t["nav.fullReport"]}
-                </span>
-              </Link>
-            </>
-          )}
-        </div>
+        <Link
+          href="/records"
+          className={`sidebar-records-button${pathname.startsWith("/records") ? " active" : ""}`}
+          onClick={() => setMenuOpen(false)}
+          aria-current={pathname.startsWith("/records") ? "page" : undefined}
+        >
+          <FileText size={15} aria-hidden="true" />
+          <span className="sidebar-label sidebar-catalog-label">{t["nav.records"]}</span>
+        </Link>
       )}
-        </div>
       <div className="sidebar-foot">
         {user ? (
           <div className="account-row">
