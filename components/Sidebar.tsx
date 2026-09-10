@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Menu, X, SquarePen, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, Sparkles, ChevronDown, ChevronRight, Languages, Activity, FileText, Gauge, LogOut, ImageDown } from "lucide-react";
+import { Menu, X, SquarePen, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronDown, ChevronRight, Languages, Activity, FileText, Gauge, LogOut, ImageDown } from "lucide-react";
 import type { ChatSession } from "@/lib/types";
 import {
   clearGuestData,
@@ -67,6 +67,7 @@ export default function Sidebar() {
   const [recordsCollapsed, setRecordsCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteDataOpen, setDeleteDataOpen] = useState(false);
+  const [clearAccountDataOpen, setClearAccountDataOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authNonce, setAuthNonce] = useState(0);
   const [insulinMode, toggleInsulinMode] = useInsulinMode();
@@ -245,6 +246,18 @@ export default function Sidebar() {
     }
   };
 
+  const clearAccountData = async () => {
+    try {
+      const response = await fetch("/api/sessions?all=1", { method: "DELETE" });
+      if (!response.ok) throw new Error("clear account data failed");
+      setSessions([]);
+      window.dispatchEvent(new CustomEvent("inschat-records-changed"));
+      setClearAccountDataOpen(false);
+      setSettingsOpen(false);
+      if (currentSession) router.replace("/");
+    } catch {}
+  };
+
   const ownerList = (sessions ?? []).sort(
     (a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false)
   );
@@ -408,7 +421,7 @@ export default function Sidebar() {
         <div className={`sidebar-top${sidebarScrolled ? " scrolled" : ""}`}>
         <div className="sidebar-brand-row">
           <span className="brand-mark">
-            <Sparkles size={16} />
+            <img src="/icon.svg" alt="" />
           </span>
           <span className="brand-name">InsChat</span>
           <button
@@ -549,15 +562,6 @@ export default function Sidebar() {
             <span className="account-name">{user.username}</span>
             <button
               type="button"
-              className="account-logout"
-              onClick={logout}
-              aria-label={t["nav.signOut"]}
-              title={t["nav.signOut"]}
-            >
-              {t["nav.signOut"]}
-            </button>
-            <button
-              type="button"
               className="settings-button"
               onClick={() => setSettingsOpen(true)}
               aria-label={t["nav.settings"]}
@@ -568,18 +572,18 @@ export default function Sidebar() {
           </div>
         ) : (
           <div className="account-row guest">
-            <div className="guest-identity">
-              <button
-                type="button"
-                className="login-circle"
-                onClick={() => setAuthOpen(true)}
-                aria-label={t["nav.signIn"]}
-                title={t["nav.signIn"]}
-              >
-                <User size={20} />
-              </button>
+            <button
+              type="button"
+              className="guest-identity"
+              onClick={() => setAuthOpen(true)}
+              aria-label={t["nav.signIn"]}
+              title={t["nav.signIn"]}
+            >
+              <span className="login-circle" aria-hidden="true">
+                <User size={18} />
+              </span>
               <span className="guest-name">{t["nav.guest"]}</span>
-            </div>
+            </button>
             <button
               type="button"
               className="settings-button"
@@ -684,6 +688,37 @@ export default function Sidebar() {
             <span className="settings-label">{t["nav.usage"]}</span>
             <ChevronRight size={16} />
           </button>
+          {user && (
+            <button
+              type="button"
+              className="settings-row settings-link"
+              onClick={() => {
+                setSettingsOpen(false);
+                void logout();
+              }}
+            >
+              <span className="settings-row-icon">
+                <LogOut size={16} />
+              </span>
+              <span className="settings-label">{t["nav.signOut"]}</span>
+              <ChevronRight size={16} />
+            </button>
+          )}
+          {user && (
+            <div className="settings-row settings-danger">
+              <span className="settings-row-icon settings-danger-icon">
+                <Trash2 size={16} />
+              </span>
+              <span className="settings-label">{t["settings.clearAccountData"]}</span>
+              <button
+                type="button"
+                className="settings-danger-button"
+                onClick={() => setClearAccountDataOpen(true)}
+              >
+                {t["settings.clearAccountData"]}
+              </button>
+            </div>
+          )}
           {!user && (
             <div className="settings-row settings-danger">
               <span className="settings-row-icon settings-danger-icon">
@@ -716,6 +751,16 @@ export default function Sidebar() {
           setSettingsOpen(false);
           if (currentSession) router.replace("/");
         }}
+      />
+    )}
+    {clearAccountDataOpen && (
+      <ConfirmModal
+        title={t["settings.clearAccountDataTitle"]}
+        message={t["settings.clearAccountDataMessage"]}
+        cancelLabel={t["actions.cancel"]}
+        confirmLabel={t["settings.clearAccountDataConfirm"]}
+        onCancel={() => setClearAccountDataOpen(false)}
+        onConfirm={clearAccountData}
       />
     )}
     </>

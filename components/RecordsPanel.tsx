@@ -259,6 +259,14 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
   }, []);
 
   useEffect(() => {
+    const onRecordsChanged = () => {
+      void load();
+    };
+    window.addEventListener("inschat-records-changed", onRecordsChanged);
+    return () => window.removeEventListener("inschat-records-changed", onRecordsChanged);
+  }, [load]);
+
+  useEffect(() => {
     load();
   }, [load]);
 

@@ -2714,3 +2714,138 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Disproved
 - Clearing the hydrated pending text was unnecessary and caused every refresh to visually replay the answer from the beginning.
+
+## 2026-09-09 — Cloud-backed guest-to-account migration
+
+### Solved
+- Added an authenticated `/api/account/migrate-guest` endpoint that imports guest sessions, messages, conclusions, reports, pins, and images into the signed-in MongoDB account.
+- Added source guest IDs and a migration record so retries are idempotent and do not duplicate cloud sessions, messages, or report entries.
+- Added client batching for large IndexedDB image payloads; local guest data is cleared only after every migration batch succeeds.
+- Rebound active persisted guest runs to their new cloud message so a response that is still generating continues to update the account-owned transcript.
+- Added nested migration validation for message content, images, process steps, conclusions, report items, and meals.
+- Added the nginx route required for the migration POST to reach Next.js.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `nginx -t` passed and nginx reloaded successfully.
+- Public homepage returned `200`.
+- Unauthenticated migration POST reached the application and returned the expected `401`, replacing the previous nginx `405`.
+
+### Unresolved
+- Full signed-in browser migration QA requires a real user account and was not performed to avoid creating test account/session data.
+
+### Disproved
+- Guest-to-account migration did not require replacing the existing guest or signed-in storage models; a source-ID mapping layer safely bridges them.
+
+## 2026-09-09 — Dedicated sign-in and sign-up pages
+
+### Solved
+- Replaced the legacy `/login` redirect with a dedicated sign-in page.
+- Added a dedicated `/signup` page for open username/password registration.
+- Shared the validated auth form between both pages and the sidebar modal.
+- Kept automatic guest-data migration after successful sign-in or registration.
+- No invite code or registration code is required.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Public `/login` and `/signup` both returned `200` after startup.
+- Server validation remains username 3–32 characters and password 8–128 characters.
+
+### Unresolved
+- A real account sign-up/sign-in flow was not submitted during QA to avoid creating test account data.
+
+### Disproved
+- A separate registration-code mechanism was not present in the existing auth API.
+
+## 2026-09-09 — Keep guest and account storage separate
+
+### Solved
+- Removed guest-data export, migration, rebinding, and local guest-data clearing from sign-in and sign-up.
+- Sign-in and registration now switch the active view to the account without importing guest sessions, records, reports, images, or pending runs.
+- Removed the migration API implementation, client coordinator, validation modules, and nginx route.
+- Logout continues to clear only the auth cookie; the browser's guest store remains unchanged and is available again after logout.
+
+### Verified
+- `npm run build` passed after the code changes.
+- `nginx -t` passed and nginx reloaded successfully with the migration route removed.
+- Repository search found no active guest-migration imports or endpoint references.
+
+### Unresolved
+- A real sign-in/logout isolation test was not performed to avoid creating test account data.
+
+### Disproved
+- Automatically merging guest data into an account is not required for cloud-backed accounts and conflicts with the desired separate guest/account model.
+
+## 2026-09-09 — Account data clearing controls
+
+### Solved
+- Added confirmation-gated signed-in settings actions for clearing all chats and clearing all saved reports.
+- Added account-scoped bulk APIs that delete sessions with their messages and clear both current and legacy report storage.
+- Kept the existing guest-only local-data deletion control separate from account deletion.
+- Refreshed an open records page after reports are cleared.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- The bulk APIs remain protected by authentication.
+
+### Unresolved
+- Full signed-in browser QA requires a real account and was not performed to avoid creating test account data.
+
+### Disproved
+- Per-item deletion alone was not sufficient for the test-phase cleanup workflow; account-level bulk controls are needed.
+
+## 2026-09-09 — Combine account cleanup into one action
+
+### Solved
+- Replaced the two signed-in cleanup buttons with one “Clear all chats and reports” action.
+- The button uses one authenticated bulk request that clears sessions, messages, current reports, and legacy report records together.
+- Kept the existing confirmation dialog and guest-only local-data action unchanged.
+
+### Verified
+- `npm run build` passed after consolidating the controls.
+- The combined endpoint remains behind the existing `/api/sessions` authentication and DELETE method protection.
+
+### Unresolved
+- Full signed-in browser QA requires a real account and was not performed to avoid creating test account data.
+
+### Disproved
+- Separate signed-in buttons were unnecessary for this test-phase cleanup workflow.
+
+## 2026-09-09 — Move logout into Settings
+
+### Solved
+- Removed the signed-in logout button from the account row in the sidebar footer.
+- Added logout as a Settings row next to usage and account cleanup controls.
+- Preserved the existing logout behavior, including returning to the separate guest account.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- The live homepage returned `200`.
+
+### Unresolved
+- Signed-in visual QA requires a real account and was not performed to avoid creating test account data.
+
+### Disproved
+- Keeping logout beside the username was not needed once account actions were grouped in Settings.
+
+## 2026-09-09 — Make the guest footer login target explicit
+
+### Solved
+- Made the guest icon and “Guest” label one shared login button.
+- Removed account-row hover highlighting so the bottom bar does not highlight as a whole.
+- Reduced the guest login icon from 20px to 18px and its circle from 34px to 31px.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Live homepage returned `200`.
+
+### Unresolved
+- Signed-in/guest visual hover QA was not run in a browser session.
+
+### Disproved
+- Requiring users to click only the small guest icon was not an adequate login affordance.

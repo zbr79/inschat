@@ -1,4 +1,4 @@
-import { insertSession, listSessions } from "@/lib/db";
+import { clearAllAccountData, insertSession, listSessions } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
@@ -49,6 +49,22 @@ export async function POST(req: Request) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Could not create the session.";
+    return Response.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const auth = await requireUser(req);
+  if (auth instanceof Response) return auth;
+  if (new URL(req.url).searchParams.get("all") !== "1") {
+    return Response.json({ error: '"all=1" is required.' }, { status: 400 });
+  }
+  try {
+    await clearAllAccountData(auth._id);
+    return Response.json({ ok: true });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Could not clear account data.";
     return Response.json({ error: message }, { status: 500 });
   }
 }

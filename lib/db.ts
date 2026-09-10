@@ -373,6 +373,20 @@ export async function deleteReportEntry(userId: string, id: string): Promise<boo
   return result.modifiedCount > 0;
 }
 
+export async function clearAllReportEntries(userId: string): Promise<void> {
+  const report = await ensureAccountReport(userId);
+  const db = await getDb();
+  await Promise.all([
+    db.collection<AccountReportDoc>("account_reports").updateOne(
+      { userId: new ObjectId(userId) },
+      { $set: { entries: [], updatedAt: new Date() } }
+    ),
+    db.collection<RecordDoc>("records").deleteMany({
+      userId: new ObjectId(userId),
+    }),
+  ]);
+}
+
 interface CallDoc {
   _id?: ObjectId;
   kind: "chat" | "conclude" | "health" | "opencode";
@@ -1024,6 +1038,29 @@ export async function deleteSession(userId: string, id: string): Promise<boolean
     .collection<SessionDoc>("sessions")
     .deleteOne({ _id: new ObjectId(id), userId: new ObjectId(userId) });
   return result.deletedCount > 0;
+}
+
+export async function clearAllSessions(userId: string): Promise<void> {
+  const db = await getDb();
+  const ownerId = new ObjectId(userId);
+  const sessions = await db
+    .collection<SessionDoc>("sessions")
+    .find({ userId: ownerId }, { projection: { _id: 1 } })
+    .toArray();
+  const sessionIds = sessions.flatMap((session) => (session._id ? [session._id] : []));
+  await Promise.all([
+    sessionIds.length
+      ? db.collection<MessageDoc>("messages").deleteMany({ sessionId: { $in: sessionIds } })
+      : Promise.resolve(),
+    db.collection<SessionDoc>("sessions").deleteMany({ userId: ownerId }),
+  ]);
+}
+
+export async function clearAllAccountData(userId: string): Promise<void> {
+  await Promise.all([
+    clearAllSessions(userId),
+    clearAllReportEntries(userId),
+  ]);
 }
 
 interface ShareDoc {
