@@ -79,7 +79,8 @@ export default function ReportTransferControls({
     const payload = {
       version: 1,
       exportedAt: new Date().toISOString(),
-      records,
+      // Local image references are intentionally not portable or exported.
+      records: records.map(({ imageKeys: _imageKeys, localImages: _localImages, ...record }) => record),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: "application/json",

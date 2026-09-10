@@ -101,6 +101,15 @@ export default function Sidebar() {
     setMenuOpen(false);
   }, [pathname, currentSession]);
 
+  useEffect(() => {
+    if (!menuOpen || !window.matchMedia("(max-width: 640px)").matches) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [menuOpen]);
+
   // Escape closes the mobile drawer (and any open row menu).
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

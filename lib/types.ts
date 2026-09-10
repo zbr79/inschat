@@ -33,6 +33,7 @@ export interface ConcludeResult {
   summary: string;
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
+  imageKeys?: string[];
 }
 
 export interface SessionConclusion {
@@ -41,6 +42,7 @@ export interface SessionConclusion {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  imageKeys?: string[];
 }
 
 export interface SavedRecord {
@@ -50,6 +52,9 @@ export interface SavedRecord {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  imageKeys?: string[];
+  /** Hydrated browser-local images; never sent to the API. */
+  localImages?: ChatImage[];
   savedAt: string;
   datetime: string | null;
   recordedAt?: string;
@@ -87,7 +92,7 @@ export interface StoredMessage {
   sessionId: string;
   role: "user" | "model";
   text: string;
-  images?: ChatImage[];
+  imageKeys?: string[];
   model?: string;
   trying?: string;
   elapsed?: number;

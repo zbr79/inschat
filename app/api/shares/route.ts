@@ -11,7 +11,6 @@ export async function POST(req: Request) {
   let messages: {
     role: "user" | "model";
     text: string;
-    image?: { mimeType: string; data: string };
     model?: string;
     elapsed?: number;
   }[] = [];
@@ -53,27 +52,12 @@ export async function POST(req: Request) {
       if (typeof text !== "string" || text.length > MAX_TEXT) {
         throw new Error(`messages[${index}].text is invalid.`);
       }
-      let parsedImages: { mimeType: string; data: string }[] | undefined;
       if (images !== undefined && images !== null) {
-        if (!Array.isArray(images) || images.length > 3) {
-          throw new Error(`messages[${index}].images must be an array of at most 3 images.`);
-        }
-        parsedImages = images.map((image) => {
-          if (
-            typeof image !== "object" ||
-            image === null ||
-            typeof (image as { mimeType?: unknown }).mimeType !== "string" ||
-            typeof (image as { data?: unknown }).data !== "string"
-          ) {
-            throw new Error(`messages[${index}].images contains an invalid image.`);
-          }
-          return image as { mimeType: string; data: string };
-        });
+        throw new Error(`messages[${index}].images are local-only.`);
       }
       return {
         role,
         text,
-        images: parsedImages,
         model: typeof model === "string" ? model.slice(0, 100) : undefined,
         elapsed: typeof elapsed === "number" ? elapsed : undefined,
       };

@@ -7,6 +7,7 @@ export interface ChatRequest {
   timeZone?: string;
   language?: "zh" | "en";
   mode?: "preset" | "free";
+  includeImages?: boolean;
   reasoning?: "max" | "medium" | "low";
   sessionId?: string;
   pendingMessageId?: string;
@@ -97,6 +98,15 @@ export function parseChatBody(body: unknown): ChatRequest {
     reasoning = rawReasoning;
   }
 
+  const rawIncludeImages = (body as { includeImages?: unknown }).includeImages;
+  let includeImages: boolean | undefined;
+  if (rawIncludeImages !== undefined) {
+    if (typeof rawIncludeImages !== "boolean") {
+      throw new ChatValidationError('"includeImages" must be a boolean.');
+    }
+    includeImages = rawIncludeImages;
+  }
+
   const rawSessionId = (body as { sessionId?: unknown }).sessionId;
   let sessionId: string | undefined;
   if (rawSessionId !== undefined) {
@@ -125,5 +135,14 @@ export function parseChatBody(body: unknown): ChatRequest {
     pendingMessageId = rawPendingMessageId;
   }
 
-  return { messages, timeZone, language, mode, reasoning, sessionId, pendingMessageId };
+  return {
+    messages,
+    timeZone,
+    language,
+    mode,
+    includeImages,
+    reasoning,
+    sessionId,
+    pendingMessageId,
+  };
 }

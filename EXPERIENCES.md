@@ -3031,3 +3031,123 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Disproved
 - Placing Load example before the transfer actions left the guest action order visually backwards.
+
+## 2026-09-09 — Improve phone sidebar navigation
+
+### Solved
+- Restored chat history visibility inside the mobile sidebar drawer.
+- Added body scroll locking while the drawer is open.
+- Improved mobile drawer width, safe-area spacing, touch targets, and visual separation.
+- Hid the desktop collapse control on phones.
+
+### Verified
+- `npm run build` passed after the sidebar pass.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- Hiding `.session-nav` on phones made the drawer useful only for navigation buttons, not chat history.
+
+## 2026-09-09 — Improve phone Records layout
+
+### Solved
+- Tightened Records page spacing for narrow screens.
+- Made transfer, demo, range, date, and pagination controls easier to tap.
+- Allowed insight dates, values, and chart tooltips to wrap.
+- Removed desktop-only timeline width reservations and made timeline times flow below content on phones.
+- Made day edit controls visible on touch screens.
+
+### Verified
+- `npm run build` passed after the Records pass.
+- Restarted only PM2 app `inschat`.
+- Guest `/`, `/records`, and redirected `/records/full` returned `200`.
+
+### Unresolved
+- Browser visual QA remains pending because no browser executable was available in the shell environment.
+
+### Disproved
+- Desktop timeline spacing and hover-only actions were not suitable for narrow touch layouts.
+
+## 2026-09-10 — Keep report pictures local
+
+### Solved
+- Stored authenticated chat image references instead of image bytes in session messages.
+- Associated original-session report entries with local image keys.
+- Hydrated report pictures from browser IndexedDB and added an unavailable-on-this-device state.
+- Kept report export/import metadata-only so local image data is never transferred.
+- Prevented the legacy share endpoint from accepting or returning image bytes.
+
+### Verified
+- `npm run build` passed after the persistence, report, and rendering passes.
+
+### Unresolved
+- Existing MongoDB documents may still contain image bytes from before this change; new writes and API responses no longer persist or expose them.
+- Images are intentionally unavailable on other devices because the browser-local sidecar is not synchronized.
+
+### Disproved
+- Persisting authenticated chat image data in MongoDB is incompatible with the local-only image requirement.
+
+## 2026-09-10 — Include earlier session photos in reports
+
+### Solved
+- Added an explicit report-mode image flag to the chat request.
+- Preserved earlier local photo parts for insulin/session-report model turns.
+- Kept ordinary text turns on the existing text-only path.
+
+### Verified
+- Production build and guest route checks are required after this pass.
+
+### Unresolved
+- Report analysis still depends on the configured vision-capable model accepting the transient image request.
+
+### Disproved
+- Treating only the latest message as image context prevented later session reports from analyzing an earlier photo.
+
+## 2026-09-10 — Preserve current image keys when saving reports
+
+### Solved
+- Report saves now collect image keys from the exact message snapshot that generated the report.
+- Existing report updates also retain image keys from the parsed conclusion as a fallback.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Guest `/` and `/records` returned `200`.
+
+### Unresolved
+- A report cannot display a photo if browser-local IndexedDB storage failed before the report was saved.
+
+### Disproved
+- Reading only the asynchronous React message ref was reliable enough for auto-saving the just-uploaded photo.
+
+## 2026-09-10 — Show pictures inside chat reports
+
+### Solved
+- Added the local report-image gallery to the in-chat report modal.
+- Reused the same local preview and unavailable-image behavior as the Records page.
+
+### Verified
+- Production build and guest route checks are required after this UI pass.
+
+### Unresolved
+- The gallery still depends on the original browser’s local IndexedDB image sidecar.
+
+### Disproved
+- Saving picture references alone was sufficient when the in-chat report itself had no image presentation.
+
+## 2026-09-10 — Replace report image thumbnails with meal buttons
+
+### Solved
+- Replaced direct image display in both report locations with a Photos button.
+- Positioned the button beside each meal name.
+- Kept the gallery and full-screen preview behind the button.
+
+### Verified
+- Production build and guest route checks are required after this UI pass.
+
+### Unresolved
+- Each meal button currently opens the session’s complete local image set because image-to-meal mapping is not stored.
+
+### Disproved
+- Showing every report image inline was the requested report interaction.
