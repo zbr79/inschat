@@ -2,7 +2,6 @@ import { Db, MongoClient, ObjectId } from "mongodb";
 import { randomBytes } from "node:crypto";
 import type {
   ApiCall,
-  ChatImage,
   ChatSession,
   ConcludeItem,
   ConcludeMeal,
@@ -21,6 +20,7 @@ interface RecordDoc {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  imageKeys?: string[];
   savedAt: Date;
   datetime: Date | null;
   pinned?: boolean;
@@ -34,6 +34,7 @@ interface ReportEntryDoc {
   items: ConcludeItem[];
   meals?: ConcludeMeal[] | null;
   sourceText?: string | null;
+  imageKeys?: string[] | null;
   savedAt: Date;
   datetime: Date | null;
   recordedAt: Date;
@@ -80,6 +81,7 @@ export function toSavedRecord(doc: RecordDoc): SavedRecord {
     items: doc.items,
     meals: doc.meals,
     sourceText: doc.sourceText,
+    imageKeys: doc.imageKeys,
     savedAt: doc.savedAt.toISOString(),
     datetime: doc.datetime ? doc.datetime.toISOString() : null,
     pinned: doc.pinned ?? false,
@@ -94,6 +96,7 @@ export async function insertRecord(
     items: ConcludeItem[];
     meals?: ConcludeMeal[];
     sourceText?: string;
+    imageKeys?: string[];
     datetime: Date | null;
   }
 ): Promise<SavedRecord> {
@@ -140,6 +143,7 @@ export async function updateRecord(
     items: ConcludeItem[];
     meals?: ConcludeMeal[];
     sourceText?: string;
+    imageKeys?: string[];
     pinned?: boolean;
   }
 ): Promise<SavedRecord | null> {
@@ -156,6 +160,7 @@ export async function updateRecord(
           items: input.items,
           meals: input.meals,
           sourceText: input.sourceText,
+          ...(input.imageKeys === undefined ? {} : { imageKeys: input.imageKeys }),
           ...(input.pinned === undefined ? {} : { pinned: input.pinned }),
         },
       },
@@ -178,6 +183,7 @@ function toSavedReportEntry(entry: ReportEntryDoc): SavedRecord {
     items: entry.items,
     meals: entry.meals ?? undefined,
     sourceText: entry.sourceText ?? undefined,
+    imageKeys: entry.imageKeys ?? undefined,
     savedAt: entry.savedAt.toISOString(),
     datetime: entry.datetime?.toISOString() ?? null,
     recordedAt: entry.recordedAt.toISOString(),
@@ -211,6 +217,7 @@ async function ensureAccountReport(userId: string): Promise<AccountReportDoc> {
       items: record.items,
       meals: record.meals,
       sourceText: record.sourceText,
+      imageKeys: record.imageKeys,
       savedAt: record.savedAt,
       datetime: record.datetime,
       recordedAt: record.datetime ?? record.savedAt,
@@ -250,6 +257,7 @@ export async function appendReportEntry(
     items: ConcludeItem[];
     meals?: ConcludeMeal[];
     sourceText?: string;
+    imageKeys?: string[];
     sessionId?: string;
     recordedAt?: string;
   }
@@ -265,6 +273,7 @@ export async function appendReportEntry(
     items: input.items,
     meals: input.meals,
     sourceText: input.sourceText,
+    imageKeys: input.imageKeys,
     savedAt: now,
     datetime: recordedAt,
     recordedAt,
@@ -279,6 +288,7 @@ export async function appendReportEntry(
       "entries.$[entry].items": input.items,
       "entries.$[entry].meals": input.meals ?? null,
       "entries.$[entry].sourceText": input.sourceText ?? null,
+      "entries.$[entry].imageKeys": input.imageKeys ?? [],
       updatedAt: now,
     };
     if (input.recordedAt !== undefined) {
@@ -331,6 +341,7 @@ export async function updateReportEntry(
     items: ConcludeItem[];
     meals?: ConcludeMeal[];
     sourceText?: string;
+    imageKeys?: string[];
     sessionId?: string;
     recordedAt?: string;
     pinned?: boolean;
@@ -347,6 +358,7 @@ export async function updateReportEntry(
     updatedAt: now,
   };
   if (input.sourceText !== undefined) set["entries.$.sourceText"] = input.sourceText;
+  if (input.imageKeys !== undefined) set["entries.$.imageKeys"] = input.imageKeys;
   if (input.sessionId !== undefined) set["entries.$.sessionId"] = input.sessionId;
   if (input.recordedAt !== undefined) {
     const recordedAt = reportDate(input.recordedAt, now);
@@ -569,7 +581,7 @@ interface MessageDoc {
   sessionId: ObjectId;
   role: "user" | "model";
   text: string;
-  images?: ChatImage[];
+  imageKeys?: string[];
   model?: string;
   trying?: string;
   elapsed?: number;
@@ -642,7 +654,7 @@ function toStoredMessage(doc: MessageDoc): StoredMessage {
     sessionId: doc.sessionId.toString(),
     role: doc.role,
     text: doc.text,
-    images: doc.images,
+    imageKeys: doc.imageKeys,
     model: doc.model,
     trying: doc.trying,
     elapsed: doc.elapsed,
@@ -764,7 +776,7 @@ export async function appendMessage(
   input: {
     role: "user" | "model";
     text: string;
-    images?: ChatImage[];
+    imageKeys?: string[];
     model?: string;
     trying?: string;
     elapsed?: number;
@@ -777,7 +789,7 @@ export async function appendMessage(
     sessionId: new ObjectId(sessionId),
     role: input.role,
     text: input.text,
-    images: input.images,
+    imageKeys: input.imageKeys,
     model: input.model,
     trying: input.trying,
     elapsed: input.elapsed,
@@ -1071,7 +1083,6 @@ interface ShareDoc {
   messages: {
     role: "user" | "model";
     text: string;
-    image?: ChatImage;
     model?: string;
     elapsed?: number;
   }[];
@@ -1089,7 +1100,12 @@ function toSharedContent(doc: ShareDoc): SharedContent {
   return {
     kind: doc.kind,
     title: doc.title,
-    messages: doc.messages,
+    messages: doc.messages.map(({ role, text, model, elapsed }) => ({
+      role,
+      text,
+      model,
+      elapsed,
+    })),
     createdAt: doc.createdAt.toISOString(),
   };
 }

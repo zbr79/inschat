@@ -121,16 +121,18 @@ export async function POST(req: Request) {
     timeZone,
     language,
     mode,
+    includeImages,
     reasoning,
     sessionId,
     pendingMessageId,
   } = parsed;
   const freeMode = mode === "free";
-  // Only the latest message decides whether this send is an image request;
-  // earlier photos in the history must not re-route text sends to the
-  // paid-only vision chain.
+  // Normal text turns only inspect the latest message. Session-report turns
+  // explicitly keep earlier local photos in the transient model request.
   const lastMessage = messages[messages.length - 1];
-  const hasImage = (lastMessage?.images?.length ?? 0) > 0;
+  const hasImage = includeImages
+    ? messages.some((message) => (message.images?.length ?? 0) > 0)
+    : (lastMessage?.images?.length ?? 0) > 0;
   const user = await getUserFromRequest(req);
   let persistedMessageId: string | undefined;
   if (sessionId && user) {
@@ -234,7 +236,8 @@ export async function POST(req: Request) {
           language,
           freeMode,
           reasoning,
-          sessionId
+          sessionId,
+          includeImages
         )) {
           const parsedChunk = parser.push(text);
           visibleText += parsedChunk.text;

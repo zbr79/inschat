@@ -33,6 +33,7 @@ interface UiMessage {
   role: "user" | "model";
   text: string;
   images?: ChatImage[];
+  imageKeys?: string[];
   streaming?: boolean;
   failed?: boolean;
   model?: string;
@@ -103,6 +104,7 @@ interface StoredLike {
   role: string;
   text: string;
   images?: ChatImage[];
+  imageKeys?: string[];
   model?: string;
   trying?: string;
   elapsed?: number;
@@ -142,6 +144,7 @@ function mapStoredMessages(
         pending
       ),
       images: message.images,
+      imageKeys: message.imageKeys,
       model: message.model,
       hideModelMeta: pending,
       trying: undefined,
@@ -237,7 +240,7 @@ function persistMessage(
   message: {
     role: "user" | "model";
     text: string;
-    images?: ChatImage[];
+    imageKeys?: string[];
     model?: string;
     elapsed?: number;
   }
@@ -247,6 +250,20 @@ function persistMessage(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(message),
   }).catch(() => {});
+}
+
+async function storeLocalImages(
+  sessionId: string,
+  messageId: number,
+  images: ChatImage[] | undefined
+): Promise<string[] | undefined> {
+  if (!images?.length) return undefined;
+  const keys = images.map((_, index) => `${sessionId}:${messageId}:${index}`);
+  const stored = await Promise.all(
+    keys.map((key, index) => putGuestImage(key, images[index]))
+  );
+  const kept = keys.filter((_, index) => stored[index]);
+  return kept.length > 0 ? kept : undefined;
 }
 
 function titleFrom(text: string, fallback: string): string {
@@ -369,21 +386,33 @@ export default function ChatApp() {
         summary: next.summary || base.summary,
         items,
         meals,
+        imageKeys: [...new Set([...(base.imageKeys ?? []), ...(next.imageKeys ?? [])])],
       };
     },
     [concludeResult]
   );
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const persistConclusionRecord = useCallback(
-    async (result: ConcludeResult, sourceText: string): Promise<string | null> => {
+    async (
+      result: ConcludeResult,
+      sourceText: string,
+      sourceMessages: UiMessage[] = messagesRef.current
+    ): Promise<string | null> => {
       const sessionId = sessionIdRef.current;
       if (!sessionId) return null;
+      const imageKeys = [
+        ...new Set([
+          ...(result.imageKeys ?? []),
+          ...sourceMessages.flatMap((message) => message.imageKeys ?? []),
+        ]),
+      ];
       const payload = {
         title: result.title.trim() || t["summary.report"],
         summary: result.summary,
         items: result.items,
         meals: result.meals,
         sourceText,
+        imageKeys,
         sessionId,
       };
       let savedRecordId = recordIdRef.current;
@@ -685,7 +714,7 @@ useEffect(() => {
             messages: {
               role: string;
               text: string;
-              images?: ChatImage[];
+              imageKeys?: string[];
               model?: string;
               trying?: string;
               elapsed?: number;
@@ -698,7 +727,7 @@ useEffect(() => {
             recordId?: string | null;
           }) => {
             if (sessionIdRef.current !== id) return;
-            const hydrated: UiMessage[] = body.messages.map((message) => {
+            return Promise.all(body.messages.map(async (message) => {
                 const status = normalizeUiStatus(
                   (message as { status?: StoredStatus }).status ??
                     (message.status as StoredStatus)
@@ -708,11 +737,19 @@ useEffect(() => {
                   (message as { processSteps?: string[] }).processSteps
                 );
                 const rawText = visibleMessageText(message.text);
+                const images = message.imageKeys?.length
+                  ? (
+                      await Promise.all(
+                        message.imageKeys.map(async (key) => (await getGuestImage(key)) ?? null)
+                      )
+                    ).filter((image): image is ChatImage => image !== null)
+                  : undefined;
                 return {
                   id: nextId++,
                   role: (message.role === "model" ? "model" : "user") as "user" | "model",
                   text: withRestoredTrail(rawText, processSteps, pending),
-                  images: message.images,
+                  images,
+                  imageKeys: message.imageKeys,
                   model: message.model,
                   hideModelMeta: pending,
                   trying: undefined,
@@ -725,7 +762,8 @@ useEffect(() => {
                   updatedAt: message.updatedAt,
                   _id: (message as { _id?: string })._id,
                 };
-              });
+              })).then((hydrated) => {
+            if (sessionIdRef.current !== id) return;
             setMessages(hydrated);
             setSending(hydrated.some((message) => message.status === "pending"));
             const pendingStored = [...(body.messages as StoredLike[])]
@@ -757,10 +795,12 @@ useEffect(() => {
                   summary: body.conclusion.summary,
                   items: body.conclusion.items,
                   meals: body.conclusion.meals,
+                  imageKeys: body.conclusion.imageKeys,
                 },
                 sourceText: body.conclusion.sourceText ?? "",
               });
             }
+          });
           }
         )
         .catch(() => {
@@ -904,6 +944,7 @@ useEffect(() => {
               summary: local.conclusion.summary,
               items: local.conclusion.items,
               meals: local.conclusion.meals,
+              imageKeys: local.conclusion.imageKeys,
             },
             sourceText: local.conclusion.sourceText ?? "",
           });
@@ -1019,6 +1060,7 @@ useEffect(() => {
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             language: lang,
             mode: insulinMode ? "preset" : "free",
+            includeImages: insulinMode,
             reasoning: reasoningEffort,
             sessionId,
             pendingMessageId,
@@ -1161,7 +1203,7 @@ useEffect(() => {
           }
           if (parsedConclude) {
             const merged = mergeConclusion(parsedConclude);
-            const savedRecordId = await persistConclusionRecord(merged, savedText);
+            const savedRecordId = await persistConclusionRecord(merged, savedText, base);
             setConcludeSaved(Boolean(savedRecordId));
             setConcludeResult({ result: merged, sourceText: savedText });
           }
@@ -1265,21 +1307,26 @@ useEffect(() => {
         }
       }
 
-      const userMessage: UiMessage = { id: nextId++, role: "user", text: trimmed, images };
+      const userMessageId = nextId++;
+      const imageKeys = sessionId
+        ? await storeLocalImages(sessionId, userMessageId, images)
+        : undefined;
+      const userMessage: UiMessage = {
+        id: userMessageId,
+        role: "user",
+        text: trimmed,
+        images,
+        imageKeys,
+      };
       if (sessionId) {
         if (authed) {
-          persistMessage(sessionId, { role: "user", text: trimmed, images });
+          persistMessage(sessionId, { role: "user", text: trimmed, imageKeys });
         } else if (images && images.length > 0) {
-          const keys = images.map((_, i) => `${sessionId}:${userMessage.id}:${i}`);
-          const stored = await Promise.all(
-            keys.map((key) => putGuestImage(key, images[Number(key.split(":").pop() ?? 0)]))
-          );
-          const keptImages = images.filter((_, i) => stored[i]);
           appendGuestMessage(sessionId, {
             role: "user",
             text: trimmed,
-            images: keptImages.length ? keptImages : images,
-            imageKeys: stored.every(Boolean) ? keys : undefined,
+            images: imageKeys?.length === images.length ? undefined : images,
+            imageKeys,
           });
         } else {
           appendGuestMessage(sessionId, { role: "user", text: trimmed });
@@ -1326,24 +1373,35 @@ useEffect(() => {
     async (id: number) => {
       const index = messages.findIndex((m) => m.id === id);
       if (index < 0 || !editingText.trim()) return;
+      const sessionId = sessionIdRef.current;
+      const editedImages = editingImages.length > 0 ? editingImages : undefined;
+      const imageKeys = sessionId
+        ? await storeLocalImages(sessionId, id, editedImages)
+        : undefined;
       const edited: UiMessage = {
         ...messages[index],
         text: editingText.trim(),
-        images: editingImages.length > 0 ? editingImages : undefined,
+        images: editedImages,
+        imageKeys,
       };
       const base = messages.slice(0, index);
       setEditingId(null);
       setEditingImages([]);
       await truncatePersisted(base);
-      const sessionId = sessionIdRef.current;
       if (sessionId) {
         if (isAuthed) {
-          persistMessage(sessionId, { role: "user", text: edited.text, images: edited.images });
+          persistMessage(sessionId, {
+            role: "user",
+            text: edited.text,
+            imageKeys: edited.imageKeys,
+          });
         } else {
           appendGuestMessage(sessionId, {
             role: "user",
             text: edited.text,
-            images: edited.images,
+            images:
+              imageKeys?.length === editedImages?.length ? undefined : editedImages,
+            imageKeys,
           });
         }
       }
@@ -1449,6 +1507,9 @@ useEffect(() => {
 */
 
   const concludeReady = concludeResult !== null;
+  const sessionImageKeys = [
+    ...new Set(messages.flatMap((message) => message.imageKeys ?? [])),
+  ];
 
   return (
     <div className="app">
@@ -1534,6 +1595,7 @@ useEffect(() => {
         guest={isAuthed === false}
         recordId={recordIdRef.current}
         sessionId={sessionIdRef.current}
+        imageKeys={sessionImageKeys}
         onClose={() => {
           setConcludeDraft(null);
         }}
@@ -1555,6 +1617,7 @@ useEffect(() => {
             items: edited.items,
             meals: edited.meals,
             sourceText: concludeDraft?.sourceText ?? "",
+            imageKeys: edited.imageKeys ?? sessionImageKeys,
           };
           if (isAuthed) {
             fetch(`/api/sessions/${sessionId}`, {

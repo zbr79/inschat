@@ -14,6 +14,7 @@ export interface GuestMessage {
   status?: "pending" | "complete" | "failed";
   startedAt?: number;
   updatedAt?: number;
+  createdAt?: number;
   processSteps?: string[];
 }
 
@@ -34,6 +35,7 @@ export interface GuestRecord {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  imageKeys?: string[];
   savedAt: string;
   recordedAt?: string;
   sessionId?: string;
@@ -118,6 +120,7 @@ export function appendGuestMessage(sessionId: string, message: GuestMessage): vo
     ...message,
     id: message.id ?? newId(),
     status: message.status ?? "complete",
+    createdAt: message.createdAt ?? now,
     updatedAt: now,
   });
   target.updatedAt = now;
@@ -138,6 +141,7 @@ export function startGuestPendingMessage(
     text: "",
     status: "pending",
     startedAt: now,
+    createdAt: now,
     updatedAt: now,
   });
   target.updatedAt = now;
@@ -478,6 +482,7 @@ export function addGuestRecord(input: {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  imageKeys?: string[];
   sessionId?: string;
   recordedAt?: string;
 }): GuestRecord {
@@ -527,6 +532,7 @@ export function updateGuestRecord(
     items: ConcludeItem[];
     meals?: ConcludeMeal[];
     sourceText?: string;
+    imageKeys?: string[];
     sessionId?: string;
     recordedAt?: string;
     pinned?: boolean;
@@ -539,6 +545,7 @@ export function updateGuestRecord(
             ...record,
             ...patch,
             recordedAt: patch.recordedAt ?? record.recordedAt,
+            imageKeys: patch.imageKeys ?? record.imageKeys,
             sessionId: patch.sessionId ?? record.sessionId,
           }
         : record

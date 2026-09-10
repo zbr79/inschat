@@ -16,6 +16,19 @@ const MAX_ITEMS = 20;
 const MAX_NAME = 100;
 const MAX_VALUE = 500;
 const MAX_SOURCE = 16000;
+const MAX_IMAGE_KEYS = 100;
+
+function parseImageKeys(raw: unknown): string[] | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (
+    !Array.isArray(raw) ||
+    raw.length > MAX_IMAGE_KEYS ||
+    raw.some((key) => typeof key !== "string" || key.length > 300)
+  ) {
+    throw new Error(`"imageKeys" must contain at most ${MAX_IMAGE_KEYS} valid local keys.`);
+  }
+  return [...new Set(raw as string[])];
+}
 
 function parseItems(raw: unknown): ConcludeItem[] {
   if (!Array.isArray(raw) || raw.length > MAX_ITEMS) {
@@ -124,6 +137,7 @@ export async function POST(req: Request) {
   let items: ConcludeItem[];
   let meals: ConcludeMeal[] | undefined;
   let sourceText: string | undefined;
+  let imageKeys: string[] | undefined;
   let sessionId: string | undefined;
   let recordedAt: string | undefined;
   try {
@@ -137,6 +151,7 @@ export async function POST(req: Request) {
       items: rawItems,
       meals: rawMeals,
       sourceText: rawSource,
+      imageKeys: rawImageKeys,
       sessionId: rawSessionId,
       recordedAt: rawRecordedAt,
     } = body as Record<string, unknown>;
@@ -156,6 +171,7 @@ export async function POST(req: Request) {
       }
       sourceText = rawSource;
     }
+    imageKeys = parseImageKeys(rawImageKeys);
     if (rawSessionId !== undefined) {
       if (typeof rawSessionId !== "string" || rawSessionId.length > 200) {
         throw new Error('"sessionId" is invalid.');
@@ -179,6 +195,7 @@ export async function POST(req: Request) {
     const translated = translateRecord({ title, summary, items, meals, sourceText });
     const record = await appendReportEntry(auth._id, {
       ...translated,
+      imageKeys,
       sessionId,
       recordedAt,
     });
@@ -205,6 +222,7 @@ export async function PUT(req: Request) {
   let items: ConcludeItem[];
   let meals: ConcludeMeal[] | undefined;
   let sourceText: string | undefined;
+  let imageKeys: string[] | undefined;
   let sessionId: string | undefined;
   let recordedAt: string | undefined;
   let pinned: boolean | undefined;
@@ -219,6 +237,7 @@ export async function PUT(req: Request) {
       items: rawItems,
       meals: rawMeals,
       sourceText: rawSource,
+      imageKeys: rawImageKeys,
       sessionId: rawSessionId,
       recordedAt: rawRecordedAt,
       pinned: rawPinned,
@@ -239,6 +258,7 @@ export async function PUT(req: Request) {
       }
       sourceText = rawSource;
     }
+    imageKeys = parseImageKeys(rawImageKeys);
     if (rawSessionId !== undefined) {
       if (typeof rawSessionId !== "string" || rawSessionId.length > 200) {
         throw new Error('"sessionId" is invalid.');
@@ -268,6 +288,7 @@ export async function PUT(req: Request) {
     const translated = translateRecord({ title, summary, items, meals, sourceText });
     const record = await updateReportEntry(auth._id, id, {
       ...translated,
+      imageKeys,
       sessionId,
       recordedAt,
       pinned,
