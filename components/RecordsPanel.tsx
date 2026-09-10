@@ -190,7 +190,15 @@ function displayEventTime(value: string | undefined, lang: "zh" | "en"): string 
   });
 }
 
-export default function RecordsPanel({ fullReport = false }: { fullReport?: boolean }) {
+export default function RecordsPanel({
+  fullReport = false,
+  merged = false,
+}: {
+  fullReport?: boolean;
+  merged?: boolean;
+}) {
+  const showBrief = merged || !fullReport;
+  const showFull = merged || fullReport;
   const [guest, setGuest] = useState<boolean | null>(null);
   const [records, setRecords] = useState<SavedRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -201,6 +209,7 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
   const [editingDay, setEditingDay] = useState<TimelineDayGroup | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [timelineVisibleDays, setTimelineVisibleDays] = useState(7);
   const lang = useUiLang();
   const t = STR[lang];
   useEffect(() => {
@@ -443,14 +452,20 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
     }
     monthGroups.sort((a, b) => b.key.localeCompare(a.key));
   }
-  const visibleMonthGroups = selectedDate
-    ? monthGroups
-        .map((month) => ({
-          ...month,
-          days: month.days.filter((day) => day.key === selectedDate),
-        }))
-        .filter((month) => month.days.length > 0)
-    : monthGroups;
+  const timelineDays = monthGroups.flatMap((month) => month.days);
+  const visibleDayKeys = new Set(
+    selectedDate
+      ? [selectedDate]
+      : timelineDays.slice(0, timelineVisibleDays).map((day) => day.key)
+  );
+  const visibleMonthGroups = monthGroups
+    .map((month) => ({
+      ...month,
+      days: month.days.filter((day) => visibleDayKeys.has(day.key)),
+    }))
+    .filter((month) => month.days.length > 0);
+  const hasMoreTimelineDays =
+    !selectedDate && timelineVisibleDays < timelineDays.length;
   const recordCounts = Object.fromEntries(
     monthGroups.flatMap((month) =>
       month.days.map((day) => [day.key, day.entries.length] as const)
@@ -470,9 +485,9 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
     <div className="usage-page">
       <div className="records-page-head">
         <div>
-          <h2>{fullReport ? t["records.fullTitle"] : t["records.title"]}</h2>
+          <h2>{merged ? t["nav.records"] : fullReport ? t["records.fullTitle"] : t["records.title"]}</h2>
         </div>
-        {!fullReport && (
+        {showBrief && (
           <GlucoseRangeControl
             range={range}
             onRangeChange={handleRangeChange}
@@ -486,7 +501,21 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
             }}
           />
         )}
-        {!fullReport && guest === true && (
+        {showFull && records !== null && (
+          <ReportTransferControls
+            records={records}
+            guest={guest}
+            onImported={load}
+            labels={{
+              export: t["records.export"],
+              import: t["records.import"],
+              importing: t["records.importing"],
+              imported: (count) => t["records.imported"].replace("{count}", String(count)),
+              error: t["records.transferError"],
+            }}
+          />
+        )}
+        {showBrief && guest === true && (
           <div className="records-demo-actions">
             <div className="records-demo-buttons">
               <button
@@ -505,43 +534,7 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
           </div>
         )}
       </div>
-      {fullReport && records !== null && (
-        <div className="full-report-tools">
-          <div className="records-date-filter">
-            <div className="records-date-filter-controls">
-              <div className="records-date-picker">
-                <button
-                  type="button"
-                  className="records-date-trigger"
-                  onClick={() => setDatePickerOpen(true)}
-                  aria-haspopup="dialog"
-                  aria-expanded={datePickerOpen}
-                >
-                  {selectedDate || t["records.dateFilter"]}
-                </button>
-              </div>
-              {selectedDate && (
-                <button type="button" onClick={() => setSelectedDate("")}>
-                  {t["records.dateClear"]}
-                </button>
-              )}
-            </div>
-          </div>
-          <ReportTransferControls
-            records={records}
-            guest={guest}
-            onImported={load}
-            labels={{
-              export: t["records.export"],
-              import: t["records.import"],
-              importing: t["records.importing"],
-              imported: (count) => t["records.imported"].replace("{count}", String(count)),
-              error: t["records.transferError"],
-            }}
-          />
-        </div>
-      )}
-      {fullReport && (
+      {showFull && (
         <DatePickerModal
           open={datePickerOpen}
           value={selectedDate}
@@ -569,7 +562,7 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
         </section>
       )}
 
-      {!fullReport && records !== null && records.length > 0 && (
+      {showBrief && records !== null && records.length > 0 && (
         <RecordInsights
           records={records}
           lang={lang}
@@ -587,7 +580,7 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
           }}
         />
       )}
-      {!fullReport && records !== null && records.length > 0 && (
+      {showBrief && records !== null && records.length > 0 && (
         <GlucoseChart
           points={glucosePoints}
           range={range}
@@ -600,7 +593,7 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
         />
       )}
 
-      {fullReport && (
+      {showFull && (
         <div className="timeline full-report-log">
           {visibleMonthGroups.map((month) => (
             <section key={month.key} className="timeline-month-group">
@@ -618,12 +611,12 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
                   </div>
                   {day.entries
                   .flatMap(({ record, events }) =>
-                    fullReport
+                    showFull
                       ? events.map((event) => ({ record, events: [event] }))
                       : [{ record, events }]
                   )
                   .sort((a, b) =>
-                    fullReport
+                    showFull
                       ? (b.events[0]?.ts ?? 0) - (a.events[0]?.ts ?? 0)
                       : 0
                   )
@@ -635,7 +628,7 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
                     >
                       <span className="timeline-dot" aria-hidden="true" />
                       <div className="timeline-content">
-                        {!fullReport && <div className="record-actions">
+                        {!showFull && <div className="record-actions">
                           <button
                             type="button"
                             className="record-edit-trigger"
@@ -661,7 +654,7 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
                           const derived =
                             localizeReadingPhase(event.phase, lang) ??
                             readingPhase(event.time, lang);
-                          if (fullReport) {
+                          if (showFull) {
                             return (
                               <div
                                 key={`reading-${index}`}
@@ -723,7 +716,7 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
                                     className={`dish-box${dish.rank ? ` rank-${rankClass(dish.rank)}` : ""}`}
                                   >
                                     <span className="dish-box-name">{dish.name}</span>
-                                    {dish.rank && !fullReport && (
+                                    {dish.rank && !showFull && (
                                       <span className="dish-box-rank">{dish.rank}</span>
                                     )}
                                   </span>
@@ -736,7 +729,7 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
                         );
                         const mealTitle = mealNameForTime(meal.time, lang);
                         return (
-                          fullReport ? (
+                          showFull ? (
                             <div key={`meal-${index}`} className="timeline-full-event">
                               <span className="timeline-full-title">{mealTitle}</span>
                               <div className="timeline-meal">{mealContent}</div>
@@ -773,7 +766,44 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
           ))}
         </div>
       )}
-      {fullReport && selectedDate && visibleMonthGroups.length === 0 && (
+      {showFull && records !== null && (
+        <div className="records-timeline-controls">
+          {hasMoreTimelineDays && (
+            <button
+              type="button"
+              className="records-timeline-more"
+              onClick={() =>
+                setTimelineVisibleDays((count) =>
+                  Math.min(count + 30, timelineDays.length)
+                )
+              }
+            >
+              {t["records.timelineMore"]}
+            </button>
+          )}
+          <div className="records-date-filter">
+            <div className="records-date-filter-controls">
+              <div className="records-date-picker">
+                <button
+                  type="button"
+                  className="records-date-trigger"
+                  onClick={() => setDatePickerOpen(true)}
+                  aria-haspopup="dialog"
+                  aria-expanded={datePickerOpen}
+                >
+                  {selectedDate || t["records.dateFilter"]}
+                </button>
+              </div>
+              {selectedDate && (
+                <button type="button" onClick={() => setSelectedDate("")}>
+                  {t["records.dateClear"]}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {showFull && selectedDate && visibleMonthGroups.length === 0 && (
         <section className="usage-card records-date-empty">
           <span className="usage-title">{t["records.dateEmpty"]}</span>
         </section>
@@ -818,7 +848,7 @@ export default function RecordsPanel({ fullReport = false }: { fullReport?: bool
         />
       )}
       {editingRecord && (
-        fullReport ? (
+        showFull ? (
           <ConcludeModal
             open
             result={editingResult}

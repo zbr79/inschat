@@ -296,6 +296,40 @@ body {
   color: var(--text-muted);
 }
 
+.sidebar-records-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background:
+    linear-gradient(var(--bg), var(--bg)) padding-box,
+    linear-gradient(135deg, #a5e8ff, #5ec8f8, #4d7cff, #8b5cf6) border-box;
+  color: #3b82f6;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.sidebar-records-button:hover,
+.sidebar-records-button.active {
+  background:
+    linear-gradient(var(--bg), var(--bg)) padding-box,
+    linear-gradient(135deg, #a5e8ff, #5ec8f8, #4d7cff, #8b5cf6) border-box;
+  color: #2563eb;
+}
+
+.sidebar-records-button .sidebar-label {
+  padding: 0;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
 .session-new {
   font-size: 13px;
   color: var(--text);
@@ -1793,7 +1827,7 @@ span.conclude-rank-badge {
 
 .thinking-dots {
   display: inline-flex;
-  gap: 5px;
+  gap: 7px;
   align-items: center;
   padding: 2px 0;
 }
@@ -1801,6 +1835,7 @@ span.conclude-rank-badge {
 .thinking-dots i {
   width: 8px;
   height: 8px;
+  flex: 0 0 8px;
   border-radius: 50%;
   background: currentColor;
   animation: thinking-pulse 1s ease-in-out infinite;
@@ -1818,11 +1853,9 @@ span.conclude-rank-badge {
   0%,
   100% {
     opacity: 0.2;
-    transform: scale(0.7);
   }
   50% {
     opacity: 1;
-    transform: scale(1);
   }
 }
 
@@ -2335,39 +2368,55 @@ span.conclude-rank-badge {
   font-size: 12px;
 }
 
+.records-range-control {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  border-radius: 10px;
+  background: transparent;
+}
+
 .records-range-tabs {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  padding: 3px;
+  gap: 3px;
+  min-width: 0;
   overflow-x: auto;
-  background: var(--bg-soft);
+  padding: 2px;
+  scrollbar-width: none;
+}
+
+.records-range-tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .records-range-tabs button {
   flex: 0 0 auto;
-  border: none;
-  border-radius: 6px;
-  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 7px 10px;
   background: transparent;
   color: var(--text-muted);
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 550;
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
 }
 
-.records-range-tabs button:hover,
-.records-range-tabs button.active {
+.records-range-tabs button:hover {
   background: var(--bg);
   color: var(--text);
 }
 
 .records-range-tabs button.active {
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+  border-color: #b7cdf8;
+  background: var(--bg);
+  color: #2563eb;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.1);
 }
 
 .glucose-chart-frame {
@@ -2453,14 +2502,14 @@ span.conclude-rank-badge {
 }
 
 .records-page-head {
-  display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 18px;
 }
 
-.records-range-control {
-  justify-self: start;
+.records-page-head > .report-transfer-controls {
+  margin-left: auto;
 }
 
 .records-page-head h2 {
@@ -2468,16 +2517,7 @@ span.conclude-rank-badge {
 }
 
 .records-page-head > .records-demo-actions {
-  justify-self: end;
-}
-
-.full-report-tools {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin: 14px 0 8px;
+  margin-left: 0;
 }
 
 .report-transfer-controls {
@@ -2543,6 +2583,34 @@ span.conclude-rank-badge {
 
 .report-transfer-error {
   color: #b42318;
+}
+
+.records-timeline-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 8px;
+}
+
+.records-timeline-more {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 14px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.records-timeline-more:hover {
+  background: var(--bg-soft);
+}
+
+.records-timeline-controls .records-date-filter {
+  align-items: center;
 }
 
 .records-date-filter {
@@ -3106,12 +3174,23 @@ span.conclude-rank-badge {
 
 @media (max-width: 640px) {
   .records-page-head {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     align-items: stretch;
   }
 
+  .records-range-control {
+    justify-self: stretch;
+  }
+
+  .records-range-tabs {
+    flex: 1;
+  }
+
+  .records-page-head > .report-transfer-controls {
+    margin-left: 0;
+  }
+
   .records-page-head > .records-demo-actions {
-    justify-self: start;
     width: 100%;
   }
 
@@ -4109,11 +4188,11 @@ span.conclude-rank-badge {
 .auth-toggle:hover {
   color: var(--text);
 }
+
 .auth-page .auth-toggle {
   display: inline-block;
   text-decoration: none;
 }
-
 
 /* iOS Safari: keep inputs at 16px on phones so focus doesn't auto-zoom.
    Placed last so it wins the cascade over the base 15px rule. */
@@ -4987,12 +5066,12 @@ span.conclude-rank-badge {
   justify-content: center;
   flex-shrink: 0;
 }
+
 .brand-mark img {
   display: block;
   width: 100%;
   height: 100%;
 }
-
 
 .brand-name {
   font-size: 15px;
@@ -5453,6 +5532,7 @@ button.settings-row:hover {
 .guest-identity {
   display: flex;
   align-items: center;
+  gap: 10px;
   flex: 1;
   min-width: 0;
   border: none;
@@ -5466,7 +5546,6 @@ button.settings-row:hover {
 
 .guest-identity:hover {
   color: var(--text);
-  gap: 10px;
 }
 
 .guest-name {
