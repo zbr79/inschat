@@ -4109,6 +4109,11 @@ span.conclude-rank-badge {
 .auth-toggle:hover {
   color: var(--text);
 }
+.auth-page .auth-toggle {
+  display: inline-block;
+  text-decoration: none;
+}
+
 
 /* iOS Safari: keep inputs at 16px on phones so focus doesn't auto-zoom.
    Placed last so it wins the cascade over the base 15px rule. */
@@ -4632,10 +4637,6 @@ span.conclude-rank-badge {
   border-radius: 12px;
 }
 
-.account-row:hover {
-  background: rgba(0, 0, 0, 0.05);
-}
-
 .avatar {
   width: 31px;
   height: 31px;
@@ -4673,23 +4674,6 @@ span.conclude-rank-badge {
 }
 
 .account-lang:hover {
-  color: var(--text);
-  background: rgba(0, 0, 0, 0.05);
-}
-
-.account-logout {
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-family: var(--font);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 3px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.account-logout:hover {
   color: var(--text);
   background: rgba(0, 0, 0, 0.05);
 }
@@ -4906,8 +4890,8 @@ span.conclude-rank-badge {
 
 /* ---- login link with icon, settings switch ---- */
 .login-circle {
-  width: 34px;
-  height: 34px;
+  width: 31px;
+  height: 31px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4997,13 +4981,18 @@ span.conclude-rank-badge {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: var(--pill);
-  color: var(--pill-text);
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
 
 .brand-name {
   font-size: 15px;
@@ -5464,6 +5453,19 @@ button.settings-row:hover {
 .guest-identity {
   display: flex;
   align-items: center;
+  flex: 1;
+  min-width: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font);
+  text-align: left;
+  cursor: pointer;
+}
+
+.guest-identity:hover {
+  color: var(--text);
   gap: 10px;
 }
 
