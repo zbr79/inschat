@@ -86,15 +86,15 @@ function writeJson(key: string, value: unknown): boolean {
   }
 }
 
-function writeSessions(sessions: GuestSession[]): void {
-  if (writeJson(SESSIONS_KEY, sessions)) return;
+function writeSessions(sessions: GuestSession[]): boolean {
+  if (writeJson(SESSIONS_KEY, sessions)) return true;
   // Quota exceeded: drop images everywhere, then shrink the list, then give up.
   const withoutImages = sessions.map((session) => ({
     ...session,
     messages: session.messages.map((message) => ({ ...message, images: undefined })),
   }));
-  if (writeJson(SESSIONS_KEY, withoutImages)) return;
-  writeJson(SESSIONS_KEY, withoutImages.slice(-10));
+  if (writeJson(SESSIONS_KEY, withoutImages)) return true;
+  return writeJson(SESSIONS_KEY, withoutImages.slice(-10));
 }
 
 export function listGuestSessions(): GuestSession[] {
@@ -174,14 +174,14 @@ export function setGuestConclusion(
   sessionId: string,
   conclusion: SessionConclusion | null,
   recordId?: string | null
-): void {
+): boolean {
   const sessions = readJson<GuestSession[]>(SESSIONS_KEY, []);
   const target = sessions.find((session) => session.id === sessionId);
-  if (!target) return;
+  if (!target) return false;
   target.conclusion = conclusion ?? null;
   if (recordId !== undefined) target.recordId = recordId ?? null;
   target.updatedAt = Date.now();
-  writeSessions(sessions);
+  return writeSessions(sessions);
 }
 
 export function renameGuestSession(sessionId: string, title: string): void {
@@ -251,12 +251,24 @@ function readGuestReport(): GuestReport {
   return migrated;
 }
 
-function writeGuestReport(entries: GuestRecord[]): boolean {
-  return writeJson(REPORT_KEY, {
+function reportPayload(entries: GuestRecord[]): GuestReport {
+  return {
     version: 1,
     updatedAt: new Date().toISOString(),
     entries,
-  } satisfies GuestReport);
+  };
+}
+
+function writeGuestReport(entries: GuestRecord[]): boolean {
+  if (writeJson(REPORT_KEY, reportPayload(entries))) return true;
+  const withoutOlderSource = entries.map((record, index) =>
+    index > 20 ? { ...record, sourceText: undefined } : record
+  );
+  if (writeJson(REPORT_KEY, reportPayload(withoutOlderSource))) return true;
+  return writeJson(
+    REPORT_KEY,
+    reportPayload(withoutOlderSource.map(({ sourceText: _sourceText, ...record }) => record))
+  );
 }
 
 export function listGuestRecords(): GuestRecord[] {
@@ -546,19 +558,20 @@ export function updateGuestRecord(
     recordedAt?: string;
     pinned?: boolean;
   }
-): void {
-  writeGuestReport(
-    readGuestReport().entries.map((record) =>
-      record.id === id
-        ? {
-            ...record,
-            ...patch,
-            recordedAt: patch.recordedAt ?? record.recordedAt,
-            imageKeys: patch.imageKeys ?? record.imageKeys,
-            events: patch.events ?? record.events,
-            sessionId: patch.sessionId ?? record.sessionId,
-          }
-        : record
-    )
-  );
+): boolean {
+  const entries = readGuestReport().entries;
+  let found = false;
+  const updated = entries.map((record) => {
+    if (record.id !== id) return record;
+    found = true;
+    return {
+      ...record,
+      ...patch,
+      recordedAt: patch.recordedAt ?? record.recordedAt,
+      imageKeys: patch.imageKeys ?? record.imageKeys,
+      events: patch.events ?? record.events,
+      sessionId: patch.sessionId ?? record.sessionId,
+    };
+  });
+  return found && writeGuestReport(updated);
 }

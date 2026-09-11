@@ -34,19 +34,20 @@ function parseConclusion(body: unknown): SessionConclusion | null {
   if (typeof title !== "string" || !title) {
     throw new Error('"conclusion.title" must be a non-empty string.');
   }
-  if (typeof summary !== "string" || !summary) {
-    throw new Error('"conclusion.summary" must be a non-empty string.');
+  if (typeof summary !== "string" || summary.length > 2000) {
+    throw new Error('"conclusion.summary" must be a string.');
   }
   if (!Array.isArray(items)) {
     throw new Error('"conclusion.items" must be an array.');
   }
-  if (
-    rawImageKeys !== undefined &&
-    (!Array.isArray(rawImageKeys) ||
+  if (rawImageKeys !== undefined && rawImageKeys !== null) {
+    if (
+      !Array.isArray(rawImageKeys) ||
       rawImageKeys.length > 100 ||
-      rawImageKeys.some((key) => typeof key !== "string" || key.length > 300))
-  ) {
-    throw new Error('"conclusion.imageKeys" is invalid.');
+      rawImageKeys.some((key) => typeof key !== "string" || key.length > 300)
+    ) {
+      throw new Error('"conclusion.imageKeys" is invalid.');
+    }
   }
   const cleanItems = items.map((item, index) => {
     if (!item || typeof item !== "object") {
@@ -102,7 +103,9 @@ function parseConclusion(body: unknown): SessionConclusion | null {
     meals,
     sourceText: typeof sourceText === "string" ? sourceText : undefined,
     imageKeys:
-      Array.isArray(rawImageKeys) ? [...new Set(rawImageKeys as string[])] : undefined,
+      Array.isArray(rawImageKeys) && rawImageKeys.length
+        ? [...new Set(rawImageKeys as string[])]
+        : undefined,
     events: parseReportEvents(rawEvents),
   };
 }
