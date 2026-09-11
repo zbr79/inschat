@@ -10,9 +10,11 @@ import type {
   ChatImage,
   ChatMessage,
   ConcludeResult,
+  ReportEvent,
   SessionConclusion,
 } from "@/lib/types";
 import { ModelMarkerParser } from "@/lib/markers";
+import { createReportEvent, mergeReportEvents } from "@/lib/reportEvents";
 import { elapsedSeconds, trimStreamingEnd } from "@/lib/format";
 import {
   addGuestRecord,
@@ -34,6 +36,7 @@ interface UiMessage {
   text: string;
   images?: ChatImage[];
   imageKeys?: string[];
+  createdAt?: string;
   streaming?: boolean;
   failed?: boolean;
   model?: string;
@@ -105,6 +108,7 @@ interface StoredLike {
   text: string;
   images?: ChatImage[];
   imageKeys?: string[];
+  createdAt?: string;
   model?: string;
   trying?: string;
   elapsed?: number;
@@ -145,6 +149,7 @@ function mapStoredMessages(
       ),
       images: message.images,
       imageKeys: message.imageKeys,
+      createdAt: message.createdAt,
       model: message.model,
       hideModelMeta: pending,
       trying: undefined,
@@ -309,6 +314,21 @@ function parseConclusionTail(
   }
 }
 
+function eventForLatestUser(
+  result: ConcludeResult,
+  messages: UiMessage[]
+): ReportEvent | null {
+  const latestUser = [...messages].reverse().find((message) => message.role === "user");
+  if (!latestUser) return null;
+  const sourceMessageId = latestUser._id ?? `ui:${latestUser.id}`;
+  return createReportEvent(
+    result,
+    sourceMessageId,
+    latestUser.createdAt ?? new Date().toISOString(),
+    latestUser.imageKeys
+  );
+}
+
 export default function ChatApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -331,11 +351,18 @@ export default function ChatApp() {
     sourceText: string;
   } | null>(null);
   const [concludeSaved, setConcludeSaved] = useState(false);
+  const concludeResultRef = useRef<{
+    result: ConcludeResult;
+    sourceText: string;
+  } | null>(null);
   const messagesRef = useRef<UiMessage[]>([]);
   const resumeAnimationRef = useRef<ResumeAnimationState | null>(null);
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+  useEffect(() => {
+    concludeResultRef.current = concludeResult;
+  }, [concludeResult]);
 
   const stopResumeAnimation = useCallback(() => {
     const animation = resumeAnimationRef.current;
@@ -343,17 +370,21 @@ export default function ChatApp() {
     resumeAnimationRef.current = null;
   }, []);
 
-  // The single record this chat owns — later concludes UPDATE it instead of
-  // creating duplicates (one conclusion per chat).
+  // The single aggregate report this chat owns. Its event list keeps each
+  // extracted message/date/image association independently.
   const recordIdRef = useRef<string | null>(null);
 
-  // Merge a new reply's conclusion into the accumulated one: meals append
-  // (dedup by name+time, dishes by name — existing dishes keep the user's
-  // edits), and the glucose/time items take the latest reading.
+  // Merge the latest event into the accumulated conclusion. The model tail is
+  // intentionally latest-message-only; persisted events retain earlier data.
   const mergeConclusion = useCallback(
-    (next: ConcludeResult): ConcludeResult => {
-      const base = concludeResult?.result;
-      if (!base) return next;
+    (next: ConcludeResult, nextEvent?: ReportEvent | null): ConcludeResult => {
+      const base = concludeResultRef.current?.result;
+      if (!base) {
+        return {
+          ...next,
+          events: mergeReportEvents(next.events, nextEvent ?? undefined),
+        };
+      }
       const meals = [...(base.meals ?? [])];
       for (const meal of next.meals ?? []) {
         const existing = meals.find(
@@ -371,8 +402,7 @@ export default function ChatApp() {
       }
       const items = [...(base.items ?? [])];
       for (const item of next.items ?? []) {
-        // Accumulate: keep every distinct reading (the tail now covers the
-        // whole conversation); exact name+value duplicates are skipped.
+        // Keep every distinct reading from each message.
         if (
           !items.some(
             (existing) => existing.name === item.name && existing.value === item.value
@@ -386,33 +416,28 @@ export default function ChatApp() {
         summary: next.summary || base.summary,
         items,
         meals,
-        imageKeys: [...new Set([...(base.imageKeys ?? []), ...(next.imageKeys ?? [])])],
+        imageKeys: base.imageKeys ?? next.imageKeys,
+        events: mergeReportEvents(base.events, nextEvent ?? undefined),
       };
     },
-    [concludeResult]
+    []
   );
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const persistConclusionRecord = useCallback(
     async (
       result: ConcludeResult,
-      sourceText: string,
-      sourceMessages: UiMessage[] = messagesRef.current
+      sourceText: string
     ): Promise<string | null> => {
       const sessionId = sessionIdRef.current;
       if (!sessionId) return null;
-      const imageKeys = [
-        ...new Set([
-          ...(result.imageKeys ?? []),
-          ...sourceMessages.flatMap((message) => message.imageKeys ?? []),
-        ]),
-      ];
       const payload = {
         title: result.title.trim() || t["summary.report"],
         summary: result.summary,
         items: result.items,
         meals: result.meals,
         sourceText,
-        imageKeys,
+        imageKeys: result.imageKeys,
+        events: result.events,
         sessionId,
       };
       let savedRecordId = recordIdRef.current;
@@ -596,7 +621,10 @@ export default function ChatApp() {
           if (status !== "pending") {
             const restored = parseConclusionTail(incoming.text ?? "");
             if (restored) {
-              const merged = mergeConclusion(restored.result);
+              const merged = mergeConclusion(
+                restored.result,
+                eventForLatestUser(restored.result, messagesRef.current)
+              );
               const savedRecordId = await persistConclusionRecord(
                 merged,
                 restored.sourceText
@@ -715,6 +743,7 @@ useEffect(() => {
               role: string;
               text: string;
               imageKeys?: string[];
+              createdAt?: string;
               model?: string;
               trying?: string;
               elapsed?: number;
@@ -796,6 +825,7 @@ useEffect(() => {
                   items: body.conclusion.items,
                   meals: body.conclusion.meals,
                   imageKeys: body.conclusion.imageKeys,
+                  events: body.conclusion.events,
                 },
                 sourceText: body.conclusion.sourceText ?? "",
               });
@@ -832,6 +862,10 @@ useEffect(() => {
               role: (message.role === "model" ? "model" : "user") as "user" | "model",
               text: visibleMessageText(message.text),
               images,
+              imageKeys: message.imageKeys,
+              createdAt: message.createdAt
+                ? new Date(message.createdAt).toISOString()
+                : undefined,
               model: message.model,
               hideModelMeta: pending,
               trying: undefined,
@@ -945,6 +979,7 @@ useEffect(() => {
               items: local.conclusion.items,
               meals: local.conclusion.meals,
               imageKeys: local.conclusion.imageKeys,
+              events: local.conclusion.events,
             },
             sourceText: local.conclusion.sourceText ?? "",
           });
@@ -1202,8 +1237,11 @@ useEffect(() => {
             }
           }
           if (parsedConclude) {
-            const merged = mergeConclusion(parsedConclude);
-            const savedRecordId = await persistConclusionRecord(merged, savedText, base);
+            const merged = mergeConclusion(
+              parsedConclude,
+              eventForLatestUser(parsedConclude, base)
+            );
+            const savedRecordId = await persistConclusionRecord(merged, savedText);
             setConcludeSaved(Boolean(savedRecordId));
             setConcludeResult({ result: merged, sourceText: savedText });
           }
@@ -1274,7 +1312,14 @@ useEffect(() => {
         abortRef.current = null;
       }
     },
-    [isAuthed, lang, insulinMode, persistConclusionRecord, reasoningEffort]
+    [
+      isAuthed,
+      lang,
+      insulinMode,
+      mergeConclusion,
+      persistConclusionRecord,
+      reasoningEffort,
+    ]
   );
 
   const send = useCallback(
@@ -1308,6 +1353,7 @@ useEffect(() => {
       }
 
       const userMessageId = nextId++;
+      const createdAt = new Date().toISOString();
       const imageKeys = sessionId
         ? await storeLocalImages(sessionId, userMessageId, images)
         : undefined;
@@ -1317,6 +1363,7 @@ useEffect(() => {
         text: trimmed,
         images,
         imageKeys,
+        createdAt,
       };
       if (sessionId) {
         if (authed) {
@@ -1327,9 +1374,14 @@ useEffect(() => {
             text: trimmed,
             images: imageKeys?.length === images.length ? undefined : images,
             imageKeys,
+            createdAt: Date.parse(createdAt),
           });
         } else {
-          appendGuestMessage(sessionId, { role: "user", text: trimmed });
+          appendGuestMessage(sessionId, {
+            role: "user",
+            text: trimmed,
+            createdAt: Date.parse(createdAt),
+          });
         }
       }
       await streamReply([...messages, userMessage]);
@@ -1595,7 +1647,7 @@ useEffect(() => {
         guest={isAuthed === false}
         recordId={recordIdRef.current}
         sessionId={sessionIdRef.current}
-        imageKeys={sessionImageKeys}
+        imageKeys={concludeDraft?.result.events ? undefined : sessionImageKeys}
         onClose={() => {
           setConcludeDraft(null);
         }}
@@ -1617,7 +1669,8 @@ useEffect(() => {
             items: edited.items,
             meals: edited.meals,
             sourceText: concludeDraft?.sourceText ?? "",
-            imageKeys: edited.imageKeys ?? sessionImageKeys,
+            imageKeys: edited.imageKeys,
+            events: edited.events,
           };
           if (isAuthed) {
             fetch(`/api/sessions/${sessionId}`, {

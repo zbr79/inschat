@@ -365,6 +365,17 @@ export default function ConcludeModal({
   const [error, setError] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
+  const imageKeysForMeal = (
+    meal: NonNullable<ConcludeResult["meals"]>[number]
+  ): string[] | undefined => {
+    const event = result?.events?.find((candidate) =>
+      candidate.meals?.some(
+        (candidateMeal) => candidateMeal.name === meal.name && candidateMeal.time === meal.time
+      )
+    );
+    return event ? event.imageKeys : result?.events ? undefined : imageKeys ?? result?.imageKeys;
+  };
+
 // Auto-save: every edit saves immediately. Saves serialize (a save started
 // while another is in flight chains after it), so a refresh never loses the
 // last edit — there is no debounce window to fall into.
@@ -605,6 +616,7 @@ closeRef.current = () => {
       items: builtItems,
       meals: savedMeals.length ? savedMeals : undefined,
       imageKeys: imageKeys ?? result.imageKeys,
+      events: result.events,
     };
     try {
       let savedId: string | null = recordId;
@@ -617,6 +629,7 @@ closeRef.current = () => {
             meals: edited.meals,
             sourceText,
             imageKeys: edited.imageKeys,
+            events: edited.events,
             sessionId: sessionId ?? undefined,
           });
         } else {
@@ -627,6 +640,7 @@ closeRef.current = () => {
             meals: edited.meals,
             sourceText,
             imageKeys: edited.imageKeys,
+            events: edited.events,
             sessionId: sessionId ?? undefined,
           });
           savedId = record.id;
@@ -644,6 +658,7 @@ closeRef.current = () => {
               meals: edited.meals,
               sourceText,
               imageKeys: edited.imageKeys,
+              events: edited.events,
               sessionId: sessionId ?? undefined,
             }),
           }
@@ -755,7 +770,6 @@ closeRef.current = () => {
             unavailableLabel={t["records.imageUnavailable"]}
             imageAlt={t["records.imageAlt"]}
             buttonLabel={t["records.imageButton"]}
-            closeLabel={t["records.imageClose"]}
           />
         )}
 
@@ -816,14 +830,15 @@ closeRef.current = () => {
                   >
                     <Trash2 size={14} />
                   </button>
-                  <span className="conclude-inline-meal-name">{meal.name}</span>
-                  <RecordImages
-                    imageKeys={imageKeys}
-                    unavailableLabel={t["records.imageUnavailable"]}
-                    imageAlt={t["records.imageAlt"]}
-                    buttonLabel={t["records.imageButton"]}
-                    closeLabel={t["records.imageClose"]}
-                  />
+                  <span className="conclude-meal-title">
+                    <span className="conclude-inline-meal-name">{meal.name}</span>
+                    <RecordImages
+                      imageKeys={imageKeysForMeal(meal)}
+                      unavailableLabel={t["records.imageUnavailable"]}
+                      imageAlt={t["records.imageAlt"]}
+                      buttonLabel={t["records.imageButton"]}
+                    />
+                  </span>
                   <InlineTime
                     value={meal.time ?? ""}
                     lang={lang}

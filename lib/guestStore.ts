@@ -1,6 +1,12 @@
 "use client";
 
-import type { ChatImage, ConcludeItem, ConcludeMeal, SessionConclusion } from "./types";
+import type {
+  ChatImage,
+  ConcludeItem,
+  ConcludeMeal,
+  ReportEvent,
+  SessionConclusion,
+} from "./types";
 
 export interface GuestMessage {
   id?: string;
@@ -36,6 +42,7 @@ export interface GuestRecord {
   meals?: ConcludeMeal[];
   sourceText?: string;
   imageKeys?: string[];
+  events?: ReportEvent[];
   savedAt: string;
   recordedAt?: string;
   sessionId?: string;
@@ -483,6 +490,7 @@ export function addGuestRecord(input: {
   meals?: ConcludeMeal[];
   sourceText?: string;
   imageKeys?: string[];
+  events?: ReportEvent[];
   sessionId?: string;
   recordedAt?: string;
 }): GuestRecord {
@@ -533,6 +541,7 @@ export function updateGuestRecord(
     meals?: ConcludeMeal[];
     sourceText?: string;
     imageKeys?: string[];
+    events?: ReportEvent[];
     sessionId?: string;
     recordedAt?: string;
     pinned?: boolean;
@@ -546,6 +555,7 @@ export function updateGuestRecord(
             ...patch,
             recordedAt: patch.recordedAt ?? record.recordedAt,
             imageKeys: patch.imageKeys ?? record.imageKeys,
+            events: patch.events ?? record.events,
             sessionId: patch.sessionId ?? record.sessionId,
           }
         : record

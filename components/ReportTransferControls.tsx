@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Download, Upload } from "lucide-react";
 import { addGuestRecord } from "@/lib/guestStore";
 import type { ConcludeItem, ConcludeMeal, SavedRecord } from "@/lib/types";
+import { parseReportEvents } from "@/lib/reportEvents";
 
 interface ReportTransferControlsProps {
   records: SavedRecord[];
@@ -24,6 +25,7 @@ type ImportableRecord = {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  events?: SavedRecord["events"];
   sessionId?: string;
   recordedAt?: string;
 };
@@ -55,6 +57,13 @@ function parseImportRecord(value: unknown): ImportableRecord | null {
     summary: typeof candidate.summary === "string" ? candidate.summary : "",
     items,
     meals,
+    events: (() => {
+      try {
+        return parseReportEvents(candidate.events);
+      } catch {
+        return undefined;
+      }
+    })(),
     sourceText:
       typeof candidate.sourceText === "string" ? candidate.sourceText : undefined,
     sessionId:
