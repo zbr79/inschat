@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ConcludeResult } from "@/lib/types";
+import { cleanDishName } from "@/lib/dishName";
 import { addGuestRecord } from "@/lib/guestStore";
 import { groupMeals, isMealRelatedItem } from "@/lib/groupMeals";
 import {
@@ -124,7 +125,7 @@ disabled={saving || isSaved}
               <div className="dish-grid">
                 {meal.dishes!.map((dish, dishIndex) => (
                   <span key={dishIndex} className={`dish-box${dish.rank ? ` rank-${rankClass(dish.rank)}` : ""}`}>
-                    <span className="dish-box-name">{dish.name}</span>
+                    <span className="dish-box-name">{cleanDishName(dish.name)}</span>
                     {dish.rank && <span className="dish-box-rank">{dish.rank}</span>}
                   </span>
                 ))}

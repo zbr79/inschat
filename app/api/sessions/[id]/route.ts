@@ -8,6 +8,7 @@ import {
 } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import type { SessionConclusion } from "@/lib/types";
+import { cleanDishName } from "@/lib/dishName";
 import { parseReportEvents } from "@/lib/reportEvents";
 
 export const runtime = "nodejs";
@@ -84,7 +85,7 @@ function parseConclusion(body: unknown): SessionConclusion | null {
           .map((dish) => {
             const rawDish = dish as Record<string, unknown>;
             const cleanDish: { name: string; rank?: string } = {
-              name: typeof rawDish.name === "string" ? rawDish.name : "",
+              name: typeof rawDish.name === "string" ? cleanDishName(rawDish.name) : "",
             };
             if (typeof rawDish.rank === "string" && rawDish.rank) {
               cleanDish.rank = rawDish.rank;

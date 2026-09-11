@@ -3431,3 +3431,20 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - The editor no longer re-hydrates from a new `result` object after every
   autosave (that reset made edits look like they reverted). Overlapping
   saves now wait in line instead of clearing the queue mid-flight.
+
+## 2026-09-10 — Health-mode chats were stuck named New chat
+
+### Solved
+- Image-plus-number reports in health/insulin mode created sessions titled
+  "New chat" or the raw glucose number.
+- After a successful health-mode reply, placeholder titles are renamed to a
+  compact date plus meal, such as `9/10 Dinner` / `9/10 晚餐`, using the
+  meal time from the conclusion or reply. Manual names are left alone.
+
+## 2026-09-11 — Photo dish names should not use parentheses
+
+### Solved
+- Food-photo replies were adding redundant category glosses in parentheses,
+  e.g. `番茄洋葱香菜莎莎（沙拉）`.
+- The system prompt now forbids `()` / `（）` on dish names, and saved and
+  displayed dish names strip trailing parenthetical labels.
