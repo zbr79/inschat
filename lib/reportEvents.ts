@@ -5,6 +5,7 @@ import type {
   ReportEvent,
 } from "./types";
 import { pairTimeItems } from "./mealTime";
+import { cleanDishName } from "./dishName";
 
 const MAX_EVENTS = 100;
 const MAX_EVENT_IMAGES = 3;
@@ -81,7 +82,7 @@ function cleanMeals(raw: unknown): ConcludeMeal[] | undefined {
         ) {
           throw new Error(`event.meals[${index}].dishes[${dishIndex}].name is invalid.`);
         }
-        const cleanDish: { name: string; rank?: string } = { name: rawDish.name };
+        const cleanDish: { name: string; rank?: string } = { name: cleanDishName(rawDish.name) };
         if (rawDish.rank !== undefined) {
           if (typeof rawDish.rank !== "string" || rawDish.rank.length > MAX_TEXT) {
             throw new Error(`event.meals[${index}].dishes[${dishIndex}].rank is invalid.`);

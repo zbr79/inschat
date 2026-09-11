@@ -7,6 +7,7 @@ import {
 import { translateRecord } from "@/lib/translate";
 import { requireUser } from "@/lib/auth";
 import type { ConcludeItem, ConcludeMeal } from "@/lib/types";
+import { cleanDishName } from "@/lib/dishName";
 import { parseReportEvents } from "@/lib/reportEvents";
 
 export const runtime = "nodejs";
@@ -96,7 +97,7 @@ function parseMeals(raw: unknown): ConcludeMeal[] | undefined {
         ) {
           throw new Error(`meals[${index}].dishes[${dishIndex}].name is invalid.`);
         }
-        const cleanDish: { name: string; rank?: string } = { name: dishName };
+        const cleanDish: { name: string; rank?: string } = { name: cleanDishName(dishName) };
         if (rank !== undefined) {
           if (typeof rank !== "string" || rank.length > MAX_VALUE) {
             throw new Error(`meals[${index}].dishes[${dishIndex}].rank is invalid.`);

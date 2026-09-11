@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import type { ConcludeItem, ConcludeMeal, SavedRecord } from "@/lib/types";
+import { cleanDishName } from "@/lib/dishName";
 import { mealNameForTime } from "@/lib/mealTime";
 import { useUiLang } from "@/lib/i18n";
 
@@ -43,7 +44,10 @@ function draftFromRecord(record: SavedRecord): RecordEditDraft {
     items: record.items.map((item) => ({ ...item })),
     meals: record.meals?.map((meal) => ({
       ...meal,
-      dishes: meal.dishes?.map((dish) => ({ ...dish })),
+      dishes: meal.dishes?.map((dish) => ({
+        ...dish,
+        name: cleanDishName(dish.name),
+      })),
     })),
   };
 }

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { ConcludeResult } from "@/lib/types";
 import { applyReportEdits, sameMeal } from "@/lib/reportEvents";
+import { cleanDishName } from "@/lib/dishName";
 import { addGuestRecord, updateGuestRecord } from "@/lib/guestStore";
 import { STR, useUiLang } from "@/lib/i18n";
 import { formatDateTimeDisplay, formatDateTimeNoYear, localizeReadingPhase, mealNameForTime, READING_PHASES, readingPhase, parseFlexibleDateTime } from "@/lib/mealTime";
@@ -453,6 +454,10 @@ closeRef.current = () => {
       (result.meals ?? []).map((meal) => ({
         ...meal,
         name: mealNameForTime(meal.time, lang),
+        dishes: meal.dishes?.map((dish) => ({
+          ...dish,
+          name: cleanDishName(dish.name),
+        })),
       }))
     );
     const paired: Reading[] = [];

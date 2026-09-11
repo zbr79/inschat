@@ -8,6 +8,7 @@ import {
 } from "@/lib/recordInsights";
 import type { TimelineRange } from "@/lib/recordTimeline";
 import type { SavedRecord } from "@/lib/types";
+import { cleanDishName } from "@/lib/dishName";
 
 interface RecordInsightsProps {
   records: SavedRecord[];
@@ -52,8 +53,8 @@ function formatComparisonDateRange(
 function mealFoods(meal: InsightMeal): InsightFood[] {
   const dishes =
     meal.meal.dishes
-      ?.filter((dish) => dish.name.trim())
-      .map((dish) => ({ name: dish.name, rank: dish.rank })) ?? [];
+      ?.filter((dish) => cleanDishName(dish.name))
+      .map((dish) => ({ name: cleanDishName(dish.name), rank: dish.rank })) ?? [];
   if (dishes.length === 0 && meal.meal.foods?.trim()) {
     dishes.push({ name: meal.meal.foods.trim(), rank: undefined });
   }

@@ -1,4 +1,5 @@
 import type { ConcludeMeal, SavedRecord } from "./types";
+import { cleanDishName } from "./dishName";
 import {
   localizeReadingPhase,
   pairTimeItems,
@@ -118,7 +119,7 @@ function inRange(ts: number, range: TimelineRange, now: Date): boolean {
 }
 
 function mealKey(meal: ConcludeMeal, ts: number): string {
-  const dishes = meal.dishes?.map((dish) => `${dish.name}:${dish.rank ?? ""}`).join("|") ?? "";
+  const dishes = meal.dishes?.map((dish) => `${cleanDishName(dish.name)}:${dish.rank ?? ""}`).join("|") ?? "";
   return `${ts}|${meal.name}|${meal.foods ?? ""}|${dishes}`;
 }
 
@@ -155,7 +156,7 @@ export function computeRecordInsights(
       if (!meals.some((entry) => mealKey(entry.meal, entry.ts) === mealKey(meal, ts))) {
         meals.push({ meal, ts });
         for (const dish of meal.dishes ?? []) {
-          const name = dish.name.trim();
+          const name = cleanDishName(dish.name);
           const rank = foodImpactRank(dish.rank);
           if (!name || !rank) continue;
           const key = name.toLocaleLowerCase();
