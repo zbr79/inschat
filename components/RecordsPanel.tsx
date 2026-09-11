@@ -60,6 +60,7 @@ function toSavedRecord(record: {
   meals?: SavedRecord["meals"];
   sourceText?: string;
   imageKeys?: string[];
+  events?: SavedRecord["events"];
   savedAt: string;
   recordedAt?: string;
   sessionId?: string;
@@ -72,6 +73,7 @@ function toSavedRecord(record: {
     meals: record.meals,
     sourceText: record.sourceText,
     imageKeys: record.imageKeys,
+    events: record.events,
     savedAt: record.savedAt,
     datetime: record.recordedAt ?? null,
     recordedAt: record.recordedAt,
@@ -110,11 +112,13 @@ type MixedRecordEvent =
       time?: string;
       phase?: string;
       ts: number;
+      imageKeys?: string[];
     }
   | {
       kind: "meal";
       meal: NonNullable<SavedRecord["meals"]>[number];
       ts: number;
+      imageKeys?: string[];
     };
 
 type TimelineDayRecord = {
@@ -150,6 +154,35 @@ function mixedRecordEvents(record: SavedRecord): MixedRecordEvent[] {
     record.recordedAt ?? record.datetime ?? record.savedAt,
     Date.now()
   );
+  if (record.events?.length) {
+    const scoped: MixedRecordEvent[] = [];
+    for (const event of record.events) {
+      const eventFallback = eventTimestamp(event.occurredAt, fallback);
+      scoped.push(
+        ...pairTimeItems(event.items)
+          .filter(({ item }) => !isMealRelatedItem(item.name))
+          .map(({ item, time, phase }) => ({
+            kind: "reading" as const,
+            item,
+            time,
+            phase,
+            ts: eventTimestamp(time, eventFallback),
+            imageKeys: event.imageKeys,
+          })),
+        ...(event.meals ?? []).map((meal) => ({
+          kind: "meal" as const,
+          meal,
+          ts: eventTimestamp(meal.time, eventFallback),
+          imageKeys: event.imageKeys,
+        }))
+      );
+    }
+    return scoped.sort((a, b) => {
+      if (a.ts !== b.ts) return a.ts - b.ts;
+      if (a.kind === b.kind) return 0;
+      return a.kind === "reading" ? -1 : 1;
+    });
+  }
   const readings: MixedRecordEvent[] = pairTimeItems(record.items)
     .filter(({ item }) => !isMealRelatedItem(item.name))
     .map(({ item, time, phase }) => ({
@@ -653,6 +686,16 @@ export default function RecordsPanel({
                               : t["records.delete"]}
                           </button>
                         </div>}
+                  {!record.events?.length && record.imageKeys?.length ? (
+                    <div className="record-images-fallback">
+                      <RecordImages
+                        imageKeys={record.imageKeys}
+                        unavailableLabel={t["records.imageUnavailable"]}
+                        imageAlt={t["records.imageAlt"]}
+                        buttonLabel={t["records.imageButton"]}
+                      />
+                    </div>
+                  ) : null}
                   {events.length > 0 ? (
                     <div className="timeline-mixed-events">
                       {events.map((event, index) => {
@@ -740,11 +783,10 @@ export default function RecordsPanel({
                               <span className="timeline-full-title">
                                 {mealTitle}
                                 <RecordImages
-                                  imageKeys={record.imageKeys}
+                                  imageKeys={event.imageKeys}
                                   unavailableLabel={t["records.imageUnavailable"]}
                                   imageAlt={t["records.imageAlt"]}
                                   buttonLabel={t["records.imageButton"]}
-                                  closeLabel={t["records.imageClose"]}
                                 />
                               </span>
                               <div className="timeline-meal">{mealContent}</div>
@@ -754,11 +796,10 @@ export default function RecordsPanel({
                               <span className="meal-name">
                                 {mealTitle}
                                 <RecordImages
-                                  imageKeys={record.imageKeys}
+                                  imageKeys={event.imageKeys}
                                   unavailableLabel={t["records.imageUnavailable"]}
                                   imageAlt={t["records.imageAlt"]}
                                   buttonLabel={t["records.imageButton"]}
-                                  closeLabel={t["records.imageClose"]}
                                 />
                               </span>
                               {mealContent}

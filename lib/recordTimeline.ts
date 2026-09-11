@@ -59,17 +59,24 @@ function numericValue(value: string | undefined): number | null {
 export function extractGlucosePoints(records: SavedRecord[]): GlucosePoint[] {
   const points: GlucosePoint[] = [];
   for (const record of records) {
-    const fallback = ownRecordTimestamp(record);
-    pairTimeItems(record.items).forEach(({ item, time }, index) => {
-      if (!GLUCOSE_NAMES.test(item.name.trim())) return;
-      const value = numericValue(item.value);
-      if (value === null) return;
-      points.push({
-        id: `${record._id}-${index}`,
-        recordId: record._id,
-        value,
-        unit: item.unit,
-        ts: pointTimestamp(time, fallback),
+    const sources = record.events?.length
+      ? record.events.map((event) => ({
+          items: event.items,
+          fallback: pointTimestamp(event.occurredAt, ownRecordTimestamp(record)),
+        }))
+      : [{ items: record.items, fallback: ownRecordTimestamp(record) }];
+    sources.forEach((source, sourceIndex) => {
+      pairTimeItems(source.items).forEach(({ item, time }, index) => {
+        if (!GLUCOSE_NAMES.test(item.name.trim())) return;
+        const value = numericValue(item.value);
+        if (value === null) return;
+        points.push({
+          id: `${record._id}-${sourceIndex}-${index}`,
+          recordId: record._id,
+          value,
+          unit: item.unit,
+          ts: pointTimestamp(time, source.fallback),
+        });
       });
     });
   }

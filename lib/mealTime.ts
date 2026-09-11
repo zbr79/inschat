@@ -42,10 +42,24 @@ export function parseMealDateTime(value: string): MealTimeParts | null {
 }
 
 const pad = (n: number) => String(n).padStart(2, "0");
+const ENGLISH_MONTHS = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
 
 // Flexible parsing for the confirm modal's native date/time pickers.
 // Accepts the chat's formats: "2026年9月3日 下午 6:17", "2026-08-26 18:17",
-// "8/26/2026 6:17 PM", or time-only ("下午 6:17" → today's date).
+// "8/26/2026 6:17 PM", "August 26, 2026 6:17 PM", or time-only.
 export function parseFlexibleDateTime(
   value: string,
   now = new Date()
@@ -55,11 +69,18 @@ export function parseFlexibleDateTime(
 
   let rest = text;
   let date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const namedDateMatch = text.match(
+    /\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(\d{4})\b/i
+  );
   const dateMatch =
     text.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/) ??
     text.match(/(\d{4})[/-](\d{1,2})[/-](\d{1,2})/) ??
     text.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (dateMatch) {
+  if (namedDateMatch) {
+    const month = ENGLISH_MONTHS.indexOf(namedDateMatch[1].toLowerCase()) + 1;
+    date = `${namedDateMatch[3]}-${pad(month)}-${pad(Number(namedDateMatch[2]))}`;
+    rest = text.slice((namedDateMatch.index ?? 0) + namedDateMatch[0].length);
+  } else if (dateMatch) {
     date =
       dateMatch[3].length === 4
         ? `${dateMatch[3]}-${pad(Number(dateMatch[1]))}-${pad(Number(dateMatch[2]))}`

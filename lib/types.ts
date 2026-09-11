@@ -28,12 +28,22 @@ export interface ConcludeMeal {
   time?: string;
 }
 
+export interface ReportEvent {
+  id: string;
+  sourceMessageId?: string;
+  occurredAt: string;
+  items: ConcludeItem[];
+  meals?: ConcludeMeal[];
+  imageKeys?: string[];
+}
+
 export interface ConcludeResult {
   title: string;
   summary: string;
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   imageKeys?: string[];
+  events?: ReportEvent[];
 }
 
 export interface SessionConclusion {
@@ -43,6 +53,7 @@ export interface SessionConclusion {
   meals?: ConcludeMeal[];
   sourceText?: string;
   imageKeys?: string[];
+  events?: ReportEvent[];
 }
 
 export interface SavedRecord {
@@ -53,6 +64,7 @@ export interface SavedRecord {
   meals?: ConcludeMeal[];
   sourceText?: string;
   imageKeys?: string[];
+  events?: ReportEvent[];
   /** Hydrated browser-local images; never sent to the API. */
   localImages?: ChatImage[];
   savedAt: string;

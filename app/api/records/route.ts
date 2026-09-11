@@ -7,6 +7,7 @@ import {
 import { translateRecord } from "@/lib/translate";
 import { requireUser } from "@/lib/auth";
 import type { ConcludeItem, ConcludeMeal } from "@/lib/types";
+import { parseReportEvents } from "@/lib/reportEvents";
 
 export const runtime = "nodejs";
 
@@ -138,6 +139,7 @@ export async function POST(req: Request) {
   let meals: ConcludeMeal[] | undefined;
   let sourceText: string | undefined;
   let imageKeys: string[] | undefined;
+  let events: ReturnType<typeof parseReportEvents>;
   let sessionId: string | undefined;
   let recordedAt: string | undefined;
   try {
@@ -152,6 +154,7 @@ export async function POST(req: Request) {
       meals: rawMeals,
       sourceText: rawSource,
       imageKeys: rawImageKeys,
+      events: rawEvents,
       sessionId: rawSessionId,
       recordedAt: rawRecordedAt,
     } = body as Record<string, unknown>;
@@ -172,6 +175,7 @@ export async function POST(req: Request) {
       sourceText = rawSource;
     }
     imageKeys = parseImageKeys(rawImageKeys);
+    events = parseReportEvents(rawEvents);
     if (rawSessionId !== undefined) {
       if (typeof rawSessionId !== "string" || rawSessionId.length > 200) {
         throw new Error('"sessionId" is invalid.');
@@ -196,6 +200,7 @@ export async function POST(req: Request) {
     const record = await appendReportEntry(auth._id, {
       ...translated,
       imageKeys,
+      events,
       sessionId,
       recordedAt,
     });
@@ -223,6 +228,7 @@ export async function PUT(req: Request) {
   let meals: ConcludeMeal[] | undefined;
   let sourceText: string | undefined;
   let imageKeys: string[] | undefined;
+  let events: ReturnType<typeof parseReportEvents>;
   let sessionId: string | undefined;
   let recordedAt: string | undefined;
   let pinned: boolean | undefined;
@@ -238,6 +244,7 @@ export async function PUT(req: Request) {
       meals: rawMeals,
       sourceText: rawSource,
       imageKeys: rawImageKeys,
+      events: rawEvents,
       sessionId: rawSessionId,
       recordedAt: rawRecordedAt,
       pinned: rawPinned,
@@ -259,6 +266,7 @@ export async function PUT(req: Request) {
       sourceText = rawSource;
     }
     imageKeys = parseImageKeys(rawImageKeys);
+    events = parseReportEvents(rawEvents);
     if (rawSessionId !== undefined) {
       if (typeof rawSessionId !== "string" || rawSessionId.length > 200) {
         throw new Error('"sessionId" is invalid.');
@@ -289,6 +297,7 @@ export async function PUT(req: Request) {
     const record = await updateReportEntry(auth._id, id, {
       ...translated,
       imageKeys,
+      events,
       sessionId,
       recordedAt,
       pinned,
