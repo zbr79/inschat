@@ -8,6 +8,7 @@ import {
 } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import type { SessionConclusion } from "@/lib/types";
+import { parseReportEvents } from "@/lib/reportEvents";
 
 export const runtime = "nodejs";
 
@@ -21,7 +22,14 @@ function parseConclusion(body: unknown): SessionConclusion | null {
   if (!raw || typeof raw !== "object") {
     throw new Error('"conclusion" must be an object or null.');
   }
-  const { title, summary, items, sourceText, imageKeys: rawImageKeys } =
+  const {
+    title,
+    summary,
+    items,
+    sourceText,
+    imageKeys: rawImageKeys,
+    events: rawEvents,
+  } =
     raw as Record<string, unknown>;
   if (typeof title !== "string" || !title) {
     throw new Error('"conclusion.title" must be a non-empty string.');
@@ -95,6 +103,7 @@ function parseConclusion(body: unknown): SessionConclusion | null {
     sourceText: typeof sourceText === "string" ? sourceText : undefined,
     imageKeys:
       Array.isArray(rawImageKeys) ? [...new Set(rawImageKeys as string[])] : undefined,
+    events: parseReportEvents(rawEvents),
   };
 }
 

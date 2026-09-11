@@ -3254,3 +3254,118 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Unresolved
 - A fresh guest image request still needs to be run to verify the live provider response.
+
+## 2026-09-10 — Simplify report image opening
+
+### Solved
+- Report image references now render as an icon-only trigger.
+- Clicking the icon opens the first available report image directly in the centered image viewer.
+- Removed the intermediate report image list dialog and its extra close/header layer.
+
+### Unresolved
+- Reports with multiple stored image references currently open the first image only.
+
+## 2026-09-10 — Expand image viewer controls
+
+### Solved
+- Image viewer images now use the available viewport instead of a fixed
+  720px width.
+- Explicit auto sizing preserves the full image aspect ratio without cropping.
+- Viewer overflow is hidden so opening an image does not create a scrollbar.
+- Added a black circular X close button in the top-right corner.
+
+### Verified
+- Production build passed.
+- PM2 `inschat` restarted successfully and port 3001 returns HTTP 200.
+
+## 2026-09-11 — Preserve mixed-date report events and image ownership
+
+### Solved
+- Added durable event metadata to conclusions and saved records: each event
+  keeps its source message, occurrence date, extracted items/meals, and only
+  that message's image keys.
+- Health-mode conclusion tails now describe the latest user message only;
+  the client merges that event into the accumulated report without deleting
+  earlier events.
+- Fixed a stale `streamReply`/conclusion closure so later messages no longer
+  replace the first event with a single-message report.
+- Records timeline and glucose chart now use event dates and event-owned image
+  keys, while legacy report-level image keys remain supported as unscoped
+  fallback data.
+- Added English month-name parsing (`August 15, 2026`) so model-produced dates
+  are not silently interpreted as today's date.
+- Guest and authenticated persistence/API/session conclusion paths carry the
+  event list, and the guest browser flow verified separate September and
+  August entries in one chat.
+
+### Unresolved
+- Existing legacy records have report-level image keys without reliable source
+  ownership; they remain unscoped and are not guessed onto dated events.
+- No real-image browser request was run in this pass because the workspace has
+  no test image asset; the event/image-key path is covered by the implemented
+  source association but still needs a real photo regression check.
+
+### Disproved
+- The report was not losing the August/September data only because the report
+  list used one `savedAt` timestamp; stale conclusion state and English-date
+  parsing were also required to reproduce the failure.
+
+## 2026-09-10 — Route image turns to GLM-5.3 Flash
+
+### Solved
+- Kept Qwen3.8 Flash as the primary model for text chat and conclusions.
+- Changed image-only and image-plus-text chat turns to start with
+  `glm-5.3-flash`.
+- Kept the free fallback chain after the paid image model is unavailable or
+  its balance is exhausted.
+- Preserved the existing multimodal request shape: text and image parts stay
+  together in one OpenAI-compatible `messages[].content` array.
+- Image turns continue to omit `reasoning_effort`, which avoids the gateway
+  rejection seen when reasoning metadata is combined with image content.
+
+### Verified
+- Production build passed.
+- PM2 `inschat` restarted successfully and port 3001 returns HTTP 200.
+- A guest image-plus-text request returned
+  `TRYING:glm-5.3-flash`, `MODEL:glm-5.3-flash`, and the expected answer.
+- A guest image-only request returned the same GLM model markers and a correct
+  description of the test image.
+
+## 2026-09-10 — Restore report date alignment
+
+### Solved
+- Kept the meal name and image icon grouped on the left.
+- Restored the report date/time to the top-right with `margin-left: auto`.
+
+## 2026-09-10 — Keep report name and image icon adjacent
+
+### Solved
+- Wrapped the meal name and image trigger in a tight flex group.
+- Removed the flexible growth from the meal name that was pushing the icon
+  across the report header.
+
+## 2026-09-10 — Simplify report image icon placement
+
+### Solved
+- Removed the square border and padding from the report image trigger.
+- Replaced the overlapping `Images` glyph with a single `Image` glyph.
+- The icon now sits immediately to the right of the meal name in report
+  headers, with a tight 4px gap.
+
+## 2026-09-10 — Reduce viewer size and close by click
+
+### Solved
+- Reduced the standalone image bounds to 80% of the viewport.
+- Removed the X button; clicking anywhere in the overlay or pressing Escape
+  closes the image.
+
+## 2026-09-10 — Mount report image viewer outside report layout
+
+### Solved
+- Rendered `ImageViewer` through a `document.body` portal.
+- Report image overlays now escape inline report spans and their layout constraints,
+  matching the chat image viewer behavior.
+
+### Verified
+- Production build passed.
+- PM2 `inschat` restarted successfully and port 3001 returns HTTP 200.

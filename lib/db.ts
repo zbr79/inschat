@@ -5,6 +5,7 @@ import type {
   ChatSession,
   ConcludeItem,
   ConcludeMeal,
+  ReportEvent,
   SavedRecord,
   SessionConclusion,
   StoredMessage,
@@ -35,6 +36,7 @@ interface ReportEntryDoc {
   meals?: ConcludeMeal[] | null;
   sourceText?: string | null;
   imageKeys?: string[] | null;
+  events?: ReportEvent[] | null;
   savedAt: Date;
   datetime: Date | null;
   recordedAt: Date;
@@ -184,6 +186,7 @@ function toSavedReportEntry(entry: ReportEntryDoc): SavedRecord {
     meals: entry.meals ?? undefined,
     sourceText: entry.sourceText ?? undefined,
     imageKeys: entry.imageKeys ?? undefined,
+    events: entry.events ?? undefined,
     savedAt: entry.savedAt.toISOString(),
     datetime: entry.datetime?.toISOString() ?? null,
     recordedAt: entry.recordedAt.toISOString(),
@@ -258,6 +261,7 @@ export async function appendReportEntry(
     meals?: ConcludeMeal[];
     sourceText?: string;
     imageKeys?: string[];
+    events?: ReportEvent[];
     sessionId?: string;
     recordedAt?: string;
   }
@@ -274,6 +278,7 @@ export async function appendReportEntry(
     meals: input.meals,
     sourceText: input.sourceText,
     imageKeys: input.imageKeys,
+    events: input.events,
     savedAt: now,
     datetime: recordedAt,
     recordedAt,
@@ -289,6 +294,7 @@ export async function appendReportEntry(
       "entries.$[entry].meals": input.meals ?? null,
       "entries.$[entry].sourceText": input.sourceText ?? null,
       "entries.$[entry].imageKeys": input.imageKeys ?? [],
+      "entries.$[entry].events": input.events ?? [],
       updatedAt: now,
     };
     if (input.recordedAt !== undefined) {
@@ -342,6 +348,7 @@ export async function updateReportEntry(
     meals?: ConcludeMeal[];
     sourceText?: string;
     imageKeys?: string[];
+    events?: ReportEvent[];
     sessionId?: string;
     recordedAt?: string;
     pinned?: boolean;
@@ -359,6 +366,7 @@ export async function updateReportEntry(
   };
   if (input.sourceText !== undefined) set["entries.$.sourceText"] = input.sourceText;
   if (input.imageKeys !== undefined) set["entries.$.imageKeys"] = input.imageKeys;
+  if (input.events !== undefined) set["entries.$.events"] = input.events;
   if (input.sessionId !== undefined) set["entries.$.sessionId"] = input.sessionId;
   if (input.recordedAt !== undefined) {
     const recordedAt = reportDate(input.recordedAt, now);
