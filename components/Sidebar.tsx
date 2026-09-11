@@ -111,10 +111,12 @@ export default function Sidebar() {
     };
   }, [menuOpen]);
 
-  // Escape closes the mobile drawer (and any open row menu).
+  // Escape closes the mobile drawer (and any open row menu). Skip when a
+  // dialog is open so Search / Settings / Auth handle Escape themselves.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
       setMenuOpen(false);
       setMenuFor(null);
       setRenamingId(null);
@@ -123,6 +125,17 @@ export default function Sidebar() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.stopImmediatePropagation();
+      setSettingsOpen(false);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [settingsOpen]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -450,7 +463,7 @@ export default function Sidebar() {
           </button>
           <button
             type="button"
-            className="sidebar-hide"
+            className="sidebar-hide sidebar-collapse"
             onClick={toggleCollapsed}
             aria-label={t["nav.hideSidebar"]}
             title={t["nav.hideSidebar"]}
