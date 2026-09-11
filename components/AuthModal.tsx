@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import AuthForm from "./AuthForm";
 
@@ -14,6 +14,17 @@ export default function AuthModal({
   onAuthed: () => void;
 }) {
   const [mode, setMode] = useState<"login" | "register">("login");
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.stopImmediatePropagation();
+      onClose();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [open, onClose]);
 
   if (!open) return null;
 

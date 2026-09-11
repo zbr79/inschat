@@ -517,7 +517,7 @@ body {
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(0.8);
+  transform: translate(-50%, -50%);
   z-index: 71;
   width: min(600px, calc(100vw - 32px));
   max-height: calc(100dvh - 80px);
@@ -1609,6 +1609,18 @@ span.conclude-rank-badge {
     padding: 10px 12px;
   }
 
+  /* Drawer already closes via the menu button / backdrop. Hiding the desktop
+     collapse control avoids a collapsed sidebar with no expand button.
+     Two-class selector so later `.sidebar-hide { display: flex }` cannot win. */
+  .sidebar-hide.sidebar-collapse {
+    display: none;
+  }
+
+  .sidebar-hide {
+    width: 36px;
+    height: 36px;
+  }
+
   .app {
     min-height: 100%;
   }
@@ -1934,14 +1946,19 @@ span.conclude-rank-badge {
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.75);
-  cursor: zoom-out;
-  padding: 24px;
+  overflow: hidden;
+  padding: 16px;
+  cursor: pointer;
 }
 
 .image-viewer img {
-  max-width: min(90vw, 720px);
-  max-height: 85vh;
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 80vw;
+  max-height: 80vh;
   border-radius: 12px;
+  cursor: pointer;
   object-fit: contain;
 }
 
@@ -1965,6 +1982,7 @@ span.conclude-rank-badge {
   object-fit: cover;
   border-radius: 12px;
   border: 1px solid var(--border);
+  cursor: pointer;
 }
 
 .preview button,
@@ -3359,6 +3377,8 @@ span.conclude-rank-badge {
   .records-range-tabs {
     flex: 1;
     width: 100%;
+    flex-wrap: wrap;
+    overflow-x: visible;
   }
 
   .records-range-tabs button {
@@ -3921,7 +3941,7 @@ span.conclude-rank-badge {
   z-index: 121;
   width: min(720px, calc(100vw - 32px));
   max-height: calc(100dvh - 48px);
-  transform: translate(-50%, -50%) scale(0.8);
+  transform: translate(-50%, -50%);
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -4393,6 +4413,10 @@ span.conclude-rank-badge {
   width: 100%;
   max-width: none;
   position: relative;
+}
+
+.auth-modal .auth-card-head {
+  padding-right: 28px;
 }
 
 .auth-modal-close {
@@ -4988,6 +5012,63 @@ span.conclude-rank-badge {
   color: var(--text);
 }
 
+@media (max-width: 640px) {
+  /* Must sit after the unscoped `.sidebar-expand { display: flex }` rule. */
+  .sidebar-expand {
+    display: none;
+  }
+
+  .sidebar-hide.sidebar-collapse {
+    display: none;
+  }
+
+  .sidebar-hide {
+    width: 36px;
+    height: 36px;
+  }
+
+  .preview button,
+  .image-remove {
+    width: 28px;
+    height: 28px;
+  }
+
+  .auth-toggle {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .settings-modal {
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+
+  .date-picker-backdrop {
+    padding: 12px;
+  }
+
+  .full-day-edit-modal,
+  .record-edit-modal {
+    width: min(720px, calc(100vw - 16px));
+    max-height: calc(100dvh - 16px);
+  }
+
+  .conclude-dish-remove {
+    width: 32px;
+    height: 32px;
+  }
+
+  .conclude-time-modal .conclude-cancel,
+  .conclude-time-modal .conclude-save {
+    min-height: 36px;
+  }
+
+  .preview img {
+    cursor: pointer;
+  }
+}
+
 .session-pin {
   flex-shrink: 0;
   width: 22px;
@@ -5426,6 +5507,7 @@ span.conclude-rank-badge {
   .search-modal {
     height: 75vh;
     width: 92vw;
+    min-width: 0;
   }
 }
 

@@ -3448,3 +3448,34 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
   e.g. `番茄洋葱香菜莎莎（沙拉）`.
 - The system prompt now forbids `()` / `（）` on dish names, and saved and
   displayed dish names strip trailing parenthetical labels.
+
+## 2026-09-11 — Phone UI audit (every guest page and modal)
+
+### Solved
+- Guest phone pass at 390×844 and 320×568: chat, drawer, Search, Settings,
+  confirm-delete, Auth, image viewer, login/signup, OpenCode, Models, Calls,
+  Usage, OpenCode-calls, Records (empty + demo), date picker, day Edit, time
+  picker. No horizontal overflow on any of those surfaces.
+- Hide-sidebar on phones was a trap: the collapse control stayed visible
+  because later `.sidebar-hide { display: flex }` beat the mobile hide rule,
+  and `.sidebar-expand { display: flex }` also beat the mobile `display: none`.
+  Collapse/expand are now hidden under 640px.
+- Search / Settings Escape could close the drawer instead of the dialog.
+  Dialogs now take Escape first; Search uses a capture listener.
+- Day Edit and Conclude sat at `scale(0.8)` with unused side margin. They now
+  fill the phone width. Range tabs wrap so "Last 1 year" / "All records" are
+  not off-screen at 320px. Composer thumbs open the image viewer.
+
+### Unresolved
+- `/records/full` still redirects to `/records`, so `RecordEditModal` is not
+  reachable for guests (`record-edit-trigger` only renders when `showFull` is
+  false). Day Edit is the editor on phones.
+- Nested `.conclude-modal-embedded` is taller than the viewport; the outer
+  day-edit sheet scrolls, which is intended.
+- Glucose chart tap on a phone jumps to that day instead of showing a hover
+  tooltip (no hover).
+- Models/Calls can show "Request failed" for guests; layout is fine.
+
+### Disproved
+- Playwright `Escape` is a bad way to close Search: the leftover backdrop
+  intercepts the next tap. Close with the X or backdrop instead.

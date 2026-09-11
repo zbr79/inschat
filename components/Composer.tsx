@@ -7,6 +7,7 @@ import { MAX_IMAGES } from "@/lib/types";
 import { STR, useUiLang } from "@/lib/i18n";
 import { useCompressImages, useReasoningEffort } from "@/lib/prefs";
 import { compressImage } from "@/lib/imageCompress";
+import ImageViewer from "./ImageViewer";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
@@ -45,6 +46,7 @@ export default function Composer({ sending, onSend, onStop, disabled = false }: 
   const [reasoning, setReasoning] = useReasoningEffort();
   const [text, setText] = useState("");
   const [images, setImages] = useState<ChatImage[]>([]);
+  const [viewer, setViewer] = useState<ChatImage | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
@@ -120,11 +122,15 @@ export default function Composer({ sending, onSend, onStop, disabled = false }: 
         <div className="preview-grid">
           {images.map((image, index) => (
             <div key={index} className="preview">
-               <img src={`data:${image.mimeType};base64,${image.data}`} alt={t["composer.previewAlt"]} />
+              <img
+                src={`data:${image.mimeType};base64,${image.data}`}
+                alt={t["composer.previewAlt"]}
+                onClick={() => setViewer(image)}
+              />
               <button
                 type="button"
                 onClick={() => removeImage(index)}
-                 aria-label={t["composer.removeImage"]}
+                aria-label={t["composer.removeImage"]}
               >
                 <X size={16} />
               </button>
@@ -190,6 +196,13 @@ export default function Composer({ sending, onSend, onStop, disabled = false }: 
         )}
       </div>
       {imageError && <p className="hint">{imageError}</p>}
+      {viewer && (
+        <ImageViewer
+          src={`data:${viewer.mimeType};base64,${viewer.data}`}
+          alt={t["composer.previewAlt"]}
+          onClose={() => setViewer(null)}
+        />
+      )}
     </div>
   );
 }
