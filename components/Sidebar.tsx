@@ -17,6 +17,7 @@ import SearchModal from "./SearchModal";
 import AuthModal from "./AuthModal";
 import ConfirmModal from "./ConfirmModal";
 import { useInsulinMode, useCompressImages } from "@/lib/prefs";
+import { SESSIONS_CHANGED_EVENT } from "@/lib/sessionTitle";
 
 interface MeUser {
   _id: string;
@@ -177,6 +178,12 @@ export default function Sidebar() {
   useEffect(() => {
     load();
   }, [load, currentSession]);
+
+  useEffect(() => {
+    const onSessionsChanged = () => load();
+    window.addEventListener(SESSIONS_CHANGED_EVENT, onSessionsChanged);
+    return () => window.removeEventListener(SESSIONS_CHANGED_EVENT, onSessionsChanged);
+  }, [load]);
 
 
   const remove = async (id: string) => {

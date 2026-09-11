@@ -15,6 +15,11 @@ import type {
 } from "@/lib/types";
 import { ModelMarkerParser } from "@/lib/markers";
 import { createReportEvent, mergeReportEvents } from "@/lib/reportEvents";
+import { maybeRenameHealthSession } from "@/lib/sessionTitle";
+import {
+  cleanDishNamesInReply,
+  sanitizeConcludeMeals,
+} from "@/lib/dishName";
 import { elapsedSeconds, trimStreamingEnd } from "@/lib/format";
 import {
   addGuestRecord,
@@ -281,11 +286,13 @@ function visibleMessageText(text: string): string {
   const visible = trimStreamingEnd(
     concludeIndex === -1 ? text : text.slice(0, concludeIndex)
   );
-  return visible
-    .split("\n")
-    .filter((line) => !/^\s*→\s+\S+/.test(line))
-    .join("\n")
-    .trimEnd();
+  return cleanDishNamesInReply(
+    visible
+      .split("\n")
+      .filter((line) => !/^\s*→\s+\S+/.test(line))
+      .join("\n")
+      .trimEnd()
+  );
 }
 
 function parseConclusionTail(
@@ -304,7 +311,7 @@ function parseConclusionTail(
           ? (raw.items as ConcludeResult["items"])
           : [],
         meals: Array.isArray(raw.meals)
-          ? (raw.meals as ConcludeResult["meals"])
+          ? sanitizeConcludeMeals(raw.meals as ConcludeResult["meals"])
           : undefined,
       },
       sourceText: visibleMessageText(text),
@@ -495,6 +502,7 @@ export default function ChatApp() {
   const [flashId, setFlashId] = useState<number | null>(null);
   const handledMsgRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
+  const sessionTitleRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [freeNotice, setFreeNotice] = useState(false);
 
@@ -726,6 +734,7 @@ useEffect(() => {
     recordIdRef.current = null;
     if (!id) {
       sessionIdRef.current = null;
+      sessionTitleRef.current = null;
       setLoading(false);
       return;
     }
@@ -739,6 +748,7 @@ useEffect(() => {
         })
         .then(
           (body: {
+            session?: { title?: string };
             messages: {
               role: string;
               text: string;
@@ -756,6 +766,7 @@ useEffect(() => {
             recordId?: string | null;
           }) => {
             if (sessionIdRef.current !== id) return;
+            sessionTitleRef.current = body.session?.title ?? null;
             return Promise.all(body.messages.map(async (message) => {
                 const status = normalizeUiStatus(
                   (message as { status?: StoredStatus }).status ??
@@ -835,6 +846,7 @@ useEffect(() => {
         )
         .catch(() => {
           sessionIdRef.current = null;
+          sessionTitleRef.current = null;
           router.replace("/");
         })
         .finally(() => {
@@ -844,6 +856,7 @@ useEffect(() => {
       const local = getGuestSession(id);
       if (local) {
         sessionIdRef.current = id;
+        sessionTitleRef.current = local.title;
         Promise.all(
           local.messages.map(async (message, index) => {
             const status = normalizeUiStatus(message.status as StoredStatus);
@@ -1162,8 +1175,10 @@ useEffect(() => {
             // Health-mode replies end with a <CONCLUDE> JSON tail for the
             // single-call recording flow — hide it from the bubble.
             const openIdx = modelText.indexOf("<CONCLUDE>");
-            const visible = trimStreamingEnd(
-              openIdx === -1 ? modelText : modelText.slice(0, openIdx)
+            const visible = cleanDishNamesInReply(
+              trimStreamingEnd(
+                openIdx === -1 ? modelText : modelText.slice(0, openIdx)
+              )
             );
             setMessages((prev) =>
               prev.map((message) =>
@@ -1178,8 +1193,10 @@ useEffect(() => {
         if (tail) {
           modelText += tail;
           const openIdx = modelText.indexOf("<CONCLUDE>");
-          const visible = trimStreamingEnd(
-            openIdx === -1 ? modelText : modelText.slice(0, openIdx)
+          const visible = cleanDishNamesInReply(
+            trimStreamingEnd(
+              openIdx === -1 ? modelText : modelText.slice(0, openIdx)
+            )
           );
           setMessages((prev) =>
             prev.map((message) =>
@@ -1209,7 +1226,9 @@ useEffect(() => {
         if (insulinMode) {
           const match = modelText.match(/<CONCLUDE>([\s\S]*?)<\/CONCLUDE>/);
           if (match) {
-            const visibleText = modelText.slice(0, match.index).trimEnd();
+            const visibleText = cleanDishNamesInReply(
+              modelText.slice(0, match.index).trimEnd()
+            );
             savedText = visibleText;
             setMessages((prev) =>
               prev.map((message) =>
@@ -1228,7 +1247,7 @@ useEffect(() => {
                     typeof raw.summary === "string" ? raw.summary : "",
                   items: Array.isArray(raw.items) ? (raw.items as ConcludeResult["items"]) : [],
                   meals: Array.isArray(raw.meals)
-                    ? (raw.meals as ConcludeResult["meals"])
+                    ? sanitizeConcludeMeals(raw.meals as ConcludeResult["meals"])
                     : undefined,
                 };
               }
@@ -1264,6 +1283,16 @@ useEffect(() => {
           }
           // Clean end + server-owned persistence: this tab closes its own
           // pending placeholder if the handler dies at exactly that moment.
+          const renamed = await maybeRenameHealthSession({
+            sessionId,
+            authed: Boolean(isAuthed),
+            insulinMode,
+            currentTitle: sessionTitleRef.current,
+            lang,
+            result: parsedConclude,
+            replyText: savedText,
+          });
+          if (renamed) sessionTitleRef.current = renamed;
           if (runPersisted) {
             if (isAuthed && runMessageId) {
               fetch(`/api/sessions/${sessionId}/messages`, {
@@ -1330,12 +1359,13 @@ useEffect(() => {
 
       let sessionId = sessionIdRef.current;
       if (!sessionId) {
+        const createdTitle = titleFrom(trimmed, t["nav.newChat"]);
         if (authed) {
           try {
             const response = await fetch("/api/sessions", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ title: titleFrom(trimmed, t["nav.newChat"]) }),
+              body: JSON.stringify({ title: createdTitle }),
             });
             const body = await response.json();
             if (!response.ok) throw new Error(t["common.requestFailed"]);
@@ -1344,10 +1374,11 @@ useEffect(() => {
             sessionId = null;
           }
         } else {
-          sessionId = createGuestSession(titleFrom(trimmed, t["nav.newChat"])).id;
+          sessionId = createGuestSession(createdTitle).id;
         }
         if (sessionId) {
           sessionIdRef.current = sessionId;
+          sessionTitleRef.current = createdTitle;
           router.replace(`/?session=${sessionId}`);
         }
       }

@@ -11,6 +11,7 @@ import { ChatValidationError } from "./errors";
 import { getConcludeChain } from "./models";
 import { insertCall } from "./db";
 import type { ChatMessage, ConcludeResult } from "./types";
+import { cleanDishName } from "./dishName";
 
 const CONCLUDE_PROMPT = `You turn a chat assistant's reply into a compact structured conclusion.
 
@@ -29,7 +30,7 @@ Produce a JSON conclusion with:
   - "name": the meal name (早餐/午餐/下午茶/晚餐/夜宵, or Breakfast/Lunch/Afternoon snack/Dinner/Late-night snack — chosen by the meal's time, NEVER 加餐/Snack).
   - "time": the meal's time when stated (e.g. "2026年8月26日 下午 6:17").
   - "dishes": an array with one entry PER DISH in that meal. Each dish has:
-    - "name": the dish name (e.g. "酱牛肉", "rice").
+    - "name": the dish name only (e.g. "酱牛肉", "rice") — no parenthetical category such as （沙拉） or (salad).
     - "rank": the dish's blood-sugar effect level exactly as stated: 低/中/高 (or low/medium/high). Omit "rank" when the reply gives no level for that dish.
   Empty array when the reply describes no meals.
 
@@ -110,8 +111,9 @@ function sanitize(raw: unknown, language: "chinese" | "english"): ConcludeResult
           .map((dish) => {
             const raw = dish as Record<string, unknown>;
             const cleanDish: { name: string; rank?: string } = {
-              name:
-                typeof raw.name === "string" && raw.name ? raw.name : "dish",
+              name: cleanDishName(
+                typeof raw.name === "string" && raw.name ? raw.name : "dish"
+              ),
             };
             if (typeof raw.rank === "string" && raw.rank) {
               cleanDish.rank = raw.rank;

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ConcludeResult, SavedRecord } from "@/lib/types";
+import { cleanDishName } from "@/lib/dishName";
 import { applyReportEdits, reportEditorResult } from "@/lib/reportEvents";
 import {
   addDemoGlucoseRecords,
@@ -777,7 +778,7 @@ export default function RecordsPanel({
                                     key={dishIndex}
                                     className={`dish-box${dish.rank ? ` rank-${rankClass(dish.rank)}` : ""}`}
                                   >
-                                    <span className="dish-box-name">{dish.name}</span>
+                                    <span className="dish-box-name">{cleanDishName(dish.name)}</span>
                                     {dish.rank && !showFull && (
                                       <span className="dish-box-rank">{dish.rank}</span>
                                     )}
