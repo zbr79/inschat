@@ -92,7 +92,11 @@ export default function ModelsPanel() {
         body: JSON.stringify({ model: name }),
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(t["common.requestFailed"]);
+      if (!response.ok) {
+        throw new Error(
+          typeof body?.error === "string" ? body.error : t["common.requestFailed"]
+        );
+      }
       setData(body);
     } catch (err) {
       setError(err instanceof Error ? err.message : t["common.requestFailed"]);
@@ -102,7 +106,7 @@ export default function ModelsPanel() {
   };
 
   const models = data?.models ?? [];
-  const autoMode = data?.current === "auto";
+  const enforcedModel = "qwen3.8-flash";
   const healthByModel = new Map((health?.results ?? []).map((r) => [r.model, r]));
   const visible = models.filter(
     (model) => !model.retired && healthByModel.get(model.name)?.status !== "retired"
@@ -199,36 +203,14 @@ export default function ModelsPanel() {
       </section>
 
       <div className="models-list">
-        <div className={`model-row${autoMode ? " current" : ""}`}>
-          <div className="model-info">
-            <span className="model-label">{t["models.autoLabel"]}</span>
-            <span className="model-name">{t["models.autoName"]}</span>
-            <span className="model-tags">
-              <span className="model-tag tier-flash">{t["models.autoTag"]}</span>
-              {autoMode && <span className="model-tag state">{t["models.active"]}</span>}
-            </span>
-          </div>
-          <div className="model-meter">
-            <span className="model-used">{t["models.fallbackChain"]}</span>
-          </div>
-          <button
-            type="button"
-            className="model-switch"
-            disabled={autoMode || switching !== null}
-            onClick={() => switchTo("auto")}
-          >
-            {autoMode
-              ? t["models.active"]
-              : switching === "auto"
-                ? t["models.switching"]
-                : t["models.use"]}
-          </button>
-        </div>
         {visible.map((model) => {
           const live = healthByModel.get(model.name);
           const current = model.name === data?.current;
+          const enforced = model.name !== enforcedModel;
           const state = current
             ? t["models.active"]
+            : enforced
+              ? t["models.enforced"]
             : live?.status === "ok"
               ? t["models.available"]
               : live?.status === "quota"
@@ -240,7 +222,7 @@ export default function ModelsPanel() {
                       ? t["models.error"]
                       : t["models.unchecked"]
                     : t["models.unchecked"];
-          const disabled = current || live?.status === "quota";
+          const disabled = !current || live?.status === "quota";
           return (
             <div
               key={model.name}
@@ -283,6 +265,8 @@ export default function ModelsPanel() {
               >
                  {current
                    ? t["models.active"]
+                   : enforced
+                     ? t["models.enforced"]
                    : switching === model.name
                      ? t["models.switching"]
                      : t["models.use"]}

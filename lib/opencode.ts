@@ -12,8 +12,8 @@ import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type ChatMessage } from "./types"
 
 export const OPENCODE_BASE_URL = "https://opencode.ai/zen/go/v1";
 export const OPENCODE_FREE_BASE_URL = "https://opencode.ai/zen/v1";
-export const OPENCODE_MODEL = "deepseek-v4-pro";
-export const OPENCODE_VISION_MODEL = "deepseek-v4-flash-vision-exp";
+export const OPENCODE_MODEL = "qwen3.8-flash";
+export const OPENCODE_VISION_MODEL = "qwen3.8-flash";
 
 // The opencode CLI stores the current subscription key here; it changes when
 // the user rotates/reconnects the key in the TUI. Prefer it over .env so the
@@ -76,6 +76,11 @@ export function isOverloadedError(error: unknown): boolean {
 export function isServerError(error: unknown): boolean {
   const message = String(error instanceof Error ? error.message : error);
   return /500|internal server error/i.test(message);
+}
+
+export function isTimeoutError(error: unknown): boolean {
+  const message = String(error instanceof Error ? error.message : error);
+  return /timeout|timed out|aborted due to timeout/i.test(message);
 }
 
 // The Go subscription's dollar windows ran out ("Insufficient balance",
@@ -245,6 +250,8 @@ function toOpenAiMessages(
           },
         });
       }
+      // Qwen accepts image-only and multimodal turns in the same standard
+      // content-array shape. Keep the user's text and image in one turn.
       out.push({ role, content: parts });
       continue;
     }
@@ -361,10 +368,6 @@ function errorFromResponse(status: number, text: string): Error {
   return new Error(message);
 }
 
-// Qwen models on the Go gateway 400 when reasoning_effort is sent together
-// with image content — skip it for those image requests.
-const NO_REASONING_WITH_IMAGES = new Set(["qwen3.5-plus"]);
-
 // One streaming round: yields content tokens and returns accumulated tool
 // calls (via the generator return value).
 async function* streamOpenCodeOnce(
@@ -380,14 +383,16 @@ async function* streamOpenCodeOnce(
       Array.isArray(message.content) &&
       message.content.some((part) => part.type === "image_url")
   );
-  const skipReasoning = hasImageParts && NO_REASONING_WITH_IMAGES.has(model);
   const body: Record<string, unknown> = {
     model,
     messages,
     stream: true,
     temperature: 0.7,
   };
-  if (!skipReasoning) body.reasoning_effort = reasoningLevel;
+  // The gateway rejects reasoning_effort with image content. Image turns
+  // should be visual analysis only; this applies to every vision model and
+  // avoids model-specific allowlists going stale.
+  if (!hasImageParts) body.reasoning_effort = reasoningLevel;
   if (tools) body.tools = [WEB_SEARCH_TOOL, WEB_FETCH_TOOL];
   const startedAt = Date.now();
   console.log(
@@ -400,7 +405,11 @@ async function* streamOpenCodeOnce(
     );
   }
 
-  const response = await postCompletion(model, body, 120_000, sessionId);
+  // A vision provider that has not emitted a first token after 30 seconds is
+  // effectively stalled for an interactive chat. Fail over promptly instead
+  // of holding the browser on a spinner for the full two-minute text timeout.
+  const timeoutMs = hasImageParts ? 30_000 : 120_000;
+  const response = await postCompletion(model, body, timeoutMs, sessionId);
 
   if (!response.ok || !response.body) {
     const text = await response.text().catch(() => "");
@@ -656,13 +665,20 @@ export async function* streamChat(
         } catch (error) {
           lastError = error;
           if (error instanceof ChatValidationError) throw error;
-        if (isQuotaError(error) || isUnavailableError(error) || isBalanceError(error) || isServerError(error)) {
-          if (!isFreeModel(model) && (isQuotaError(error) || isBalanceError(error))) {
-            paidExhausted = true;
+          const moveToNextModel =
+            isQuotaError(error) ||
+            isUnavailableError(error) ||
+            isBalanceError(error) ||
+            isServerError(error) ||
+            isTimeoutError(error);
+          if (moveToNextModel) {
+            if (!isFreeModel(model) && (isQuotaError(error) || isBalanceError(error))) {
+              paidExhausted = true;
+            }
+            const reason = isTimeoutError(error) ? "timed out" : "unavailable";
+            console.log(`[opencode:${requestId}] ${model} ${reason} → next model`);
+            break;
           }
-          console.log(`[opencode:${requestId}] ${model} unavailable → next model`);
-          break;
-        }
           if (isOverloadedError(error)) {
             const delay = 1500 * (attempt + 1);
             console.log(`[opencode:${requestId}] ${model} overloaded → retry in ${delay}ms`);
@@ -706,6 +722,14 @@ export async function* streamChat(
       console.log(
         `[opencode:${requestId}] failed — all ${chain.length} models unavailable`
       );
+      if (
+        hasImage &&
+        (isUnavailableError(lastError) || isTimeoutError(lastError))
+      ) {
+        throw new Error(
+          "The image model is unavailable right now. Please try again shortly."
+        );
+      }
       throw lastError ?? new Error("Chat request failed: all models unavailable.");
     }
   }
