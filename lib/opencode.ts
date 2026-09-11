@@ -1,18 +1,19 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { ChatValidationError } from "./errors";
 import { getSystemPrompt } from "./prompt";
 import { encodeFreeMarker, encodeModelMarker, encodeTryingMarker } from "./markers";
 import { getChatChain } from "./models";
 import { insertCall } from "./db";
-import { fetchPageText } from "./webfetch";
+import { fetchPageText, searchWeb } from "./webfetch";
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type ChatMessage } from "./types";
 
 export const OPENCODE_BASE_URL = "https://opencode.ai/zen/go/v1";
 export const OPENCODE_FREE_BASE_URL = "https://opencode.ai/zen/v1";
-export const OPENCODE_MODEL = "deepseek-v4-pro";
-export const OPENCODE_VISION_MODEL = "deepseek-v4-flash-vision-exp";
+export const OPENCODE_MODEL = "qwen3.8-flash";
+export const OPENCODE_VISION_MODEL = "qwen3.8-flash";
 
 // The opencode CLI stores the current subscription key here; it changes when
 // the user rotates/reconnects the key in the TUI. Prefer it over .env so the
@@ -75,6 +76,11 @@ export function isOverloadedError(error: unknown): boolean {
 export function isServerError(error: unknown): boolean {
   const message = String(error instanceof Error ? error.message : error);
   return /500|internal server error/i.test(message);
+}
+
+export function isTimeoutError(error: unknown): boolean {
+  const message = String(error instanceof Error ? error.message : error);
+  return /timeout|timed out|aborted due to timeout/i.test(message);
 }
 
 // The Go subscription's dollar windows ran out ("Insufficient balance",
@@ -244,6 +250,8 @@ function toOpenAiMessages(
           },
         });
       }
+      // Qwen accepts image-only and multimodal turns in the same standard
+      // content-array shape. Keep the user's text and image in one turn.
       out.push({ role, content: parts });
       continue;
     }
@@ -268,6 +276,25 @@ const WEB_FETCH_TOOL = {
         },
       },
       required: ["url"],
+    },
+  },
+};
+
+const WEB_SEARCH_TOOL = {
+  type: "function",
+  function: {
+    name: "web_search",
+    description:
+      "Search the live web for current information, news, prices, or documentation. Use web_fetch on useful result URLs when the answer needs source details.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "A concise web search query.",
+        },
+      },
+      required: ["query"],
     },
   },
 };
@@ -316,13 +343,16 @@ function baseUrlForModel(model: string): string {
 async function postCompletion(
   model: string,
   body: Record<string, unknown>,
-  timeoutMs: number
+  timeoutMs: number,
+  sessionId?: string
 ): Promise<Response> {
   return fetch(`${baseUrlForModel(model)}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${getOpenCodeKey()}`,
+      "User-Agent": "InsChat/1.0",
+      "x-opencode-session": sessionId ?? `inschat-${randomUUID()}`,
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
@@ -338,17 +368,14 @@ function errorFromResponse(status: number, text: string): Error {
   return new Error(message);
 }
 
-// Qwen models on the Go gateway 400 when reasoning_effort is sent together
-// with image content — skip it for those image requests.
-const NO_REASONING_WITH_IMAGES = new Set(["qwen3.5-plus"]);
-
 // One streaming round: yields content tokens and returns accumulated tool
 // calls (via the generator return value).
 async function* streamOpenCodeOnce(
   messages: OpenAiMessage[],
   model: string,
   tools: boolean,
-  reasoningLevel: "max" | "medium" | "low" = "max"
+  reasoningLevel: "max" | "medium" | "low" = "medium",
+  sessionId?: string
 ): AsyncGenerator<string, { toolCalls: ToolCall[] }, void> {
   const requestId = Math.random().toString(36).slice(2, 8);
   const hasImageParts = messages.some(
@@ -356,15 +383,17 @@ async function* streamOpenCodeOnce(
       Array.isArray(message.content) &&
       message.content.some((part) => part.type === "image_url")
   );
-  const skipReasoning = hasImageParts && NO_REASONING_WITH_IMAGES.has(model);
   const body: Record<string, unknown> = {
     model,
     messages,
     stream: true,
     temperature: 0.7,
   };
-  if (!skipReasoning) body.reasoning_effort = reasoningLevel;
-  if (tools) body.tools = [WEB_FETCH_TOOL];
+  // The gateway rejects reasoning_effort with image content. Image turns
+  // should be visual analysis only; this applies to every vision model and
+  // avoids model-specific allowlists going stale.
+  if (!hasImageParts) body.reasoning_effort = reasoningLevel;
+  if (tools) body.tools = [WEB_SEARCH_TOOL, WEB_FETCH_TOOL];
   const startedAt = Date.now();
   console.log(
     `[opencode:${requestId}] start — model ${model}, ${messages.length} messages${tools ? ", tools on" : ""}`
@@ -376,7 +405,11 @@ async function* streamOpenCodeOnce(
     );
   }
 
-  const response = await postCompletion(model, body, 120_000);
+  // A vision provider that has not emitted a first token after 30 seconds is
+  // effectively stalled for an interactive chat. Fail over promptly instead
+  // of holding the browser on a spinner for the full two-minute text timeout.
+  const timeoutMs = hasImageParts ? 30_000 : 120_000;
+  const response = await postCompletion(model, body, timeoutMs, sessionId);
 
   if (!response.ok || !response.body) {
     const text = await response.text().catch(() => "");
@@ -508,7 +541,32 @@ async function executeTool(
   call: ToolCall
 ): Promise<OpenAiMessage> {
   let text: string;
-  if (call.name === "web_fetch") {
+  if (call.name === "web_search") {
+    let query: string | undefined;
+    try {
+      query = (JSON.parse(call.arguments) as { query?: unknown }).query as
+        | string
+        | undefined;
+    } catch {}
+    if (typeof query !== "string" || !query.trim()) {
+      text = "web_search failed: missing query argument.";
+    } else {
+      const result = await searchWeb(query);
+      if (!result.ok) {
+        text = `Search failed (${result.error}).`;
+      } else if (!result.results?.length) {
+        text = `No web results found for "${query}".`;
+      } else {
+        text = [
+          `Search results for "${query}":`,
+          ...result.results.map(
+            (item, index) =>
+              `${index + 1}. ${item.title}\nURL: ${item.url}\n${item.snippet}`
+          ),
+        ].join("\n\n");
+      }
+    }
+  } else if (call.name === "web_fetch") {
     let url: string | undefined;
     try {
       url = (JSON.parse(call.arguments) as { url?: unknown }).url as
@@ -536,27 +594,29 @@ async function executeTool(
 
 const MAX_TOOL_ROUNDS = 6;
 
-// Chat with web_fetch tool use: images → vision model (no tools); text →
-// pinned model or pro→flash chain, with an agent loop for tool calls.
+// Chat with web search/fetch tools: images → vision model (no tools); text →
+// pinned model or pro→flash chain, with a direct tool loop.
 export async function* streamChat(
   messages: ChatMessage[],
   timeZone?: string,
   language?: "zh" | "en",
   freeMode = false,
-  reasoning: "max" | "medium" | "low" = "max"
+  reasoning: "max" | "medium" | "low" = "medium",
+  sessionId?: string,
+  includeImages = false
 ): AsyncGenerator<string> {
   const lastMessage = messages[messages.length - 1];
-  const hasImage = (lastMessage?.images?.length ?? 0) > 0;
+  const hasImage = includeImages
+    ? messages.some((message) => (message.images?.length ?? 0) > 0)
+    : (lastMessage?.images?.length ?? 0) > 0;
   const useTools = !hasImage;
   const requestId = Math.random().toString(36).slice(2, 8);
   let chain = getChatChain(hasImage);
   const systemOverride = freeMode
     ? getSystemPrompt(timeZone, language, true)
     : undefined;
-  // Text-only sends must not pass earlier photo parts to text models — the
-  // free gateway rejects image content (404 "No endpoints for image").
-  // Mirror the agent transcript's "[photo attached]" marker so the model
-  // still knows a photo was part of the conversation.
+  // Ordinary text sends must not pass earlier photo parts to text models.
+  // Report turns opt in so the session report can analyze earlier local photos.
   const sourceMessages = hasImage
     ? messages
     : messages.map((message) =>
@@ -587,7 +647,13 @@ export async function* streamChat(
         let toolCalls: ToolCall[] = [];
         try {
           yield encodeTryingMarker(model);
-          const gen = streamOpenCodeOnce(working, model, useTools, reasoning);
+          const gen = streamOpenCodeOnce(
+            working,
+            model,
+            useTools,
+            reasoning,
+            sessionId
+          );
           while (true) {
             const { done, value } = await gen.next();
             if (done) {
@@ -599,13 +665,20 @@ export async function* streamChat(
         } catch (error) {
           lastError = error;
           if (error instanceof ChatValidationError) throw error;
-        if (isQuotaError(error) || isUnavailableError(error) || isBalanceError(error) || isServerError(error)) {
-          if (!isFreeModel(model) && (isQuotaError(error) || isBalanceError(error))) {
-            paidExhausted = true;
+          const moveToNextModel =
+            isQuotaError(error) ||
+            isUnavailableError(error) ||
+            isBalanceError(error) ||
+            isServerError(error) ||
+            isTimeoutError(error);
+          if (moveToNextModel) {
+            if (!isFreeModel(model) && (isQuotaError(error) || isBalanceError(error))) {
+              paidExhausted = true;
+            }
+            const reason = isTimeoutError(error) ? "timed out" : "unavailable";
+            console.log(`[opencode:${requestId}] ${model} ${reason} → next model`);
+            break;
           }
-          console.log(`[opencode:${requestId}] ${model} unavailable → next model`);
-          break;
-        }
           if (isOverloadedError(error)) {
             const delay = 1500 * (attempt + 1);
             console.log(`[opencode:${requestId}] ${model} overloaded → retry in ${delay}ms`);
@@ -649,6 +722,14 @@ export async function* streamChat(
       console.log(
         `[opencode:${requestId}] failed — all ${chain.length} models unavailable`
       );
+      if (
+        hasImage &&
+        (isUnavailableError(lastError) || isTimeoutError(lastError))
+      ) {
+        throw new Error(
+          "The image model is unavailable right now. Please try again shortly."
+        );
+      }
       throw lastError ?? new Error("Chat request failed: all models unavailable.");
     }
   }

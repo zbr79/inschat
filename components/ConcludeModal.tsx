@@ -3,10 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { ConcludeResult } from "@/lib/types";
+import { applyReportEdits, sameMeal } from "@/lib/reportEvents";
+import { cleanDishName } from "@/lib/dishName";
 import { addGuestRecord, updateGuestRecord } from "@/lib/guestStore";
 import { STR, useUiLang } from "@/lib/i18n";
-import { formatDateTimeDisplay, formatDateTimeNoYear, READING_PHASES, readingPhase, parseFlexibleDateTime, refineMealName } from "@/lib/mealTime";
-import { Calendar, ChevronLeft, ChevronRight, Clock, Pencil, Trash2, X } from "lucide-react";
+import { formatDateTimeDisplay, formatDateTimeNoYear, localizeReadingPhase, mealNameForTime, READING_PHASES, readingPhase, parseFlexibleDateTime } from "@/lib/mealTime";
+import { Calendar, Clock, Pencil, Trash2, X } from "lucide-react";
+import RecordImages from "./RecordImages";
 
 const RANK_CYCLE: Record<string, string[]> = {
   zh: ["低", "中", "高"],
@@ -14,46 +17,6 @@ const RANK_CYCLE: Record<string, string[]> = {
 };
 
 const UNITS = ["mg/dL", "mmol/L"];
-
-// Insulin units are few — cycle them with left/right steppers instead of a
-// dropdown. Custom units typed in old records are kept as-is.
-const INSULIN_UNITS = ["U", "IU"];
-
-function UnitStepper({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (unit: string) => void;
-}) {
-  const idx = INSULIN_UNITS.indexOf(value);
-  const step = (delta: number) => {
-    if (idx === -1) return;
-    const next = INSULIN_UNITS[(idx + delta + INSULIN_UNITS.length) % INSULIN_UNITS.length];
-    onChange(next);
-  };
-  return (
-    <div className="conclude-unit-stepper">
-      <button
-        type="button"
-        onClick={() => step(-1)}
-        disabled={idx === -1}
-        aria-label="previous unit"
-      >
-        <ChevronLeft size={14} />
-      </button>
-      <span className="conclude-unit-value">{value}</span>
-      <button
-        type="button"
-        onClick={() => step(1)}
-        disabled={idx === -1}
-        aria-label="next unit"
-      >
-        <ChevronRight size={14} />
-      </button>
-    </div>
-  );
-}
 
 function isTimeItem(name: string): boolean {
   return /^(时间|time|timestamp|date|when)$/i.test(name.trim());
@@ -65,6 +28,18 @@ function rankTone(rank: string | undefined): string {
   if (clean === "中" || clean === "medium") return "rank-mid";
   if (clean === "高" || clean === "high") return "rank-high";
   return "rank-none";
+}
+
+function rankLabel(rank: string | undefined, lang: "zh" | "en"): string {
+  const clean = (rank ?? "").trim().toLowerCase();
+  if (lang === "zh") {
+    if (clean === "low" || clean === "低") return "低";
+    if (clean === "high" || clean === "高") return "高";
+    return "中";
+  }
+  if (clean === "low" || clean === "低") return "L";
+  if (clean === "high" || clean === "高") return "H";
+  return "M";
 }
 
 function nextRank(current: string | undefined, lang: "zh" | "en"): string {
@@ -267,12 +242,14 @@ function InlineTime({
   t,
   onCommit,
   className,
+  compact = false,
 }: {
   value: string;
   lang: "zh" | "en";
   t: Record<string, string>;
   onCommit: (next: string) => void;
   className?: string;
+  compact?: boolean;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -307,7 +284,18 @@ function InlineTime({
           }
         }}
       >
-        {value ? formatDateTimeNoYear(value, lang) : "—"}
+        {value
+          ? compact
+            ? (() => {
+                const parsed = parseFlexibleDateTime(value);
+                if (!parsed) return value;
+                return new Date(`2000-01-01T${parsed.time}`).toLocaleTimeString(
+                  lang === "zh" ? "zh-CN" : "en-US",
+                  { hour: "numeric", minute: "2-digit", hour12: true }
+                );
+              })()
+            : formatDateTimeNoYear(value, lang)
+          : "—"}
         <Pencil size={11} className="edit-pen" aria-hidden="true" />
       </span>
     </>
@@ -346,52 +334,15 @@ function TimePickerModal({
   );
 }
 
-function InlineUnitStepper({
-  value,
-  onCommit,
-  className,
-}: {
-  value: string;
-  onCommit: (next: string) => void;
-  className?: string;
-}) {
-  const [editing, setEditing] = useState(false);
-  if (editing) {
-    return (
-      <div onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setEditing(false);
-        }
-      }}>
-        <UnitStepper value={value} onChange={(unit) => onCommit(unit)} />
-      </div>
-    );
-  }
-  return (
-    <span
-      className={`conclude-inline-text ${className ?? ""}`}
-      role="button"
-      tabIndex={0}
-      onClick={() => setEditing(true)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          setEditing(true);
-        }
-      }}
-    >
-      {value}
-      <Pencil size={11} className="edit-pen" aria-hidden="true" />
-    </span>
-  );
-}
-
 export default function ConcludeModal({
   open,
   result,
   sourceText,
   guest = false,
   recordId = null,
+  sessionId,
+  imageKeys,
+  embedded = false,
   onClose,
   onSaved,
 }: {
@@ -400,8 +351,11 @@ export default function ConcludeModal({
   sourceText: string;
   guest?: boolean;
   recordId?: string | null;
+  sessionId?: string | null;
+  imageKeys?: string[];
+  embedded?: boolean;
   onClose: () => void;
-  onSaved: (edited: ConcludeResult, savedRecordId: string | null) => void;
+  onSaved: (edited: ConcludeResult, savedRecordId: string | null) => void | Promise<void>;
 }) {
   const lang = useUiLang();
   const t = STR[lang];
@@ -413,26 +367,37 @@ export default function ConcludeModal({
   const [error, setError] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
+  const imageKeysForMeal = (
+    meal: NonNullable<ConcludeResult["meals"]>[number]
+  ): string[] | undefined => {
+    const event = result?.events?.find((candidate) =>
+      candidate.meals?.some((candidateMeal) => sameMeal(candidateMeal, meal))
+    );
+    return event ? event.imageKeys : result?.events ? undefined : imageKeys ?? result?.imageKeys;
+  };
+
 // Auto-save: every edit saves immediately. Saves serialize (a save started
 // while another is in flight chains after it), so a refresh never loses the
 // last edit — there is no debounce window to fall into.
-const saveRef = useRef<() => Promise<void>>(async () => undefined);
-const saveQueueRef = useRef<Promise<void> | null>(null);
-const doSave = (): Promise<void> => {
-  const run = () =>
-    saveRef.current().finally(() => {
-      saveQueueRef.current = null;
-    });
-  if (saveQueueRef.current) {
-    saveQueueRef.current = saveQueueRef.current.then(run, run);
-    return saveQueueRef.current;
-  }
-  saveQueueRef.current = run();
-  return saveQueueRef.current;
+const saveRef = useRef<() => Promise<boolean>>(async () => true);
+const saveQueueRef = useRef<Promise<boolean> | null>(null);
+const doSave = (): Promise<boolean> => {
+  const previous = saveQueueRef.current ?? Promise.resolve(true);
+  const next = previous.then(
+    () => saveRef.current(),
+    () => saveRef.current()
+  );
+  saveQueueRef.current = next;
+  void next.finally(() => {
+    if (saveQueueRef.current === next) saveQueueRef.current = null;
+  });
+  return next;
 };
 const closeRef = useRef<() => void>(() => undefined);
 closeRef.current = () => {
-  void doSave().finally(() => onClose());
+  void doSave().then((saved) => {
+    if (saved) onClose();
+  });
 };
 
   // Dialog behavior: Escape closes (auto-saving when editing); focus moves
@@ -479,14 +444,20 @@ closeRef.current = () => {
     };
   }, [open, onClose]);
 
+  // Hydrate when the modal opens or the language changes. Parent result
+  // objects are recreated after every autosave, and first save can assign a
+  // record id; resetting from those updates would wipe in-progress edits.
   useEffect(() => {
     if (!open || !result) return;
     setItems(result.items.map((item) => ({ ...item })));
     setMeals(
       (result.meals ?? []).map((meal) => ({
         ...meal,
-        // 加餐/Snack → time-based name (早餐/午餐/下午茶/晚餐/夜宵).
-        name: refineMealName(meal.name, meal.time, lang),
+        name: mealNameForTime(meal.time, lang),
+        dishes: meal.dishes?.map((dish) => ({
+          ...dish,
+          name: cleanDishName(dish.name),
+        })),
       }))
     );
     const paired: Reading[] = [];
@@ -517,7 +488,7 @@ closeRef.current = () => {
         const target = pending
           ? pending
           : (pairedInsulin[pairedInsulin.length - 1] ?? paired[paired.length - 1]);
-        if (target) target.phase = item.value ?? "";
+        if (target) target.phase = localizeReadingPhase(item.value, lang) ?? "";
       } else if (isTimeItem(name) && pending) {
         (pending.kind === "insulin" ? pairedInsulin : paired).push({
           value: pending.value,
@@ -534,11 +505,12 @@ closeRef.current = () => {
     setReadings(paired);
     setInsulins(pairedInsulin);
     setError(null);
-  }, [open, result]);
+  }, [open, lang]);
 
   if (!open || !result) return null;
 
-  const glucoseName = lang === "zh" ? "血糖" : "glucose";
+  const glucoseName = "glucose";
+  const bloodSugarLabel = t["records.glucose.label"];
   const timeName = lang === "zh" ? "时间" : "time";
   const phaseName = lang === "zh" ? "时段" : "phase";
 
@@ -559,9 +531,9 @@ closeRef.current = () => {
   };
 
   const phaseOf = (reading: Reading): string =>
-    reading.phase ?? readingPhase(reading.time, lang);
+    localizeReadingPhase(reading.phase, lang) ?? readingPhase(reading.time, lang);
 
-  const insulinBaseName = (): string => (lang === "zh" ? "胰岛素" : "Insulin");
+  const insulinBaseName = (): string => "insulin";
 
   const setMeal = (index: number, patch: Partial<NonNullable<ConcludeResult["meals"]>[number]>) => {
     setMeals((prev) => prev.map((meal, i) => (i === index ? { ...meal, ...patch } : meal)));
@@ -606,10 +578,14 @@ closeRef.current = () => {
     setMeals((prev) => prev.filter((_, i) => i !== mealIndex));
   };
 
-  const save = async () => {
+  const save = async (): Promise<boolean> => {
     setBusy(true);
     setError(null);
-    const firstMealName = meals.find((meal) => meal.name.trim())?.name.trim();
+    const savedMeals = meals.map((meal) => ({
+      ...meal,
+      name: mealNameForTime(meal.time, lang),
+    }));
+    const firstMealName = savedMeals[0]?.name;
     const builtItems: ConcludeResult["items"] = [];
     for (const reading of insulins) {
       if (reading.value.trim()) {
@@ -645,21 +621,27 @@ closeRef.current = () => {
     }
     const edited: ConcludeResult = {
       title: firstMealName || t["summary.report"],
-      summary: result.summary,
+      summary: result.summary ?? "",
       items: builtItems,
-      meals: meals.length ? meals : undefined,
+      meals: savedMeals.length ? savedMeals : undefined,
+      imageKeys: imageKeys ?? result.imageKeys ?? undefined,
+      events: applyReportEdits(result.events, builtItems, savedMeals),
     };
     try {
       let savedId: string | null = recordId;
       if (guest) {
         if (recordId) {
-          updateGuestRecord(recordId, {
+          const saved = updateGuestRecord(recordId, {
             title: edited.title,
             summary: edited.summary,
             items: edited.items,
             meals: edited.meals,
             sourceText,
+            imageKeys: edited.imageKeys,
+            events: edited.events,
+            sessionId: sessionId ?? undefined,
           });
+          if (!saved) throw new Error(t["summary.saveFailed"]);
         } else {
           const record = addGuestRecord({
             title: edited.title,
@@ -667,6 +649,9 @@ closeRef.current = () => {
             items: edited.items,
             meals: edited.meals,
             sourceText,
+            imageKeys: edited.imageKeys,
+            events: edited.events,
+            sessionId: sessionId ?? undefined,
           });
           savedId = record.id;
         }
@@ -682,6 +667,9 @@ closeRef.current = () => {
               items: edited.items,
               meals: edited.meals,
               sourceText,
+              imageKeys: edited.imageKeys,
+              events: edited.events,
+              sessionId: sessionId ?? undefined,
             }),
           }
         );
@@ -693,9 +681,11 @@ closeRef.current = () => {
           savedId = body?.record?._id ?? null;
         }
       }
-      onSaved(edited, savedId);
+      await onSaved(edited, savedId);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : t["summary.saveFailed"]);
+      return false;
     } finally {
       setBusy(false);
     }
@@ -759,9 +749,20 @@ closeRef.current = () => {
 
   return (
     <>
-      <div className="settings-backdrop" onClick={() => closeRef.current()} aria-hidden="true" />
-      <div className="conclude-modal" role="dialog" aria-modal="true" ref={modalRef}>
-        <div className="conclude-modal-head">
+      {!embedded && (
+        <div
+          className="settings-backdrop"
+          onClick={() => closeRef.current()}
+          aria-hidden="true"
+        />
+      )}
+      <div
+        className={`conclude-modal${embedded ? " conclude-modal-embedded" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        ref={modalRef}
+      >
+        {!embedded && <div className="conclude-modal-head">
           <div className="conclude-modal-head-text">
             <h3 className="conclude-modal-title">{t["concludeModal.title"]}</h3>
           </div>
@@ -773,7 +774,16 @@ closeRef.current = () => {
           >
             <X size={16} />
           </button>
-        </div>
+        </div>}
+
+        {meals.length === 0 && imageKeys && imageKeys.length > 0 && (
+          <RecordImages
+            imageKeys={imageKeys}
+            unavailableLabel={t["records.imageUnavailable"]}
+            imageAlt={t["records.imageAlt"]}
+            buttonLabel={t["records.imageButton"]}
+          />
+        )}
 
         {(() => {
         // Order meals, insulin and glucose readings by time: same time →
@@ -832,17 +842,32 @@ closeRef.current = () => {
                   >
                     <Trash2 size={14} />
                   </button>
-                  <span className="conclude-inline-meal-name">{meal.name}</span>
+                  <span className="conclude-meal-title">
+                    <span className="conclude-inline-meal-name">{meal.name}</span>
+                    <RecordImages
+                      imageKeys={imageKeysForMeal(meal)}
+                      unavailableLabel={t["records.imageUnavailable"]}
+                      imageAlt={t["records.imageAlt"]}
+                      buttonLabel={t["records.imageButton"]}
+                    />
+                  </span>
                   <InlineTime
                     value={meal.time ?? ""}
                     lang={lang}
                     t={t}
-                    onCommit={(time) => commitMeal(entry.index, { time })}
+                    onCommit={(time) =>
+                      commitMeal(entry.index, {
+                        time,
+                        name: mealNameForTime(time, lang),
+                      })
+                    }
                     className="conclude-inline-meal-time"
+                    compact={embedded}
                   />
                 </div>
                 <div className="conclude-dishes">
-                  {(meal.dishes ?? []).map((dish, dishIndex) => (
+                  {(meal.dishes ?? []).length > 0 ? (
+                    (meal.dishes ?? []).map((dish, dishIndex) => (
                     <div key={dishIndex} className="conclude-dish-row">
                       <button
                         type="button"
@@ -868,10 +893,19 @@ closeRef.current = () => {
                         aria-label={t["concludeModal.ranking"]}
                         title={t["concludeModal.ranking"]}
                       >
-                        {dish.rank ?? "低"}
+                        {rankLabel(dish.rank, lang)}
                       </button>
                     </div>
-                  ))}
+                    ))
+                  ) : (
+                    <InlineText
+                      className="conclude-inline-foods"
+                      value={meal.foods ?? ""}
+                      onCommit={(foods) => commitMeal(entry.index, { foods })}
+                      ariaLabel={t["concludeModal.foods"]}
+                      placeholder={t["concludeModal.foods"]}
+                    />
+                  )}
                 </div>
               </section>
             );
@@ -881,7 +915,7 @@ closeRef.current = () => {
               ? insulins[entry.index]
               : readings[entry.index];
           const label =
-            entry.kind === "insulin" ? insulinBaseName() : glucoseName;
+            bloodSugarLabel;
           const phase = phaseOf(reading);
           const setter =
             entry.kind === "insulin" ? commitInsulin : commitReading;
@@ -914,16 +948,7 @@ closeRef.current = () => {
                   ariaLabel={t["concludeModal.phase"]}
                   showPen={false}
                 />
-                <InlineTime
-                  value={reading.time}
-                  lang={lang}
-                  t={t}
-                  onCommit={(time) => setter(entry.index, { time })}
-                  className="conclude-inline-time"
-                />
-              </div>
-              <div className="conclude-reading-main">
-                <div className="conclude-value-cluster">
+                <div className="conclude-inline-reading-value">
                   <InlineText
                     className="conclude-inline-value"
                     value={reading.value}
@@ -932,22 +957,22 @@ closeRef.current = () => {
                     ariaLabel={t["concludeModal.value"]}
                     placeholder="0"
                   />
-                  {entry.kind === "insulin" ? (
-                    <InlineUnitStepper
-                      value={reading.unit}
-                      onCommit={(unit) => setter(entry.index, { unit })}
-                      className="conclude-inline-unit"
-                    />
-                  ) : (
-                    <InlineSelect
-                      className="conclude-inline-unit"
-                      value={reading.unit}
-                      options={UNITS}
-                      onCommit={(unit) => setter(entry.index, { unit })}
-                      ariaLabel={t["concludeModal.unit"]}
-                    />
-                  )}
+                  <InlineSelect
+                    className="conclude-inline-unit"
+                    value={reading.unit}
+                    options={UNITS}
+                    onCommit={(unit) => setter(entry.index, { unit })}
+                    ariaLabel={t["concludeModal.unit"]}
+                  />
                 </div>
+                <InlineTime
+                  value={reading.time}
+                  lang={lang}
+                  t={t}
+                  onCommit={(time) => setter(entry.index, { time })}
+                  className="conclude-inline-time"
+                  compact={embedded}
+                />
               </div>
             </section>
           );

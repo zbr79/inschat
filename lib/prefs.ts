@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { TimelineRange } from "./recordTimeline";
 
 const KEY = "inschat_insulin_mode";
 const EVENT = "inschat-insulin-mode";
@@ -70,21 +71,20 @@ export function useCompressImages(): [boolean, (on: boolean) => void] {
   return [on, setCompressImages];
 }
 
-export type ReasoningEffort = "max" | "medium" | "low";
+export type ReasoningEffort = "max" | "medium";
 
 const REASONING_KEY = "inschat_reasoning";
 const REASONING_EVENT = "inschat-reasoning";
 
-// Reasoning effort is MAX by default (unchanged behavior); users can lower it
-// to medium/low for faster replies (vision + direct-fallback requests only —
-// the opencode agent keeps its own default).
+// Balanced reasoning is the default; users can enable max reasoning for
+// slower, deeper replies.
 export function getReasoningEffort(): ReasoningEffort {
-  if (typeof window === "undefined") return "max";
+  if (typeof window === "undefined") return "medium";
   try {
     const value = window.localStorage.getItem(REASONING_KEY);
-    return value === "medium" || value === "low" ? value : "max";
+    return value === "max" ? "max" : "medium";
   } catch {
-    return "max";
+    return "medium";
   }
 }
 
@@ -106,10 +106,39 @@ export function useReasoningEffort(): [
   useEffect(() => {
     const handler = (event: Event) => {
       const detail = (event as CustomEvent<ReasoningEffort>).detail;
-      setLevel(detail === "medium" || detail === "low" ? detail : "max");
+      setLevel(detail === "max" ? "max" : "medium");
     };
     window.addEventListener(REASONING_EVENT, handler);
     return () => window.removeEventListener(REASONING_EVENT, handler);
   }, []);
   return [level, setReasoningEffort];
+}
+
+const GLUCOSE_RANGE_KEY = "inschat_glucose_range";
+
+function isTimelineRange(value: string | null): value is TimelineRange {
+  return (
+    value === "day" ||
+    value === "week" ||
+    value === "quarter" ||
+    value === "year" ||
+    value === "all"
+  );
+}
+
+export function getGlucoseRange(): TimelineRange | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = window.localStorage.getItem(GLUCOSE_RANGE_KEY);
+    return isTimelineRange(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setGlucoseRange(range: TimelineRange): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(GLUCOSE_RANGE_KEY, range);
+  } catch {}
 }

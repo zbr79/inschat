@@ -1,16 +1,36 @@
-import { deleteRecord, insertRecord, listRecords, updateRecord } from "@/lib/db";
+import {
+  appendReportEntry,
+  deleteReportEntry,
+  listReportEntries,
+  updateReportEntry,
+} from "@/lib/db";
 import { translateRecord } from "@/lib/translate";
 import { requireUser } from "@/lib/auth";
 import type { ConcludeItem, ConcludeMeal } from "@/lib/types";
+import { cleanDishName } from "@/lib/dishName";
+import { parseReportEvents } from "@/lib/reportEvents";
 
 export const runtime = "nodejs";
 
 const MAX_TITLE = 200;
 const MAX_SUMMARY = 2000;
-const MAX_ITEMS = 20;
+const MAX_ITEMS = 100;
 const MAX_NAME = 100;
 const MAX_VALUE = 500;
 const MAX_SOURCE = 16000;
+const MAX_IMAGE_KEYS = 100;
+
+function parseImageKeys(raw: unknown): string[] | undefined {
+  if (raw === undefined || raw === null) return undefined;
+  if (
+    !Array.isArray(raw) ||
+    raw.length > MAX_IMAGE_KEYS ||
+    raw.some((key) => typeof key !== "string" || key.length > 300)
+  ) {
+    throw new Error(`"imageKeys" must contain at most ${MAX_IMAGE_KEYS} valid local keys.`);
+  }
+  return [...new Set(raw as string[])];
+}
 
 function parseItems(raw: unknown): ConcludeItem[] {
   if (!Array.isArray(raw) || raw.length > MAX_ITEMS) {
@@ -77,7 +97,7 @@ function parseMeals(raw: unknown): ConcludeMeal[] | undefined {
         ) {
           throw new Error(`meals[${index}].dishes[${dishIndex}].name is invalid.`);
         }
-        const cleanDish: { name: string; rank?: string } = { name: dishName };
+        const cleanDish: { name: string; rank?: string } = { name: cleanDishName(dishName) };
         if (rank !== undefined) {
           if (typeof rank !== "string" || rank.length > MAX_VALUE) {
             throw new Error(`meals[${index}].dishes[${dishIndex}].rank is invalid.`);
@@ -101,7 +121,7 @@ export async function GET(req: Request) {
   const auth = await requireUser(req);
   if (auth instanceof Response) return auth;
   try {
-    const records = await listRecords(auth._id, 100);
+    const records = await listReportEntries(auth._id);
     return Response.json({ records });
   } catch (error) {
     const message =
@@ -119,6 +139,10 @@ export async function POST(req: Request) {
   let items: ConcludeItem[];
   let meals: ConcludeMeal[] | undefined;
   let sourceText: string | undefined;
+  let imageKeys: string[] | undefined;
+  let events: ReturnType<typeof parseReportEvents>;
+  let sessionId: string | undefined;
+  let recordedAt: string | undefined;
   try {
     const body: unknown = await req.json();
     if (!body || typeof body !== "object") {
@@ -130,6 +154,10 @@ export async function POST(req: Request) {
       items: rawItems,
       meals: rawMeals,
       sourceText: rawSource,
+      imageKeys: rawImageKeys,
+      events: rawEvents,
+      sessionId: rawSessionId,
+      recordedAt: rawRecordedAt,
     } = body as Record<string, unknown>;
     if (typeof rawTitle !== "string" || !rawTitle.trim() || rawTitle.length > MAX_TITLE) {
       throw new Error('"title" must be a short non-empty string.');
@@ -147,6 +175,20 @@ export async function POST(req: Request) {
       }
       sourceText = rawSource;
     }
+    imageKeys = parseImageKeys(rawImageKeys);
+    events = parseReportEvents(rawEvents);
+    if (rawSessionId !== undefined) {
+      if (typeof rawSessionId !== "string" || rawSessionId.length > 200) {
+        throw new Error('"sessionId" is invalid.');
+      }
+      sessionId = rawSessionId;
+    }
+    if (rawRecordedAt !== undefined) {
+      if (typeof rawRecordedAt !== "string" || rawRecordedAt.length > 100) {
+        throw new Error('"recordedAt" is invalid.');
+      }
+      recordedAt = rawRecordedAt;
+    }
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Invalid request body." },
@@ -156,7 +198,13 @@ export async function POST(req: Request) {
 
   try {
     const translated = translateRecord({ title, summary, items, meals, sourceText });
-    const record = await insertRecord(auth._id, translated);
+    const record = await appendReportEntry(auth._id, {
+      ...translated,
+      imageKeys,
+      events,
+      sessionId,
+      recordedAt,
+    });
     return Response.json({ record }, { status: 201 });
   } catch (error) {
     const message =
@@ -180,6 +228,11 @@ export async function PUT(req: Request) {
   let items: ConcludeItem[];
   let meals: ConcludeMeal[] | undefined;
   let sourceText: string | undefined;
+  let imageKeys: string[] | undefined;
+  let events: ReturnType<typeof parseReportEvents>;
+  let sessionId: string | undefined;
+  let recordedAt: string | undefined;
+  let pinned: boolean | undefined;
   try {
     const body: unknown = await req.json();
     if (!body || typeof body !== "object") {
@@ -191,6 +244,11 @@ export async function PUT(req: Request) {
       items: rawItems,
       meals: rawMeals,
       sourceText: rawSource,
+      imageKeys: rawImageKeys,
+      events: rawEvents,
+      sessionId: rawSessionId,
+      recordedAt: rawRecordedAt,
+      pinned: rawPinned,
     } = body as Record<string, unknown>;
     if (typeof rawTitle !== "string" || !rawTitle.trim() || rawTitle.length > MAX_TITLE) {
       throw new Error('"title" must be a short non-empty string.');
@@ -208,6 +266,26 @@ export async function PUT(req: Request) {
       }
       sourceText = rawSource;
     }
+    imageKeys = parseImageKeys(rawImageKeys);
+    events = parseReportEvents(rawEvents);
+    if (rawSessionId !== undefined) {
+      if (typeof rawSessionId !== "string" || rawSessionId.length > 200) {
+        throw new Error('"sessionId" is invalid.');
+      }
+      sessionId = rawSessionId;
+    }
+    if (rawRecordedAt !== undefined) {
+      if (typeof rawRecordedAt !== "string" || rawRecordedAt.length > 100) {
+        throw new Error('"recordedAt" is invalid.');
+      }
+      recordedAt = rawRecordedAt;
+    }
+    if (rawPinned !== undefined) {
+      if (typeof rawPinned !== "boolean") {
+        throw new Error('"pinned" is invalid.');
+      }
+      pinned = rawPinned;
+    }
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Invalid request body." },
@@ -217,7 +295,14 @@ export async function PUT(req: Request) {
 
   try {
     const translated = translateRecord({ title, summary, items, meals, sourceText });
-    const record = await updateRecord(auth._id, id, translated);
+    const record = await updateReportEntry(auth._id, id, {
+      ...translated,
+      imageKeys,
+      events,
+      sessionId,
+      recordedAt,
+      pinned,
+    });
     if (!record) {
       return Response.json({ error: "Record not found." }, { status: 404 });
     }
@@ -237,7 +322,7 @@ export async function DELETE(req: Request) {
     return Response.json({ error: '"id" query parameter is required.' }, { status: 400 });
   }
   try {
-    const deleted = await deleteRecord(auth._id, id);
+    const deleted = await deleteReportEntry(auth._id, id);
     if (!deleted) {
       return Response.json({ error: "Record not found." }, { status: 404 });
     }

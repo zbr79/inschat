@@ -28,11 +28,22 @@ export interface ConcludeMeal {
   time?: string;
 }
 
+export interface ReportEvent {
+  id: string;
+  sourceMessageId?: string;
+  occurredAt: string;
+  items: ConcludeItem[];
+  meals?: ConcludeMeal[];
+  imageKeys?: string[];
+}
+
 export interface ConcludeResult {
   title: string;
   summary: string;
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
+  imageKeys?: string[];
+  events?: ReportEvent[];
 }
 
 export interface SessionConclusion {
@@ -41,6 +52,8 @@ export interface SessionConclusion {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  imageKeys?: string[];
+  events?: ReportEvent[];
 }
 
 export interface SavedRecord {
@@ -50,8 +63,15 @@ export interface SavedRecord {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  imageKeys?: string[];
+  events?: ReportEvent[];
+  /** Hydrated browser-local images; never sent to the API. */
+  localImages?: ChatImage[];
   savedAt: string;
   datetime: string | null;
+  recordedAt?: string;
+  sessionId?: string;
+  pinned?: boolean;
 }
 
 export interface ApiCall {
@@ -84,10 +104,17 @@ export interface StoredMessage {
   sessionId: string;
   role: "user" | "model";
   text: string;
-  images?: ChatImage[];
+  imageKeys?: string[];
   model?: string;
+  trying?: string;
   elapsed?: number;
   createdAt: string;
+  /** Write "complete"; accept "done" (agent) when reading shared Mongo docs. */
+  status?: "pending" | "complete" | "failed" | "done";
+  startedAt?: string;
+  updatedAt?: string;
+  /** Transcript trail (Ran/Read/Edited / trying labels, no leading arrow). */
+  processSteps?: string[];
 }
 
 export const MAX_MESSAGES = 20;

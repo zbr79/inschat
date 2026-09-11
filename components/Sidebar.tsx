@@ -3,15 +3,21 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Menu, X, SquarePen, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, Sparkles, ChevronRight, Languages, Activity, Gauge, LogOut, ImageDown } from "lucide-react";
+import { Menu, X, SquarePen, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronDown, ChevronRight, Languages, Activity, FileText, Gauge, LogOut, ImageDown } from "lucide-react";
 import type { ChatSession } from "@/lib/types";
-import { deleteGuestSession, clearGuestSessions, listGuestSessions, pinGuestSession, renameGuestSession } from "@/lib/guestStore";
+import {
+  clearGuestData,
+  deleteGuestSession,
+  listGuestSessions,
+  pinGuestSession,
+  renameGuestSession,
+} from "@/lib/guestStore";
 import { STR, useUiLang, setUiLang } from "@/lib/i18n";
 import SearchModal from "./SearchModal";
 import AuthModal from "./AuthModal";
+import ConfirmModal from "./ConfirmModal";
 import { useInsulinMode, useCompressImages } from "@/lib/prefs";
-import { listGuestRecords } from "@/lib/guestStore";
-import type { SavedRecord } from "@/lib/types";
+import { SESSIONS_CHANGED_EVENT } from "@/lib/sessionTitle";
 
 interface MeUser {
   _id: string;
@@ -57,11 +63,13 @@ export default function Sidebar() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarScrolled, setSidebarScrolled] = useState(false);
+  const [chatsCollapsed, setChatsCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [deleteArmed, setDeleteArmed] = useState(false);
+  const [deleteDataOpen, setDeleteDataOpen] = useState(false);
+  const [clearAccountDataOpen, setClearAccountDataOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authNonce, setAuthNonce] = useState(0);
-  const [records, setRecords] = useState<SavedRecord[] | null>(null);
   const [insulinMode, toggleInsulinMode] = useInsulinMode();
   const [compressImages, setCompressImages] = useCompressImages();
   const [menuFor, setMenuFor] = useState<{
@@ -94,17 +102,40 @@ export default function Sidebar() {
     setMenuOpen(false);
   }, [pathname, currentSession]);
 
-  // Escape closes the mobile drawer (and any open row menu).
+  useEffect(() => {
+    if (!menuOpen || !window.matchMedia("(max-width: 640px)").matches) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [menuOpen]);
+
+  // Escape closes the mobile drawer (and any open row menu). Skip when a
+  // dialog is open so Search / Settings / Auth handle Escape themselves.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
       setMenuOpen(false);
       setMenuFor(null);
       setRenamingId(null);
+      setDeleteDataOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.stopImmediatePropagation();
+      setSettingsOpen(false);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [settingsOpen]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -152,30 +183,20 @@ export default function Sidebar() {
         .then((response) => response.json())
         .then((body: { sessions: ChatSession[] }) => setSessions(body.sessions))
         .catch(() => {});
-      fetch("/api/records")
-        .then((response) => response.json())
-        .then((body: { records: SavedRecord[] }) => setRecords(body.records))
-        .catch(() => {});
     } else {
       setGuestSessions(listGuestSessions());
-      setRecords(
-        listGuestRecords().map((record) => ({
-          _id: record.id,
-          title: record.title,
-          summary: record.summary,
-          items: record.items,
-          meals: record.meals,
-          sourceText: record.sourceText,
-          savedAt: record.savedAt,
-          datetime: null,
-        }))
-      );
     }
   }, [authChecked, user]);
 
   useEffect(() => {
     load();
   }, [load, currentSession]);
+
+  useEffect(() => {
+    const onSessionsChanged = () => load();
+    window.addEventListener(SESSIONS_CHANGED_EVENT, onSessionsChanged);
+    return () => window.removeEventListener(SESSIONS_CHANGED_EVENT, onSessionsChanged);
+  }, [load]);
 
 
   const remove = async (id: string) => {
@@ -242,6 +263,7 @@ export default function Sidebar() {
     } catch {}
   };
 
+
   const logout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
@@ -250,6 +272,18 @@ export default function Sidebar() {
       window.dispatchEvent(new CustomEvent("inschat-auth"));
       router.replace("/");
     }
+  };
+
+  const clearAccountData = async () => {
+    try {
+      const response = await fetch("/api/sessions?all=1", { method: "DELETE" });
+      if (!response.ok) throw new Error("clear account data failed");
+      setSessions([]);
+      window.dispatchEvent(new CustomEvent("inschat-records-changed"));
+      setClearAccountDataOpen(false);
+      setSettingsOpen(false);
+      if (currentSession) router.replace("/");
+    } catch {}
   };
 
   const ownerList = (sessions ?? []).sort(
@@ -408,9 +442,14 @@ export default function Sidebar() {
       <aside
         className={`sidebar${menuOpen ? " open" : ""}${collapsed ? " collapsed" : ""}`}
       >
+        <div
+          className="sidebar-scroll"
+          onScroll={(event) => setSidebarScrolled(event.currentTarget.scrollTop > 0)}
+        >
+        <div className={`sidebar-top${sidebarScrolled ? " scrolled" : ""}`}>
         <div className="sidebar-brand-row">
           <span className="brand-mark">
-            <Sparkles size={16} />
+            <img src="/icon.svg" alt="" />
           </span>
           <span className="brand-name">InsChat</span>
           <button
@@ -424,7 +463,7 @@ export default function Sidebar() {
           </button>
           <button
             type="button"
-            className="sidebar-hide"
+            className="sidebar-hide sidebar-collapse"
             onClick={toggleCollapsed}
             aria-label={t["nav.hideSidebar"]}
             title={t["nav.hideSidebar"]}
@@ -432,19 +471,32 @@ export default function Sidebar() {
             <PanelLeft size={16} />
           </button>
         </div>
-        <div className="sidebar-scroll">
         <Link
-            href="/"
-            className={`sidebar-new${pathname === "/" && !currentSession ? " active" : ""}`}
-            onClick={() => setMenuOpen(false)}
-          >
-            <SquarePen size={16} />
-            {t["nav.newChat"]}
-          </Link>
+          href="/"
+          className={`sidebar-new${pathname === "/" && !currentSession ? " active" : ""}`}
+          onClick={() => setMenuOpen(false)}
+        >
+          <SquarePen size={16} />
+          {t["nav.newChat"]}
+        </Link>
+        </div>
       {authChecked && (
         <div className="session-nav">
           <div className="session-label-row">
-            <span className="sidebar-label">{t["nav.chats"]}</span>
+            <button
+              type="button"
+              className="catalog-toggle"
+              onClick={() => setChatsCollapsed((value) => !value)}
+              aria-expanded={!chatsCollapsed}
+              title={t["nav.chats"]}
+            >
+              <span className="sidebar-label sidebar-catalog-label">{t["nav.chats"]}</span>
+              <ChevronDown
+                size={14}
+                className={`catalog-chevron${chatsCollapsed ? " collapsed" : ""}`}
+                aria-hidden="true"
+              />
+            </button>
             <button
               type="button"
               className="session-new-btn"
@@ -458,66 +510,49 @@ export default function Sidebar() {
               <SquarePen size={13} />
             </button>
           </div>
-          <div className="session-list">
-            {user ? (
-              <>
-                {sessions === null && <p className="session-hint">{t["nav.loading"]}</p>}
-                {sessions !== null && ownerList.length === 0 && (
-                  <p className="session-hint">{t["nav.noSessions"]}</p>
-                )}
-                {ownerList.map((session) =>
-                  renderSessionRow(session._id, session.title, Boolean(session.pinned))
-                )}
-              </>
-            ) : (
-              <>
-                {guestList.length === 0 && (
-                  <p className="session-hint">{t["nav.guestHint"]}</p>
-                )}
-                {guestList.map((session) =>
-                  renderSessionRow(session.id, session.title, Boolean(session.pinned))
-                )}
-              </>
-            )}
-          </div>
+          {!chatsCollapsed && (
+            <div className="session-list">
+              {user ? (
+                <>
+                  {sessions === null && <p className="session-hint">{t["nav.loading"]}</p>}
+                  {sessions !== null && ownerList.length === 0 && (
+                    <p className="session-hint">{t["nav.noSessions"]}</p>
+                  )}
+                  {ownerList.map((session) =>
+                    renderSessionRow(session._id, session.title, Boolean(session.pinned))
+                  )}
+                </>
+              ) : (
+                <>
+                  {guestList.length === 0 && (
+                    <p className="session-hint">{t["nav.guestHint"]}</p>
+                  )}
+                  {guestList.map((session) =>
+                    renderSessionRow(session.id, session.title, Boolean(session.pinned))
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
+        </div>
       {authChecked && (
-        <div className="session-nav">
-          <span className="sidebar-label">{t["nav.records"]}</span>
-          <div className="session-list">
-            {records === null && <p className="session-hint">{t["nav.loading"]}</p>}
-            {records !== null && records.length === 0 && (
-              <p className="session-hint">{t["records.empty"]}</p>
-            )}
-            {records?.map((record) => (
-              <Link
-                key={record._id}
-                href="/records"
-                className="session-link"
-                onClick={() => setMenuOpen(false)}
-              >
-                <FitTitle title={record.title} />
-              </Link>
-            ))}
-          </div>
-        </div>
+        <Link
+          href="/records"
+          className={`sidebar-records-button${pathname.startsWith("/records") ? " active" : ""}`}
+          onClick={() => setMenuOpen(false)}
+          aria-current={pathname.startsWith("/records") ? "page" : undefined}
+        >
+          <FileText size={15} aria-hidden="true" />
+          <span className="sidebar-label sidebar-catalog-label">{t["nav.records"]}</span>
+        </Link>
       )}
-        </div>
       <div className="sidebar-foot">
         {user ? (
           <div className="account-row">
             <span className="avatar">{user.username.charAt(0).toUpperCase()}</span>
             <span className="account-name">{user.username}</span>
-            <button
-              type="button"
-              className="account-logout"
-              onClick={logout}
-              aria-label={t["nav.signOut"]}
-              title={t["nav.signOut"]}
-            >
-              {t["nav.signOut"]}
-            </button>
             <button
               type="button"
               className="settings-button"
@@ -530,18 +565,18 @@ export default function Sidebar() {
           </div>
         ) : (
           <div className="account-row guest">
-            <div className="guest-identity">
-              <button
-                type="button"
-                className="login-circle"
-                onClick={() => setAuthOpen(true)}
-                aria-label={t["nav.signIn"]}
-                title={t["nav.signIn"]}
-              >
-                <User size={20} />
-              </button>
+            <button
+              type="button"
+              className="guest-identity"
+              onClick={() => setAuthOpen(true)}
+              aria-label={t["nav.signIn"]}
+              title={t["nav.signIn"]}
+            >
+              <span className="login-circle" aria-hidden="true">
+                <User size={18} />
+              </span>
               <span className="guest-name">{t["nav.guest"]}</span>
-            </div>
+            </button>
             <button
               type="button"
               className="settings-button"
@@ -646,37 +681,80 @@ export default function Sidebar() {
             <span className="settings-label">{t["nav.usage"]}</span>
             <ChevronRight size={16} />
           </button>
+          {user && (
+            <button
+              type="button"
+              className="settings-row settings-link"
+              onClick={() => {
+                setSettingsOpen(false);
+                void logout();
+              }}
+            >
+              <span className="settings-row-icon">
+                <LogOut size={16} />
+              </span>
+              <span className="settings-label">{t["nav.signOut"]}</span>
+              <ChevronRight size={16} />
+            </button>
+          )}
+          {user && (
+            <div className="settings-row settings-danger">
+              <span className="settings-row-icon settings-danger-icon">
+                <Trash2 size={16} />
+              </span>
+              <span className="settings-label">{t["settings.clearAccountData"]}</span>
+              <button
+                type="button"
+                className="settings-danger-button"
+                onClick={() => setClearAccountDataOpen(true)}
+              >
+                {t["settings.clearAccountData"]}
+              </button>
+            </div>
+          )}
           {!user && (
             <div className="settings-row settings-danger">
               <span className="settings-row-icon settings-danger-icon">
                 <Trash2 size={16} />
               </span>
-              <span className="settings-danger-text">
-                <span className="settings-label">{t["settings.deleteHistory"]}</span>
-                <span className="settings-hint">{t["settings.deleteHistoryHint"]}</span>
-              </span>
+              <span className="settings-label">{t["settings.deleteData"]}</span>
               <button
                 type="button"
-                className={`settings-danger-button${deleteArmed ? " armed" : ""}`}
-                onClick={() => {
-                  if (!deleteArmed) {
-                    setDeleteArmed(true);
-                    window.setTimeout(() => setDeleteArmed(false), 3000);
-                    return;
-                  }
-                  clearGuestSessions();
-                  setGuestSessions([]);
-                  setDeleteArmed(false);
-                  setSettingsOpen(false);
-                  if (currentSession) router.replace("/");
-                }}
+                className="settings-danger-button"
+                onClick={() => setDeleteDataOpen(true)}
               >
-                {deleteArmed ? t["settings.deleteConfirm"] : t["settings.delete"]}
+                {t["settings.deleteData"]}
               </button>
             </div>
           )}
         </div>
       </>
+    )}
+    {deleteDataOpen && (
+      <ConfirmModal
+        title={t["settings.deleteDataTitle"]}
+        message={t["settings.deleteDataMessage"]}
+        cancelLabel={t["actions.cancel"]}
+        confirmLabel={t["settings.deleteDataConfirm"]}
+        onCancel={() => setDeleteDataOpen(false)}
+        onConfirm={() => {
+          clearGuestData();
+          setGuestSessions([]);
+          setDeleteDataOpen(false);
+          setSettingsOpen(false);
+          if (currentSession) router.replace("/");
+        }}
+      />
+    )}
+    {clearAccountDataOpen && (
+      <ConfirmModal
+        title={t["settings.clearAccountDataTitle"]}
+        message={t["settings.clearAccountDataMessage"]}
+        cancelLabel={t["actions.cancel"]}
+        confirmLabel={t["settings.clearAccountDataConfirm"]}
+        onCancel={() => setClearAccountDataOpen(false)}
+        onConfirm={clearAccountData}
+      />
     )}
     </>
   );

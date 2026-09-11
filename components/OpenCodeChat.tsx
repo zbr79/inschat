@@ -9,11 +9,12 @@ import {
   elapsedSeconds,
   formatLimitReset,
   parseLimitPayload,
+  trimStreamingEnd,
   type LimitWindow,
 } from "@/lib/format";
 import { AlertTriangle } from "lucide-react";
 import { STR, useUiLang } from "@/lib/i18n";
-import { useInsulinMode } from "@/lib/prefs";
+import { useInsulinMode, useReasoningEffort } from "@/lib/prefs";
 
 interface UiMessage {
   id: number;
@@ -42,11 +43,13 @@ export default function OpenCodeChat() {
   const lang = useUiLang();
   const t = STR[lang];
   const [insulinMode, toggleInsulinMode] = useInsulinMode();
+  const [reasoningEffort] = useReasoningEffort();
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [sending, setSending] = useState(false);
   const [limitReset, setLimitReset] = useState<number | null>(null);
   const [limitWindow, setLimitWindow] = useState<LimitWindow | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const sessionIdRef = useRef<string | null>(null);
 
   const send = useCallback(
     async (text: string, images?: ChatImage[]) => {
@@ -85,6 +88,8 @@ export default function OpenCodeChat() {
 
       const controller = new AbortController();
       abortRef.current = controller;
+      const sessionId =
+        sessionIdRef.current ?? (sessionIdRef.current = crypto.randomUUID());
 
       try {
         const response = await fetch("/api/opencode", {
@@ -95,6 +100,8 @@ export default function OpenCodeChat() {
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             language: lang,
             mode: insulinMode ? "preset" : "free",
+            reasoning: reasoningEffort,
+            sessionId,
           }),
           signal: controller.signal,
         });
@@ -138,7 +145,7 @@ export default function OpenCodeChat() {
             setMessages((prev) =>
               prev.map((message) =>
                 message.id === modelMessage.id
-                  ? { ...message, text: message.text + text }
+                  ? { ...message, text: trimStreamingEnd(modelText) }
                   : message
               )
             );
@@ -156,7 +163,7 @@ export default function OpenCodeChat() {
           setMessages((prev) =>
             prev.map((message) =>
               message.id === modelMessage.id
-                ? { ...message, text: message.text + tail }
+                  ? { ...message, text: trimStreamingEnd(modelText) }
                 : message
             )
           );
@@ -192,7 +199,7 @@ export default function OpenCodeChat() {
         abortRef.current = null;
       }
     },
-    [messages, sending, lang, insulinMode]
+    [messages, sending, lang, insulinMode, reasoningEffort]
   );
 
   const stop = useCallback(() => {
@@ -238,7 +245,6 @@ export default function OpenCodeChat() {
             onSend={send}
             onStop={stop}
             disabled={limitReset !== null}
-            placeholder={t["composer.placeholder"]}
           />
         </main>
       ) : (
@@ -256,7 +262,6 @@ export default function OpenCodeChat() {
             onSend={send}
             onStop={stop}
             disabled={limitReset !== null}
-            placeholder={t["composer.placeholder"]}
           />
         </>
       )}

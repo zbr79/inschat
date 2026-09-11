@@ -7,7 +7,10 @@ export interface ChatRequest {
   timeZone?: string;
   language?: "zh" | "en";
   mode?: "preset" | "free";
+  includeImages?: boolean;
   reasoning?: "max" | "medium" | "low";
+  sessionId?: string;
+  pendingMessageId?: string;
 }
 
 function parseImage(raw: unknown, index: number): ChatImage {
@@ -95,5 +98,51 @@ export function parseChatBody(body: unknown): ChatRequest {
     reasoning = rawReasoning;
   }
 
-  return { messages, timeZone, language, mode, reasoning };
+  const rawIncludeImages = (body as { includeImages?: unknown }).includeImages;
+  let includeImages: boolean | undefined;
+  if (rawIncludeImages !== undefined) {
+    if (typeof rawIncludeImages !== "boolean") {
+      throw new ChatValidationError('"includeImages" must be a boolean.');
+    }
+    includeImages = rawIncludeImages;
+  }
+
+  const rawSessionId = (body as { sessionId?: unknown }).sessionId;
+  let sessionId: string | undefined;
+  if (rawSessionId !== undefined) {
+    if (
+      typeof rawSessionId !== "string" ||
+      rawSessionId.length === 0 ||
+      rawSessionId.length > 128 ||
+      /[\r\n]/.test(rawSessionId)
+    ) {
+      throw new ChatValidationError('"sessionId" is invalid.');
+    }
+    sessionId = rawSessionId;
+  }
+
+  const rawPendingMessageId = (body as { pendingMessageId?: unknown }).pendingMessageId;
+  let pendingMessageId: string | undefined;
+  if (rawPendingMessageId !== undefined) {
+    if (
+      typeof rawPendingMessageId !== "string" ||
+      rawPendingMessageId.length === 0 ||
+      rawPendingMessageId.length > 128 ||
+      /[\r\n]/.test(rawPendingMessageId)
+    ) {
+      throw new ChatValidationError('"pendingMessageId" is invalid.');
+    }
+    pendingMessageId = rawPendingMessageId;
+  }
+
+  return {
+    messages,
+    timeZone,
+    language,
+    mode,
+    includeImages,
+    reasoning,
+    sessionId,
+    pendingMessageId,
+  };
 }

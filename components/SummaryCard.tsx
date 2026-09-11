@@ -2,9 +2,15 @@
 
 import { useState } from "react";
 import type { ConcludeResult } from "@/lib/types";
+import { cleanDishName } from "@/lib/dishName";
 import { addGuestRecord } from "@/lib/guestStore";
 import { groupMeals, isMealRelatedItem } from "@/lib/groupMeals";
-import { pairTimeItems, readingPhase } from "@/lib/mealTime";
+import {
+  localizeReadingPhase,
+  mealNameForTime,
+  pairTimeItems,
+  readingPhase,
+} from "@/lib/mealTime";
 import { STR, useUiLang } from "@/lib/i18n";
 
 function rankClass(rank: string): string {
@@ -113,13 +119,13 @@ disabled={saving || isSaved}
         </div>
         {meals.map((meal, index) => (
           <div key={index} className="conclusion-meal">
-            <div className="meal-name">{meal.name}</div>
+            <div className="meal-name">{mealNameForTime(meal.time, lang)}</div>
             {meal.time && <div className="meal-time">{meal.time}</div>}
             {(meal.dishes ?? []).length > 0 ? (
               <div className="dish-grid">
                 {meal.dishes!.map((dish, dishIndex) => (
                   <span key={dishIndex} className={`dish-box${dish.rank ? ` rank-${rankClass(dish.rank)}` : ""}`}>
-                    <span className="dish-box-name">{dish.name}</span>
+                    <span className="dish-box-name">{cleanDishName(dish.name)}</span>
                     {dish.rank && <span className="dish-box-rank">{dish.rank}</span>}
                   </span>
                 ))}
@@ -132,7 +138,7 @@ disabled={saving || isSaved}
         {extras.length > 0 && (
           <ul className="conclusion-items">
             {extras.map(({ item, time, phase }, index) => {
-              const derived = phase ?? readingPhase(time, lang);
+              const derived = localizeReadingPhase(phase, lang) ?? readingPhase(time, lang);
               return (
                 <li key={index}>
                   <span className="item-name">

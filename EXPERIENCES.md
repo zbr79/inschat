@@ -21,6 +21,680 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 
 ---
 
+## 2026-09-06 — Direct web research and agent removal
+
+### Solved
+- Removed the local OpenCode agent-server route and SDK dependency; `/api/chat` now uses the direct engine for both text and image requests.
+- Added a direct `web_search` tool backed by Bing RSS results, alongside the existing `web_fetch` tool. Text requests can search first and fetch source pages in the same tool loop.
+- Reverted the uncommitted free-model fallback banner to the previous centered notice.
+
+### Unresolved
+- Search quality depends on the public Bing RSS endpoint and may need a provider/API-key change if it becomes unreliable.
+
+### Disproved
+- The separate agent server was not needed for direct web research once search and fetch tools were available in `streamChat`; it added latency and a second runtime to maintain.
+
+## 2026-09-06 — Restore OpenCode Go session routing
+
+### Solved
+- Added the required stable `x-opencode-session` header to direct Go requests, using the chat session ID when available and a generated ID for one-off requests.
+- Added the recommended `InsChat/1.0` user agent and passed session IDs through both chat APIs.
+
+### Unresolved
+- The provider may still reject individual models for quota, availability, or endpoint-specific reasons.
+
+### Disproved
+- The response-bubble layout change was not the cause of the provider error; the direct request lacked the provider's newly enforced session metadata.
+
+## 2026-09-06 — ChatGPT-style sent-message editing
+
+### Solved
+- Upgraded inline editing with a composer-style card, auto-growing textarea, clearer Submit/Cancel hierarchy, and visible image previews.
+- Added `Ctrl/Cmd+Enter` to submit and `Escape` to cancel without changing the existing truncate-and-regenerate behavior.
+
+### Unresolved
+- Message version history is not implemented; editing still replaces the conversation path from the edited message.
+
+### Disproved
+- A separate editing route or modal was unnecessary; the existing inline editor can support the improved workflow.
+
+## 2026-09-07 — Make edit composer visibly distinct
+
+### Solved
+- Expanded the editor to a clearly wider composer-style card with a title, keyboard hint, stronger border, and shadow.
+- Kept the message bubble width separate from the editor width so the edit state is visibly intentional rather than a small restyled bubble.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The first editor polish pass was too subtle to be reliably visible in the live UI.
+
+## 2026-09-07 — Simplify edit box and grow multiline inputs
+
+### Solved
+- Simplified the edit state to one full-width gray container with only the textarea and two actions.
+- Removed the extra edit title and keyboard-hint layers.
+- Added auto-growth to the main composer textarea so multiline input increases its height up to the existing maximum.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The layered edit header and hint improved discoverability enough to justify the added visual complexity; the simpler ChatGPT-like treatment is clearer.
+
+## 2026-09-07 — Rename edit action to Send
+
+### Solved
+- Changed the edit action label from “Save & submit” to the shorter “Send” in English and Chinese.
+
+### Unresolved
+- n/a
+
+### Disproved
+- n/a
+
+## 2026-09-07 — Refine inline edit actions
+### Solved
+- The inline editor now places Cancel on the left and Send on the right.
+- Removed the border around the inline editing area while preserving the gray editor background.
+### Verified
+- `npm run build` passed after each requested UI change.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Add glucose timeline chart and month grouping
+### Solved
+- Added a records-page blood-glucose line chart with selectable 1-day, 7-day, 3-month, 1-year, and all-time ranges.
+- Chart points are extracted from saved glucose readings and never synthesize missing health data.
+- Grouped saved records under month headings while retaining day-level entries.
+### Verified
+- `npm run build` passed after each implementation point.
+### Unresolved
+- The chart currently supports blood glucose only; insulin-dose visualization remains a separate follow-up.
+- No manual backfill or import flow was added, so ranges with no recorded readings remain empty.
+### Disproved
+- n/a
+
+## 2026-09-07 — Replace glucose line chart with bars
+### Solved
+- Replaced the connected glucose line with vertical bars that rise from a visible zero baseline.
+- Each bar represents one actual reading, making missing readings visually explicit without interpolation.
+### Verified
+- `npm run build` passed.
+- PM2 restarted and `/records` returned HTTP 200.
+### Unresolved
+- The IDE browser probe could not access the local app, so visual verification was limited to the production build and HTTP smoke test.
+### Disproved
+- n/a
+
+## 2026-09-07 — Add reusable synthetic records preview
+### Solved
+- Added a guest-only Records control that loads 60 days of clearly labeled synthetic data into local storage.
+- Each demo day contains four glucose readings: morning before eating, morning after eating, afternoon before eating, and afternoon after eating.
+- Added a separate removal action that deletes only demo records and leaves real guest records untouched.
+- Kept the chart inside the available content width; dense ranges use narrower bars and suppress overlapping value labels.
+### Verified
+- `npm run build` passed after each implementation point.
+### Unresolved
+- Demo values are for chart visualization only and must not be interpreted as real health measurements.
+### Disproved
+- n/a
+
+## 2026-09-07 — Simplify Records navigation and fit chart width
+### Solved
+- Replaced the sidebar's per-record list with one Report timeline link.
+- Removed horizontal chart scrolling so the complete selected range fits inside the widened records content area.
+### Verified
+- `npm run build` passed after the sidebar and chart updates.
+### Unresolved
+- Very dense ranges show exact values through bar tooltips rather than drawing every number on the chart.
+### Disproved
+- n/a
+
+## 2026-09-07 — Restore Records folder with timeline child
+### Solved
+- Restored the Records folder header and its collapse control.
+- Kept the folder contents limited to the single Report timeline item.
+### Verified
+- `npm run build` passed.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Add timestamp-aware glucose line view
+### Solved
+- Added a Bar chart / Line chart toggle to the glucose timeline.
+- Line points use their actual recorded timestamps, preserving visible time gaps when readings are irregular or skipped.
+- Range bounds now represent the selected time window instead of compressing points between the first and last reading.
+### Verified
+- `npm run build` passed after the chart helper, UI, and styling updates.
+### Unresolved
+- The line connects adjacent real observations; it does not create missing readings or infer health values.
+### Disproved
+- n/a
+
+## 2026-09-07 — Add chronological and daily-pattern chart modes
+### Solved
+- Added Timeline and Daily pattern view modes.
+- Daily pattern overlays each date on a 24-hour axis, with separate per-day lines and actual reading points.
+- Kept missing time-of-day readings absent rather than filling or connecting separate dates.
+### Verified
+- `npm run build` passed after the chart mode, labels, and styling updates.
+### Unresolved
+- The current daily mode overlays daily traces; aggregate statistics such as median bands can be added later if needed.
+### Disproved
+- n/a
+
+## 2026-09-07 — Add connected report editing
+### Solved
+- Added an Edit action to each dated report entry.
+- Added a shared record editor for title, summary, data items, timestamps, units, and meal details.
+- Guest edits persist to local storage; authenticated edits persist through the existing records PUT endpoint.
+- Updated records in state immediately so edited glucose values update the timeline and charts without leaving the page.
+### Verified
+- `npm run build` passed after the editor, persistence, and styling updates.
+### Unresolved
+- The editor does not alter the original chat transcript; it updates the connected saved report only.
+### Disproved
+- n/a
+
+## 2026-09-07 — Migrate records to one account report
+### Solved
+- Added a single account-level report container for guest data and authenticated MongoDB data.
+- Existing per-session records migrate into timestamped entries the first time the account report is read.
+- New chat conclusions append entries; later saves for the same linked chat entry update that entry.
+- Report entries retain session IDs and recorded timestamps, while the Records page continues sorting by date.
+- Kept the existing records API shape for the UI while changing its storage source to the account report.
+### Verified
+- `npm run build` passed after the storage, API, and chat-save changes.
+- PM2 restarted successfully after the build.
+### Unresolved
+- The report is currently stored as one MongoDB document with embedded entries; a separate event collection may be needed if a user's history approaches MongoDB's document-size limit.
+### Disproved
+- Append order is not used for timeline display; entries are sorted by recorded time.
+
+## 2026-09-07 — Add Full report account log page
+### Solved
+- Added a Full report page at `/records/full` beneath the Records sidebar folder.
+- Reused the account report data source and dated grouping so the page shows every saved entry from newest to oldest.
+- Added report titles, summaries, and recorded timestamps to make the page a complete account log rather than only a chart view.
+### Verified
+- `npm run build` passed after fixing the sidebar fragment required for two Records links.
+- Both `/records` and `/records/full` returned HTTP 200 after restarting PM2.
+### Unresolved
+- The full log currently shares the Records page's edit and delete controls; a separate export/print action has not been added.
+### Disproved
+- n/a
+
+## 2026-09-07 — Match Full report editing to session reports
+### Solved
+- Full report entries now open the same `ConcludeModal` structure used for reports created from chat sessions.
+- Kept the page itself as a read-only account log; editing remains an editing panel.
+- Made report titles, summaries, meal names, foods, dish names, meal times, reading values, units, phases, and timestamps editable in that panel.
+- Removed repeated delete buttons from the full-report list; entry deletion is available from the open editor instead.
+- Expanded guest demo data into a one-month full report with breakfast, lunch, dinner, occasional afternoon snacks, occasional 11 PM entries, glucose, insulin, phases, timestamps, and variable dish counts.
+### Verified
+- `npm run build` passed after the editor and demo-data changes.
+- Both Records routes returned HTTP 200 after restarting PM2.
+### Unresolved
+- Demo data remains guest-only and synthetic; it is not written into authenticated MongoDB reports.
+### Disproved
+- A generic grid editor is not equivalent to the session report editor because it omitted the session editor's reading, phase, meal, and dish controls.
+
+## 2026-09-07 — Remove unrequested Full report labels
+### Solved
+- Removed entry titles and summaries from the Full report log.
+- Removed generated breakfast/lunch/dinner category labels and phase labels from the log; timestamps, values, insulin, glucose, and actual food names remain.
+- Removed title and summary fields from the session-style editing panel.
+- Kept food names editable because they are the actual food records the Full report needs to control.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Existing stored entries may still contain internal title and summary data for compatibility, but those fields are no longer shown or edited in Full report.
+### Disproved
+- n/a
+
+## 2026-09-07 — Unify insulin and glucose display labels
+### Solved
+- Full report and session-style editors now display both glucose and insulin readings as “Blood sugar” or “血糖”.
+- Kept canonical stored metric names as `glucose` and `insulin` so the data model remains accurate.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Existing raw records can still contain older localized metric names internally; display normalization covers them.
+### Disproved
+- Changing stored insulin data into glucose would have corrupted chart and analysis semantics, so only the visible label was unified.
+
+## 2026-09-07 — Normalize demo readings to mg/dL
+### Solved
+- Updated the one-month guest demo report so glucose and insulin-labeled example readings both use `mg/dL`.
+- Adjusted the synthetic insulin-labeled values to stay around 100 instead of using `U` values.
+- Restricted the editor's unit choices to blood-sugar units for the unified display.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Existing demo data already loaded in local storage must be removed and loaded again to receive the new units and values.
+### Disproved
+- n/a
+
+## 2026-09-07 — Interleave readings and meals by time
+### Solved
+- Records now render readings and meal entries in one chronological stream instead of separate reading and meal blocks.
+- Each event retains its own timestamp, so a measurement appears before or after a meal according to the recorded time.
+- Kept the Full report's simplified labels while preserving editable food entries.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Events with exactly identical timestamps use readings before meals as the deterministic tie-breaker.
+### Disproved
+- Grouping every measurement together before every meal did not represent the user's actual sequence of measuring, eating, and measuring again.
+
+## 2026-09-07 — Group Full report by day and normalize time display
+### Solved
+- Full report now renders one card per day, with all that day's readings and food entries inside it.
+- Daily cards show only the month/day without a year.
+- Event times now use localized 12-hour AM/PM formatting instead of raw or 24-hour strings.
+- Moved Edit to the upper-right of each underlying entry block and reveal it on hover or keyboard focus.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- If multiple independent report entries share one day, each underlying entry retains its own hover Edit control within the shared day card.
+### Disproved
+- Showing a full timestamp on every entry duplicated the day context and mixed 12-hour and 24-hour formats.
+
+## 2026-09-07 — Add day-level Full report editing
+### Solved
+- Replaced per-entry Full report Edit buttons with one Edit button per day card.
+- Added a day editor dialog that selects the underlying entry before opening the familiar session-style editor.
+- Rebuilt day grouping from event timestamps, so meals and readings are assigned to the correct calendar day independently of record titles.
+- Flattened all events within a day before rendering, so an earlier reading from one source record cannot appear after a later reading from another.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Multiple source entries on one day are selectable inside the day editor rather than merged into one persisted database entry.
+### Disproved
+- Grouping a day by the first reading in a source record could misplace events when one record contains multiple dates.
+
+## 2026-09-07 — Style Full report event cards and dish effectiveness
+### Solved
+- Applied the same gray card treatment to reading and meal rows.
+- Moved each event's time to the upper-right corner of its card.
+- Removed visible `low`, `medium`, and `high` words from Full report dish tags.
+- Used green, yellow, and red borders to communicate dish effectiveness.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Existing records without a stored rank keep the neutral border.
+### Disproved
+- Showing the rank word beside every dish was necessary once the color border communicates the same status.
+
+## 2026-09-07 — Compact Full report dish tags
+### Solved
+- Matched dish text sizing and weight to the blood-sugar reading text.
+- Removed the dish tag minimum height and reduced its internal padding.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- The larger dish tag dimensions were not needed to preserve the effectiveness border.
+
+## 2026-09-07 — Match Full report dish timestamp styling
+### Solved
+- Matched meal/dish timestamps to blood-sugar timestamps at 12px, muted color, and normal weight.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- Inherited dish timestamp styling was not visually consistent with reading timestamps.
+
+## 2026-09-07 — Apply role-card colors to Full report dishes
+### Solved
+- Reused the referenced repository's pastel role palette for dish effectiveness.
+- Low, medium, and high dishes now use green, orange/yellow, and red card backgrounds with matching borders.
+- Kept the compact tag dimensions and timestamp styling unchanged.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Dishes without an effectiveness rank remain neutral.
+### Disproved
+- Border-only coloring did not sufficiently match the referenced role-card visual language.
+
+## 2026-09-07 — Remove Full report entry picker layer
+### Solved
+- Removed the intermediate Entry/Edit selection modal from the day editor flow.
+- The day editor now opens directly and displays every record for that day, including readings, meals, dishes, values, units, and event times.
+- Kept records grouped as separate cards so the next editing pass can add controls without hiding any day data.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- The new day modal is currently a complete day display; record-level editing controls will be added in the next pass.
+### Disproved
+- A separate entry picker was not necessary for understanding the day's records.
+
+## 2026-09-07 — Match day editor cards to session report cards
+### Solved
+- Replaced the custom day-modal rows with the same report-card structure used by the chat conclusion editor.
+- Readings now use the report card header/value layout, and meals use the report dish-row layout with rank badges.
+- Kept every event visible while removing the extra custom grouping headings.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- The cards currently mirror the report editor's visual structure; inline editing behavior remains the next step.
+### Disproved
+- A separate gray list layout was not visually consistent with the chat session report editor.
+
+## 2026-09-07 — Reuse ConcludeModal for Full report editing
+### Solved
+- Added an embedded mode to the existing `ConcludeModal` instead of maintaining a second report-card renderer.
+- Full report day editing now uses the same inline controls, autosave behavior, rank controls, and delete action as chat-session reports.
+- The day modal renders every day's record through the shared component.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- The shared component still edits each underlying record independently within the day container.
+### Disproved
+- Duplicating the report-card markup in `FullDayEditModal` would have kept chat and Full report behavior synchronized.
+
+## 2026-09-07 — Move reading values into the report-card header
+### Solved
+- Moved the blood-sugar value and unit onto the first card line after the blood-sugar label and phase.
+- Kept the event time at the end of that same line to reduce vertical space in the shared modal.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Very long phase labels may wrap on narrow mobile widths.
+### Disproved
+- A separate second row for the blood-sugar number was not needed in the report editor.
+
+## 2026-09-07 — Remove modal-level report deletion control
+### Solved
+- Removed the top-right trash action from the shared report modal.
+- Kept the per-card delete controls for individual readings, meals, and dishes.
+- Reduced shared report-card spacing and removed the extra gap between embedded Full report cards.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Deleting an entire underlying report entry is no longer available from the report modal.
+### Disproved
+- A modal-level trash icon was not necessary when each report card already has its own delete control.
+
+## 2026-09-07 — Abbreviate rank badges and tighten embedded cards
+### Solved
+- English dish ranks now display as `L`, `M`, and `H`; Chinese ranks remain localized.
+- Embedded Full report timestamps now show time only, avoiding long date strings in the card header.
+- Reduced the remaining gap between embedded report cards.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- The stored rank values remain full words for data compatibility; only their display is abbreviated.
+### Disproved
+- Full date strings and full English rank words were necessary in the compact embedded editor.
+
+## 2026-09-07 — Normalize embedded report wrapper spacing
+### Solved
+- Removed inherited 24px modal padding from each embedded record wrapper.
+- Reset embedded wrapper margins and applied one consistent gap between report cards.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Card content height still varies naturally with the number of dishes or readings.
+### Disproved
+- The inconsistent visual gaps were caused by record timestamps or source-record grouping.
+
+## 2026-09-07 — Normalize reading phase language
+### Solved
+- Added shared phase localization across the report editor, Records timeline, and chat summary.
+- English stored phases such as `before breakfast` now display as `早餐前` in Chinese UI and `Before breakfast` in English UI.
+- Selector values and inserted phase items now follow the active language instead of mixing languages.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Existing stored records retain their original canonical phase text until they are edited and saved.
+### Disproved
+- The mixed-language display was not caused by the selected time; it came from rendering stored phase text without localization.
+
+## 2026-09-07 — Scale report modal surfaces
+### Solved
+- Scaled the shared report editor and Full report day modal to 80% of their previous visual size.
+- Scaled the modal contents together so report-card proportions remain unchanged.
+- Left the nested time picker at its normal scale.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Very small mobile viewports may need a separate scale adjustment later.
+### Disproved
+- Shrinking individual text and controls independently would have preserved the excessive modal footprint.
+
+## 2026-09-07 — Derive meal names from time
+### Solved
+- Removed meal-name editing from both report editor paths.
+- Demo meals no longer insert Breakfast/Lunch/Dinner names.
+- Meal labels are generated from meal time in the active language and re-derived before saving.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Existing saved records may still contain old meal-name text internally, but it is no longer editable or displayed as the source of truth.
+### Disproved
+- Meal names should not be user-entered data when the timestamp already determines the meal category.
+
+## 2026-09-07 — Enlarge modal text without enlarging the window
+### Solved
+- Increased report-modal text sizes by approximately 20% while keeping the existing modal dimensions and scale.
+- Allowed card headers to wrap when needed so larger text stays inside the modal.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Dense cards with many controls may still wrap on narrow screens, but no content should overflow horizontally.
+### Disproved
+- Increasing the modal window itself was necessary to improve text readability.
+
+## 2026-09-07 — Scale modal icons with enlarged text
+### Solved
+- Increased edit, delete, close, and day-modal icons by approximately 20% alongside the text.
+- Kept the modal window dimensions unchanged.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- Enlarging text without scaling its associated controls would have left the modal visually unbalanced.
+
+## 2026-09-07 — Show red dish delete control on row hover
+### Solved
+- Dish trash icons now turn red with a light red background when the dish row is hovered.
+- The existing focus and icon-hover behavior remains available.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- Revealing the icon in muted gray did not provide sufficient destructive-action feedback.
+
+## 2026-09-07 — Use the date as the day editor title
+### Solved
+- Replaced the Full report day editor title with the selected calendar date.
+- Removed the duplicate “Edit day” label and secondary date line.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- A generic editor title added useful context when the date itself already identifies the card.
+
+## 2026-09-07 — Show derived titles in Full report timeline
+### Solved
+- Full report meal cards now show time-derived titles such as 午餐 and 晚餐.
+- Blood-sugar cards now show a title combining the metric and localized phase, such as 血糖 · 午餐前.
+- Titles use the same active-language derivation as the editor.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- Records without a parseable time fall back to the generic localized meal label or omit the phase suffix.
+### Disproved
+- Hiding meal and phase labels made the chronological Full report cards sufficiently identifiable.
+
+## 2026-09-07 — Move timeline titles outside event cards
+### Solved
+- Full report meal and blood-sugar titles now sit above their gray event cards.
+- Kept values, dishes, units, and times inside the cards.
+- Made the left timeline dot explicitly black and layered it above the vertical line.
+- Started the line at the dot edge so it no longer runs through the dot.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- Placing the title inside each card made the event hierarchy unnecessarily dense.
+
+## 2026-09-07 — Align Full report timeline connector
+### Solved
+- Offset the Full report connector below the dot's actual position after card padding.
+- Preserved the last event as the day timeline endpoint without a trailing line.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- n/a
+### Disproved
+- The connector was not randomly extending above the dot; it was using the unpadded entry coordinate.
+
+## 2026-09-07 — Extend connector through the final Full report event
+### Solved
+- Kept the connector visible below the final event dot as requested.
+- All Full report timeline events now render the same connector treatment.
+### Verified
+- Pending final build and runtime check.
+### Unresolved
+- The final connector intentionally continues through the bottom padding of the day card.
+### Disproved
+- Treating the last dot as a special endpoint did not match the requested timeline appearance.
+
+## 2026-09-07 — Add Full report date filter
+### Solved
+- Added a date picker above the Full report timeline.
+- Selecting a date now shows only that day's timeline card, with a clear action to restore all dates.
+- Added an explicit empty state when the selected date has no records.
+### Verified
+- Confirmed the production build and selected-date empty state during the final verification pass.
+### Unresolved
+- The filter is a single-date selector rather than a date-range selector.
+### Disproved
+- Requiring users to scroll through the entire account log was not necessary for finding a known date.
+
+## 2026-09-07 — Add Full report export and import
+### Solved
+- Moved date filtering above the first timeline card and removed the Full report description text.
+- Replaced the native empty date placeholder with a date-picker trigger button.
+- Added JSON export for the complete report.
+- Added JSON import that appends validated records for guest storage and authenticated accounts.
+- Removed duplicate date-filter text and anchored the calendar input to the visible date control.
+- Added distinct blue export and green import icons/buttons.
+- Replaced the unreliable native date picker with a centered calendar modal.
+- Added month navigation, localized weekday/month labels, Today, Cancel, Escape, and date selection actions.
+- Removed the modal backdrop blur and recorded a permanent no-blur project rule in `AGENTS.md`.
+- Added light-blue date backgrounds and accessible record counts for dates that contain saved records.
+### Verified
+- `npm run build` passed.
+- PM2 restarted successfully and the local Full report route returned HTTP 200.
+- Browser smoke test confirmed the controls precede the first card, the page description is removed, JSON export downloads, and guest JSON import appends a second report.
+- Final browser smoke test confirmed one visible date label and two transfer icons.
+- Browser smoke test confirmed the calendar modal is centered, opens from the single date control, and closes after selecting a date.
+- Verified the modal backdrop uses a solid translucent overlay without any blur effect.
+- Browser smoke test confirmed record-bearing dates receive the light-blue background and count label.
+### Unresolved
+- Imported records append to the existing report; duplicate detection is not performed.
+### Disproved
+- A page-level description and a native empty date input were not necessary for the Full report controls.
+
+## 2026-09-07 — Simplify the Brief report page
+### Solved
+- Renamed the timeline page and sidebar entry to `简报` in Chinese.
+- Removed guest/owner descriptions, demo data controls, demo preview text, and the glucose chart subtitle.
+- Removed the detailed record timeline list from the Brief report page while keeping the glucose chart.
+### Verified
+- `npm run build` passed.
+- PM2 restarted successfully and `/records` returned HTTP 200.
+- Browser smoke test confirmed the chart remains visible while the detailed timeline, edit, and delete controls are absent.
+### Unresolved
+- The Full report page remains separately labeled `完整报告`.
+### Disproved
+- The removed descriptions and demo-preview controls were not necessary for the Brief report view.
+
+## 2026-09-07 — Add 30-day report insights
+### Solved
+- Removed the bar-chart mode and kept the glucose chart as line/daily views.
+- Added a 30-day insights section for highest blood sugar, lowest blood sugar, and the largest same-phase glucose difference across consecutive day pairs.
+- Added deduplicated meals for both dates in the winning consecutive pair.
+- Changed meal details to show only the higher-glucose day.
+- Rendered that day's foods as rank-colored bubbles.
+- Changed the display labels from insulin to blood sugar without changing stored record names.
+- Kept meal categories and food bubbles on one row, ordered from high impact to low impact.
+### Verified
+- `npm run build` passed.
+- PM2 restarted successfully and `/records` returned HTTP 200.
+- Browser smoke test confirmed consecutive day pairs are compared, with older non-adjacent days excluded.
+- Browser smoke test confirmed the largest pair shows `105 → 130` for `晚餐前` and duplicate meals are collapsed.
+- Browser smoke test confirmed only the higher-glucose day's foods are shown with low/medium/high green, yellow, and red bubbles.
+- Browser smoke test confirmed highest/lowest metrics display blood sugar labels and foods order high → medium → low.
+### Unresolved
+- Insights require parseable numeric glucose readings, timestamps, and explicit phase tags.
+- If fewer than two tagged days exist, the phase comparison has no result.
+### Disproved
+- A bar-chart toggle was not needed alongside the new summary metrics.
+
+## 2026-09-06 — Suppress transient streaming trailing whitespace
+
+### Solved
+- Trimmed only the text shown during streaming in both chat surfaces, preventing model-emitted trailing newlines/spaces from appearing as a temporary blank line.
+- Kept the raw accumulated response unchanged for conclusion parsing and persistence.
+
+### Unresolved
+- Intentional trailing whitespace is not visually shown while a response is still streaming.
+
+### Disproved
+- No backend response mutation was needed; the issue was caused by the UI rendering raw incomplete stream chunks before final cleanup.
+
+## 2026-09-06 — Streaming cursor extra-line artifact
+
+### Solved
+- Found that `MessageBubble` appended Markdown hard-break spaces to the final rendered line, then placed the blinking cursor after the Markdown block.
+- Stopped adding the hard-break suffix to the final line while preserving breaks between content lines.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The remaining one-frame blank line was not caused by the model emitting an extra response line; it was caused by the cursor following a forced Markdown break.
+
+## 2026-09-06 — Remove block-level streaming cursor
+
+### Solved
+- Browser inspection showed the cursor was a sibling after ReactMarkdown's block-level `<p>`, which forced it onto a separate line before the model/time footer.
+- Removed the cursor element and its unused animation styles; the existing thinking dots still indicate an active response before text arrives.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Trimming trailing response whitespace alone could not fix the gap because the cursor's block-flow position created it independently.
+
+## 2026-09-06 — Stabilize assistant bubble phases
+
+### Solved
+- Kept one assistant bubble visually stable while it transitions from thinking dots to streamed text.
+- Reserved the metadata footer's height so the model/time row does not create a new layout jump when the response completes.
+
+### Unresolved
+- The assistant bubble still grows naturally for multi-line answers.
+
+### Disproved
+- Combining the user and assistant messages into one bubble was rejected because it would obscure who wrote each message.
+
 ## 2026-08-27 — v1 built: text chat + image upload + streaming
 
 ### Solved
@@ -1168,3 +1842,1640 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - n/a
 ### Disproved
 - n/a
+
+## 2026-09-07 — Align image removal controls
+### Solved
+- Added an X button to every image thumbnail while editing a sent message.
+- Removed images from the edited message state when their X button is pressed.
+- Unified the normal composer and editing-preview X buttons with a centered, circular, keyboard-focusable control.
+### Verified
+- `npm run build` passed after adding edit-mode removal and after unifying the button styling.
+- Guest browser probing confirmed the normal preview X is 22×22px, flex-centered, and visually aligned over the thumbnail.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Tighten inline edit spacing
+### Solved
+- Reduced the inline editor's internal padding from 10px to 8px.
+- Reduced the vertical gap between the image preview and text area from 8px to 4px.
+### Verified
+- `npm run build` passed after each spacing adjustment.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Restore visible edit-box padding
+### Solved
+- Fixed the generic image-bubble selector overriding the edit composer padding whenever an edited message contained a photo.
+- The edit composer now has an explicit 12px inner padding while retaining the 4px image-to-text gap.
+### Verified
+- `npm run build` passed.
+- Browser CSS probing confirmed the rendered editor computes to `padding: 12px` and `gap: 4px`.
+### Unresolved
+- n/a
+### Disproved
+- The earlier 8px edit-bubble padding was not actually visible for image messages because of the higher-specificity image selector.
+
+## 2026-09-07 — Widen desktop chat column
+### Solved
+- Increased the app chat container from 40rem (640px) to 48rem (768px), matching ChatGPT's large-screen conversation width.
+- Preserved fluid sizing at narrower and mobile viewport widths.
+### Verified
+- `npm run build` passed.
+- Browser measurements confirmed 768px at 1440px viewport width, 764px at 1024px, and fluid 390px at mobile width.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Simplify reasoning choices
+### Solved
+- Replaced the three-state Deep/Balanced/Fast selector with a two-state checkbox.
+- Checked now sends `max` reasoning; unchecked sends `medium` Balanced reasoning.
+- Changed the default from max to Balanced and normalized old saved `low` preferences to medium.
+- Applied the same reasoning value to the OpenCode chat surface instead of always forcing max.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed only a checkbox is rendered, old `low` becomes Balanced, and toggling stores `max`/`medium`.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Match ChatGPT Thinking control
+### Solved
+- Renamed the checked max-reasoning state to Thinking in English and Chinese.
+- Styled the checked control as an active dark pill at the end of the composer, while unchecked remains Balanced.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed Balanced is the default and the checked control displays Thinking with the active pill styling.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Replace reasoning checkbox with button
+### Solved
+- Removed the checkbox entirely.
+- Replaced it with a real button at the end of the input row, using Balanced when off and Thinking when active.
+- Added a sparkle icon, pressed-state semantics, and ChatGPT-style active pill styling.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the control is a `button` with zero checkbox elements and toggles `aria-pressed` from false to true.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Soften Thinking button appearance
+### Solved
+- Reworked the reasoning button into a smaller, borderless composer-toolbar control.
+- Replaced the dark active fill with a subtle gray active highlight and softer hover/focus treatment.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed a 32px-high button with transparent Balanced styling and subtle active Thinking styling.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Keep Thinking label across states
+### Solved
+- Both inactive and active states now display the Thinking label.
+- Changed the inactive state to a neutral gray pill and the active state to a clearly different purple highlight.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed both states say Thinking and use distinct colors.
+### Unresolved
+- n/a
+### Disproved
+- The previous Balanced label and subtle gray active state did not match the requested ChatGPT-style control.
+
+## 2026-09-07 — Use borderless light-blue Thinking states
+### Solved
+- Removed the Thinking button border in all states.
+- Changed the inactive state to light blue and the active state to a stronger light-blue highlight.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed both states have a 0px border and distinct light-blue backgrounds.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Make composer white and placeholder-free
+### Solved
+- Changed the composer input row from gray to white with a subtle gray border.
+- Removed placeholder text from the main Chat and OpenCode composer instances.
+### Verified
+- The first build caught stale placeholder props in two call sites; removing them restored a clean TypeScript build.
+- Guest browser probing confirmed white background, subtle gray border, and an empty placeholder attribute.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Make left sidebar white
+### Solved
+- Changed the left sidebar background from the soft gray surface to white.
+- Kept the subtle right divider and existing navigation styling unchanged.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the sidebar background is white with the existing gray divider.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Bold sidebar Chats and Records catalogs
+### Solved
+- Increased the Chats and Records section-label weight from 500 to 600.
+- Scoped the change to the two sidebar catalog headers without changing individual session rows.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed both labels render at font weight 600.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Compact and extend sidebar account footer
+### Solved
+- Reduced the sidebar footer padding from 10px/12px to 8px/8px, making the login/settings area approximately 10% shorter.
+- Extended the footer's top divider to the full sidebar width with matching inner content padding.
+### Verified
+- `npm run build` passed.
+- Guest browser probing measured a 71px footer spanning 259px inside the 260px sidebar, with a full-width top divider.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Neutral inactive Thinking control
+### Solved
+- Changed the inactive Thinking button to a neutral gray surface and muted text.
+- Preserved the light-blue background and blue text for the active Thinking state.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed inactive `rgba(0, 0, 0, 0.05)` and active `rgb(191, 224, 255)` backgrounds.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Keep sidebar top controls visible
+### Solved
+- Added a non-shrinking top sidebar panel containing the brand controls and New Chat link.
+- Left chats and records in the independently scrollable middle region.
+- Added a full-width divider below the top panel to match the fixed account footer treatment.
+### Verified
+- `npm run build` passed.
+- Guest browser probing injected overflowing catalog content and confirmed the top panel and New Chat position stayed fixed while the middle region scrolled.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Adaptive sidebar scrollbar and divider
+### Solved
+- Moved the sticky top panel into the full-height catalog scroll container so its scrollbar begins at the top of the sidebar.
+- Added scroll-state tracking so the divider below the sticky panel is hidden at scroll position 0 and appears after scrolling.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the scroll container starts at y=0, the top divider is 0px at the top, and becomes 1px after scrolling overflowing catalog content.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Animate sidebar divider visibility
+### Solved
+- Replaced the layout-changing border with a pseudo-element that fades in and out over 160ms.
+- Kept the bottom account bar unchanged.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the divider opacity changes from 0 at the top to 1 after scrolling, with the transition configured at 160ms.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Soften top divider and compact footer again
+### Solved
+- Reduced the top divider contrast to a subtle rgba black line.
+- Reduced the bottom account footer padding from 8px to 5px, producing a 65px footer.
+- Kept the bottom footer divider permanently visible.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the 65px footer retains a 1px top divider and the top divider is subtle and hidden at the top position.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Add collapsible Chats and Records catalogs
+### Solved
+- Added independent chevron toggle buttons to the Chats and Records headers.
+- Collapsing a catalog hides only its session list and rotates its chevron.
+- Preserved the existing New Chat action beside the Chats toggle.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed both controls start expanded and each click removes only its own catalog list while setting `aria-expanded` to false.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- Collapse state resets on a full page reload because persistence was not requested.
+### Disproved
+- n/a
+
+## 2026-09-07 — Cap Chats catalog and place instant chevrons
+### Solved
+- Capped the Chats session list at 320px on desktop-sized viewports with its own scrollbar so the Records header remains visible.
+- Positioned each chevron directly beside its catalog name instead of at the far edge.
+- Removed chevron transition animation while preserving the open/closed direction change.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed a 320px chat list cap, overflowing chat content, visible Records header, a 2px label-to-chevron gap, and `transition: none`.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Restore shared sidebar catalog scrolling
+### Solved
+- Removed the per-folder Chats height cap and nested scrollbar.
+- Restored one shared sidebar scrollbar for both Chats and Records, excluding the fixed account footer.
+- Removed catalog-name hover color changes so labels remain gray on hover.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the outer sidebar is scrollable, the catalog list overflow is visible, and label color remains `rgb(142, 142, 142)` before and after hover.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- A long Chats list can place the Records header lower in the shared sidebar scroll area, as expected with one shared scrollbar.
+### Disproved
+- n/a
+
+## 2026-09-07 — Add data confirmation and record row actions
+### Solved
+- Renamed the guest settings action to Delete data and replaced the repeated-click confirmation with a modal dialog.
+- Delete data now clears both guest chat sessions and saved records while preserving preferences.
+- Added record-row Rename, Pin/Unpin, and Delete actions for guest and authenticated record lists.
+- Added persisted record pinning so pinned records sort to the top.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the record menu actions, record pinning, record rename, individual record deletion, confirmation modal, and removal of both local-storage data keys.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- The settings Delete data action remains guest-only, matching its local-storage scope.
+### Disproved
+- n/a
+
+## 2026-09-07 — Bold chat and record action menus
+### Solved
+- Increased the Rename, Pin/Unpin, and Delete menu-item weight to 600 for both chat and record row menus.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed both chat and record action menus render at font weight 600.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-07 — Soften action-menu weight
+### Solved
+- Reduced chat and record action-menu text from weight 600 to 500 after the stronger treatment was too bold.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the final row-menu weight is 500.
+- PM2 restarted and the app returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Match insights to chart interval
+### Solved
+- Connected the Brief report insights to the Glucose Chart interval selector.
+- Replaced the fixed 30-day window with matching 1-day, 7-day, 3-month, 1-year, or all-record windows.
+- Made the insights heading show the selected interval and removed stale 30-day wording from the metric labels.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the 7-day summary excluded an older high reading, while All records included it and updated the period label.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Move insight dates to card header
+### Solved
+- Moved the highest and lowest glucose dates into the top-right area of their insight cards.
+- Kept the metric label and value grouped in the card's main content area.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the dates render at the card's top-right corner.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Persist chart interval selection
+### Solved
+- Added a validated local-storage preference for the selected glucose chart interval.
+- Restored the saved 1-day, 7-day, 3-month, 1-year, or all-record choice after refreshing the Brief report.
+### Verified
+- `npm run build` passed.
+- Guest browser probing selected the 3-month interval, confirmed the storage key, refreshed the page, and confirmed the selector remained on 3 months.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- The preference is browser-local; no account settings endpoint currently exists for cross-device synchronization.
+### Disproved
+- n/a
+
+## 2026-09-08 — Combine glucose summary cards
+### Solved
+- Changed the insights layout from three cards to two columns.
+- Combined highest and lowest blood sugar into one card with stacked top and bottom sections.
+- Kept the biggest-difference insight as the second card.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed two outer cards, two stacked glucose sections, and a separate difference card.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Clarify biggest increase card
+### Solved
+- Renamed the comparison title to Biggest increase / 最大升幅.
+- Added a yearless date range in the card header with an arrow, such as September 6th → September 7th.
+- Kept the phase and increase amount below the glucose values and retained the meal details.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the title, ordinal date range, glucose values, phase, and meal section.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Remove meal heading and date
+### Solved
+- Removed the “Foods on the higher-glucose day” / “血糖较高当天吃了什么” heading from the biggest-increase card.
+- Removed the separate higher-glucose date line while preserving meal categories and food bubbles.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the meal heading and separate date are absent while the comparison details remain.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Format increase as lower-to-higher
+### Solved
+- Changed the biggest-increase value display to put the phase first, then the lower reading, higher reading, and upward delta.
+- Example: `Before breakfast 115 → 120 (↑ 5 mg/dL)`.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed a chronological decrease is displayed as the requested lower-to-higher increase.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — De-emphasize glucose units
+### Solved
+- Moved highest and lowest glucose units to smaller gray text aligned at the lower-right of each value section.
+- Changed comparison dates to compact numeric month/day format, such as `9/3 → 9/4`.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed both units remain visible at the right edge and comparison dates contain no year.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Compact highest and lowest dates
+### Solved
+- Changed the highest and lowest glucose dates to numeric month/day format, such as `9/30`.
+- Kept comparison dates in the same compact format.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed all insight dates render as month/day values without year or month names.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Put comparison phase in title
+### Solved
+- Changed the comparison title to include the localized phase, such as `Highest increase · Before dinner`.
+- Removed the phase and unit from the main value string.
+- Kept the value as lower → higher with the parenthetical increase, while moving the unit to the shared bottom-right unit treatment.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the title, `115 → 120 (↑ 5)` value, and separate `mg/dL` unit.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Use red triangle for increase
+### Solved
+- Removed parentheses around the increase delta.
+- Replaced the upward arrow with a small red triangle and red delta text, such as `▲ 5`.
+- Left the unit in the separate bottom-right unit position.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the indicator renders as `▲ 5` in red with no parentheses.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Aggregate comparison-day food bubbles
+### Solved
+- Removed meal-category labels from the comparison food display.
+- Switched the food source to all meals from the earlier day in the two-day comparison.
+- Flattened and sorted foods by impact, showing high-impact bubbles first, then medium-impact bubbles.
+- Excluded low-impact foods and moved the divider below the bubble row.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed four bubbles in high/high/medium/medium order, no low-impact bubble, no meal label, and a bottom divider.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- Unranked foods are excluded along with low-impact foods so the display stays limited to high and medium impact.
+### Disproved
+- n/a
+
+## 2026-09-08 — Cap foods and add decrease comparison
+### Solved
+- Limited both food lists to a maximum of three bubbles.
+- Added a separated decrease section showing higher → lower glucose with a green down triangle and the same unit/date treatment.
+- Added up to three low-impact green foods from the paired comparison day to the decrease section.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed three upper high/medium foods, three lower low-impact foods, matching dates, and the decrease section below the divider.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Tighten summary and move chart below
+### Solved
+- Reduced insight card padding, section gaps, and divider spacing.
+- Reordered the Brief report so the summary appears above the glucose chart.
+- Left the Full Report timeline order unchanged.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the summary renders before the chart and the stacked summary-section gap is 10px.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Replace demo data with Chinese timestamp-driven records
+### Solved
+- Replaced English synthetic dishes with detailed Chinese, Korean, and Asian dishes using meaningful high/medium/low impact ranks.
+- Removed demo record titles, summaries, and explicit phase fields; phases are now derived from entered timestamps.
+- Ensured each demo day has one glucose reading per time slot without duplicate same-phase readings.
+- Added a planned approximately 120 mg/dL baseline, occasional 108 mg/dL lows, and a 180 mg/dL spike after a high-impact meal day.
+- Updated insight phase matching to derive the phase from reading time when no stored phase exists.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed timestamp-only readings produce the derived “Before dinner” phase and both increase/decrease comparison values.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- The visible demo-data controls remain removed from the Brief report; this update changes the existing guest-store demo generator for callers that use it.
+### Disproved
+- The first browser probe assumed one comparison title and failed because the new card correctly has both increase and decrease titles; the probe was corrected to target the first title.
+
+## 2026-09-08 — Restore example data controls
+### Solved
+- Restored guest-only Load example data and Remove example data buttons.
+- Added a recent 108 mg/dL example so low data appears in the generated report.
+- Added Chinese and English labels for the controls.
+### Verified
+- `npm run build` passed.
+- Guest browser probing clicked Load example data and confirmed 30 records, blank titles, no stored phase fields, one reading per derived phase, 108 and 180 examples, CJK dish names, and the Remove example data button.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- The controls remain guest-only; authenticated accounts continue to use server records.
+### Disproved
+- n/a
+
+## 2026-09-08 — Add compact high-impact food summary
+### Solved
+- Added a third stacked section below Lowest blood sugar in the left summary card.
+- Aggregated high and medium-impact foods across the selected interval.
+- Sorted foods by impact, then occurrence count, and limited the list to five bubbles with counts.
+- Kept low-impact foods out of this dangerous-food list.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the third section is below Lowest blood sugar and displays counted high/medium foods with a maximum of five.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Remove visible food counts
+### Solved
+- Kept occurrence frequency for internal ranking but removed all visible `×1`/`×2` counts from food bubbles.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed dangerous-food bubbles contain names only.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Simplify glucose chart hover details
+### Solved
+- Removed the Daily pattern chart mode and its toggle.
+- Removed visible chart dots while preserving larger transparent hover targets.
+- Added native hover/focus tooltips with the exact glucose value, unit, and timestamp.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed no Daily pattern toggle, no visible dots, and tooltip titles for each chart point.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Replace chart hover targets with real tooltip
+### Solved
+- Replaced the native SVG title-only behavior with a positioned tooltip that appears on mouse hover and keyboard focus.
+- Removed the crosshair cursor and focus square styling.
+- Tooltip now shows the exact value, unit, and timestamp beside the hovered reading.
+### Verified
+- `npm run build` passed.
+- Guest browser probing hovered a chart reading and confirmed the visible tooltip, pointer cursor, and no outline.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- Native SVG titles alone were insufficient for the requested hover behavior because they did not provide a reliable visible tooltip.
+
+## 2026-09-08 — Move glucose range control to page header
+### Solved
+- Moved the time-range selector out of the glucose chart card.
+- Added a centered page-level range control in the Brief report header.
+- Kept the existing range state and persistence so the selector continues to control insights and chart filtering together.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the selector is centered in the page header, absent from the chart card, and changes from All records to Last 7 days.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Open full-day editor from glucose readings
+### Solved
+- Made each glucose checkpoint clickable from the Brief report chart.
+- Resolved the clicked reading to its calendar day and opened the existing full-day editor.
+- The editor includes that day’s records, glucose readings, meals, and food details.
+- Added Enter and Space keyboard activation for chart checkpoints.
+### Verified
+- `npm run build` passed.
+- Guest browser probing clicked a glucose checkpoint and confirmed the full-day modal opened with the expected date, glucose value, and meal dish.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Consolidate Brief report controls
+### Solved
+- Removed the visible range label so only the accessible dropdown remains.
+- Moved the page controls to the right side of the Brief report header.
+- Consolidated guest example-data actions into one toggle button.
+- The button now switches between Load example data and Remove example data without duplicate controls.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed no visible range label, right-aligned controls, exactly one demo button, and correct Load/Remove label switching.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Increase chart date-axis frequency
+### Solved
+- Replaced the chart’s start/end-only date labels with multiple interval-aware ticks.
+- Added five ticks for day/week views, four for the three-month view, five for the yearly view, and six for all records.
+- Uses time labels for short ranges and date labels for longer ranges.
+- Added small axis tick marks to make each date position clear.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed four quarterly labels (`Jun 9`, `Jul 9`, `Aug 9`, `Sep 9`), five yearly labels, and six all-record labels.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- Day/week probes with the seeded timestamps filtered to an empty chart, so their tick labels were not rendered in that specific probe; the component is configured for five ticks when readings exist.
+### Disproved
+- n/a
+
+## 2026-09-08 — Use numeric chart dates
+### Solved
+- Changed longer-range chart date labels from localized month names to universal numeric month/day values such as `9/2`.
+- Kept time formatting for short day-range labels.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed quarterly labels render as numeric values such as `6/9`, `7/9`, `8/9`, and `9/9`.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Replace range dropdown with tabs
+### Solved
+- Replaced the Brief report interval dropdown with five localized tabs: one day, seven days, three months, one year, and all records.
+- Preserved the selected range in local storage.
+- Added selected-tab semantics with `role="tablist"`, `role="tab"`, and `aria-selected`.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed five tabs, no select element, correct localized English labels, active-tab switching, and persisted `quarter` selection.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Shorten Chinese range tabs
+### Solved
+- Simplified Chinese interval labels to `1天`, `7天`, `3个月`, `1年`, and `全部`.
+- Kept the English labels unchanged.
+### Verified
+- `npm run build` passed.
+- Guest browser probing with Chinese UI confirmed the compact labels and no dropdown.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Place range tabs beside page title
+### Solved
+- Positioned the range tabs immediately to the right of the Brief report title.
+- Kept the guest demo toggle separate at the far right of the header.
+- Preserved the stacked layout on narrow screens.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the tabs begin directly after the page title with an 18px gap and all five tabs render.
+- PM2 restarted and the Brief report returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-08 — Automatically persist completed conclusions
+### Solved
+- Automatically save structured health conclusions to Full report when a chat response completes.
+- Added guest session-keyed upsert behavior so repeated conclusions update one local report.
+- Added authenticated session-keyed MongoDB upsert behavior to prevent duplicate report entries.
+- Link the saved report ID back to the chat session so the existing editor opens the persisted report.
+- Added a non-empty title fallback for conclusions that omit a title.
+### Verified
+- `npm run build` passed.
+- Guest end-to-end browser testing completed a health-mode chat and confirmed one report entry with a session ID, glucose item, session record ID, and stored conclusion without manual modal saving.
+- PM2 restarted and the chat route returned HTTP 200.
+### Unresolved
+- Free-form chats that do not produce a structured `<CONCLUDE>` conclusion remain chat-only; automatically converting arbitrary free-form text into health records would create unstructured report entries.
+### Disproved
+- The initial probe appeared to show no report because it inspected the deprecated `inschat_guest_records` key; the active store is `inschat_guest_report`, which the follow-up end-to-end probe confirmed.
+
+## 2026-09-08 — Match sidebar icon to application icon
+### Solved
+- Replaced the sidebar’s separate Lucide Sparkles mark with the shared `/icon.svg` application icon.
+- Added sizing and overflow styles so the sidebar uses the same dark background and white mark as the app icon.
+### Verified
+- `npm run build` passed.
+- Guest browser probing confirmed the sidebar renders `/icon.svg` at 28×28 with the image loaded.
+- PM2 restarted and the chat route returned HTTP 200.
+### Unresolved
+- n/a
+### Disproved
+- n/a
+
+## 2026-09-09 — Persist chat runs across refresh
+### Solved
+- Added a durable pending model-message anchor before generation starts, with throttled progress writes, a heartbeat, completion/failure status, and stale-run closure.
+- Changed server streaming so a disconnected browser only detaches the response writer; the model generator continues and finalizes the same message.
+- Added guest run snapshots and local pending-message IDs, plus client polling that resumes the existing run without issuing a second chat request.
+- Restored structured health conclusions when a resumed response finishes with a `<CONCLUDE>` payload, so refresh does not produce an apparently empty completed bubble.
+- Kept the UI stable by updating only the existing pending bubble when polled data changes, rather than replacing the whole transcript or appending duplicate model messages.
+### Verified
+- `npm run build` passed.
+- PM2 restarted only for `inschat`; the app returned HTTP 200 with the new production build.
+- An early poll returned the same run as `status: "pending"` and a later poll returned `status: "complete"` with the final text.
+- A guest stream was intentionally disconnected and then polled successfully; the existing run reached `status: "complete"` with its final text.
+- A real browser probe on the main `/` chat refreshed during generation, restored two bubbles, and later displayed the completed response.
+### Unresolved
+- Guest run snapshots use MongoDB when configured and fall back to process memory when it is unavailable; the fallback cannot survive a full server/process restart.
+### Disproved
+- Treating the browser's streaming React state as the source of truth was the root failure: refreshing discarded the only partial transcript and the server stopped at the failed enqueue.
+
+## 2026-09-09 — Complete InsChat refresh resume loop
+
+### Solved
+- Re-checked the live tree before editing and kept the work scoped to Issue 1; no OpenCode-session persistence changes were made.
+- Added full authenticated-session resume polling against `/api/sessions/:id` and full guest resume polling against `/api/guest-runs/:id`, both updating the existing message in place.
+- Restored persisted `processSteps` and the active pending trail after refresh, while keeping the composer in sending/stop state until the server reports completion or failure.
+- Kept `X-Run-Persisted` and `X-Run-Message-Id` response headers, guest MongoDB snapshots, detached streaming, heartbeats, and stale pending finalization in the deployed path.
+
+### Verified
+- `npm run build` passed after the resume-loop fix.
+- Restarted only PM2 app `inschat`; `pm2 logs inschat --lines 50 --nostream` showed the new server ready without startup-blocking errors.
+- Live guest QA created a new chat, refreshed during a pending run, restored the trail and Stop generating control, then reached the completed answer without a second POST.
+
+### Unresolved
+- Signed-in QA was not run because no test credentials were provided; the authenticated path was build-verified and wired to the shared session/message store.
+- Guest durability still depends on MongoDB being available; the documented in-memory fallback cannot survive a full process restart.
+
+### Disproved
+- A single initial guest-run fetch was insufficient: it could restore the first snapshot but did not reliably keep the refreshed UI synchronized while the detached run continued. Continuous guest resume polling fixed that gap.
+
+## 2026-09-09 — Smooth resumed response updates
+
+### Solved
+- Changed refresh polling to target the exact pending message using `sessionId` and `messageId`, instead of refetching and remapping the entire session.
+- Reduced resume polling and server progress snapshots to 500ms.
+- Suppressed React updates when the persisted message snapshot has not changed, while retaining the existing message identity and process trail.
+
+### Verified
+- `npm run build` passed.
+- PM2 restarted only for `inschat`.
+- Live guest QA showed the restored Stop generating state and answer lengths increasing across successive 500ms samples after refresh, then settled successfully.
+
+### Unresolved
+- The resumed view is still persistence-backed polling rather than a replayable token stream; cadence is bounded by database progress writes.
+
+### Disproved
+- Polling the full session every 2.5 seconds produced the reported blocky post-refresh experience even though persistence itself worked.
+
+## 2026-09-09 — Allow live resume polling through nginx
+
+### Solved
+- Found that the public nginx site explicitly rejected `GET /api/chat` with `405 Not Allowed`, so the browser could only display the initial restored snapshot.
+- Updated only the InsChat nginx `/api/chat` method allow-list to include `GET`.
+- Added no-store response headers and a per-poll cache-buster so pending snapshots cannot be reused by a proxy.
+
+### Verified
+- `nginx -t` passed and nginx reloaded successfully.
+- Public `GET https://inschat.renstoolbox.com/api/chat?...` now reaches Next.js and returns JSON `404` for an unknown run instead of nginx `405`.
+- Public live QA refreshed a guest response mid-run; poll responses returned `200 pending` with increasing text lengths, the Stop generating control stayed visible, and the run settled successfully.
+
+### Unresolved
+- The authenticated public path still needs a real signed-in QA run with user-provided test credentials.
+
+### Disproved
+- The React poller was not the primary live failure. It was running, but nginx blocked every resume request before the request reached the application.
+
+## 2026-09-09 — Match refreshed replies to live typing
+
+### Solved
+- Removed internal process arrows and model names from assistant bubble content.
+- Hid the model-name footer while retaining the completed elapsed-time display.
+- Changed pending hydration to start with a clean thinking state, then reveal persisted response text through a short typing queue as polling receives new snapshots.
+- Kept polling and final status synchronization independent from the visual typing queue so completion is not lost while text catches up.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Public QA refreshed after answer text had started; successive 300ms samples increased in length, contained no arrow or model name, and the run settled successfully.
+
+### Unresolved
+- The refreshed path remains persistence-backed rather than a literal replay of every original token.
+
+### Disproved
+- Rendering each persisted snapshot directly as the bubble text made refresh visibly different from the normal live stream and exposed internal `→ model` metadata.
+
+## 2026-09-09 — Restore model metadata after resumed replies
+
+### Solved
+- Restored the bottom-right model label for normal live and completed replies.
+- Kept the label hidden only for a refreshed pending reply while its typing queue is catching up.
+- The model label becomes visible again when the resumed text reaches its settled state.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Public UI probe confirmed a completed reply displays `1.2s · Qwen3.8 Flash` in the bottom-right metadata area.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Removing the model metadata block globally was too broad; it fixed the refresh artifact but also removed intended normal-response context.
+
+## 2026-09-09 — Resume from the last persisted characters
+
+### Solved
+- Kept the latest persisted assistant text visible during refresh instead of clearing the pending bubble to zero.
+- Seeded the resumed typing queue from that stored text, so only newly persisted characters are animated afterward.
+- Preserved the pending process state and completion synchronization while resuming from the stored position.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Public QA measured 56 characters before refresh, then continued from 102, 142, 249, 319, and later samples without returning to zero; the run settled successfully.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Clearing the hydrated pending text was unnecessary and caused every refresh to visually replay the answer from the beginning.
+
+## 2026-09-09 — Cloud-backed guest-to-account migration
+
+### Solved
+- Added an authenticated `/api/account/migrate-guest` endpoint that imports guest sessions, messages, conclusions, reports, pins, and images into the signed-in MongoDB account.
+- Added source guest IDs and a migration record so retries are idempotent and do not duplicate cloud sessions, messages, or report entries.
+- Added client batching for large IndexedDB image payloads; local guest data is cleared only after every migration batch succeeds.
+- Rebound active persisted guest runs to their new cloud message so a response that is still generating continues to update the account-owned transcript.
+- Added nested migration validation for message content, images, process steps, conclusions, report items, and meals.
+- Added the nginx route required for the migration POST to reach Next.js.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `nginx -t` passed and nginx reloaded successfully.
+- Public homepage returned `200`.
+- Unauthenticated migration POST reached the application and returned the expected `401`, replacing the previous nginx `405`.
+
+### Unresolved
+- Full signed-in browser migration QA requires a real user account and was not performed to avoid creating test account/session data.
+
+### Disproved
+- Guest-to-account migration did not require replacing the existing guest or signed-in storage models; a source-ID mapping layer safely bridges them.
+
+## 2026-09-09 — Dedicated sign-in and sign-up pages
+
+### Solved
+- Replaced the legacy `/login` redirect with a dedicated sign-in page.
+- Added a dedicated `/signup` page for open username/password registration.
+- Shared the validated auth form between both pages and the sidebar modal.
+- Kept automatic guest-data migration after successful sign-in or registration.
+- No invite code or registration code is required.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Public `/login` and `/signup` both returned `200` after startup.
+- Server validation remains username 3–32 characters and password 8–128 characters.
+
+### Unresolved
+- A real account sign-up/sign-in flow was not submitted during QA to avoid creating test account data.
+
+### Disproved
+- A separate registration-code mechanism was not present in the existing auth API.
+
+## 2026-09-09 — Keep guest and account storage separate
+
+### Solved
+- Removed guest-data export, migration, rebinding, and local guest-data clearing from sign-in and sign-up.
+- Sign-in and registration now switch the active view to the account without importing guest sessions, records, reports, images, or pending runs.
+- Removed the migration API implementation, client coordinator, validation modules, and nginx route.
+- Logout continues to clear only the auth cookie; the browser's guest store remains unchanged and is available again after logout.
+
+### Verified
+- `npm run build` passed after the code changes.
+- `nginx -t` passed and nginx reloaded successfully with the migration route removed.
+- Repository search found no active guest-migration imports or endpoint references.
+
+### Unresolved
+- A real sign-in/logout isolation test was not performed to avoid creating test account data.
+
+### Disproved
+- Automatically merging guest data into an account is not required for cloud-backed accounts and conflicts with the desired separate guest/account model.
+
+## 2026-09-09 — Account data clearing controls
+
+### Solved
+- Added confirmation-gated signed-in settings actions for clearing all chats and clearing all saved reports.
+- Added account-scoped bulk APIs that delete sessions with their messages and clear both current and legacy report storage.
+- Kept the existing guest-only local-data deletion control separate from account deletion.
+- Refreshed an open records page after reports are cleared.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- The bulk APIs remain protected by authentication.
+
+### Unresolved
+- Full signed-in browser QA requires a real account and was not performed to avoid creating test account data.
+
+### Disproved
+- Per-item deletion alone was not sufficient for the test-phase cleanup workflow; account-level bulk controls are needed.
+
+## 2026-09-09 — Combine account cleanup into one action
+
+### Solved
+- Replaced the two signed-in cleanup buttons with one “Clear all chats and reports” action.
+- The button uses one authenticated bulk request that clears sessions, messages, current reports, and legacy report records together.
+- Kept the existing confirmation dialog and guest-only local-data action unchanged.
+
+### Verified
+- `npm run build` passed after consolidating the controls.
+- The combined endpoint remains behind the existing `/api/sessions` authentication and DELETE method protection.
+
+### Unresolved
+- Full signed-in browser QA requires a real account and was not performed to avoid creating test account data.
+
+### Disproved
+- Separate signed-in buttons were unnecessary for this test-phase cleanup workflow.
+
+## 2026-09-09 — Move logout into Settings
+
+### Solved
+- Removed the signed-in logout button from the account row in the sidebar footer.
+- Added logout as a Settings row next to usage and account cleanup controls.
+- Preserved the existing logout behavior, including returning to the separate guest account.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- The live homepage returned `200`.
+
+### Unresolved
+- Signed-in visual QA requires a real account and was not performed to avoid creating test account data.
+
+### Disproved
+- Keeping logout beside the username was not needed once account actions were grouped in Settings.
+
+## 2026-09-09 — Make the guest footer login target explicit
+
+### Solved
+- Made the guest icon and “Guest” label one shared login button.
+- Removed account-row hover highlighting so the bottom bar does not highlight as a whole.
+- Reduced the guest login icon from 20px to 18px and its circle from 34px to 31px.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Live homepage returned `200`.
+
+### Unresolved
+- Signed-in/guest visual hover QA was not run in a browser session.
+
+### Disproved
+- Requiring users to click only the small guest icon was not an adequate login affordance.
+
+## 2026-09-09 — Simplify application metadata
+
+### Solved
+- Changed the browser/application metadata title to simply “InsChat”.
+- Removed the extra insulin and glucose tracker title and description text.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Live homepage returned `200` and rendered `<title>InsChat`.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The longer product descriptor was not wanted as part of the application name.
+
+## 2026-09-09 — Merge brief and full records views
+
+### Solved
+- Combined the brief insights/chart and full report tools/timeline into one `/records` page.
+- Replaced the sidebar Records folder and two child links with one Records button above the account footer.
+- Kept `/records/full` as a compatibility redirect to `/records`.
+- Removed the unused brief/full navigation labels.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200`.
+- `/records/full` redirected to `/records`.
+
+### Unresolved
+- Full guest and signed-in visual QA was not run in a browser session.
+
+### Disproved
+- Separate sidebar entries were necessary after the two records views were merged into one page.
+
+## 2026-09-09 — Place Records above the account footer
+
+### Solved
+- Moved the single Records link outside the `.sidebar-foot` container.
+- Records now sits directly above the bottom account/guest bar instead of inside it.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual spacing QA remains pending.
+
+### Disproved
+- Placing the Records link inside the footer did not satisfy the requested above-footer layout.
+
+## 2026-09-09 — Make the Records entry visibly clickable
+
+### Solved
+- Redesigned the above-footer Records link as an always-visible bordered button.
+- Switched the icon to a report/document icon and kept the label “Records”.
+- The button no longer depends on hover to communicate that it is clickable.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- A plain sidebar link with hover feedback was not obvious enough as the entry point to the full report.
+
+## 2026-09-09 — Match Records button to insulin mode styling
+
+### Solved
+- Applied the insulin-mode gradient-border accent to the Records button.
+- Reduced the button padding and text size so it is compact.
+- Removed the gray button treatment while keeping the control visibly clickable.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- The larger gray bordered treatment did not match the insulin-mode visual language.
+
+## 2026-09-09 — Paginate the Records timeline
+
+### Solved
+- Moved the full-report date selector below the timeline.
+- Limited the timeline to the newest seven days initially.
+- Added a button that appends up to 30 more days per click.
+- Added English and Chinese labels for the incremental timeline control.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA was blocked because the browser probe could not connect to the local app URL.
+
+### Disproved
+- Rendering every historical timeline day immediately made the records page unnecessarily long.
+
+## 2026-09-09 — Improve Records button typography
+
+### Solved
+- Kept the existing Records button border and accent colors.
+- Removed the inherited sidebar-label padding from the Records text.
+- Matched the label color to the button accent and refined its weight, spacing, and line height.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- The generic sidebar label styling made the Records text look misaligned and muted inside the accent button.
+
+## 2026-09-09 — Refine Records range controls
+
+### Solved
+- Replaced the raw time-range tabs with a labeled segmented control.
+- Added clearer active-state contrast, spacing, borders, and mobile overflow behavior.
+- Moved Import and Export controls ahead of the time-range selector at the top of the Records page.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- The unlabeled, lightly bordered range tabs did not provide enough visual hierarchy.
+
+## 2026-09-09 — Simplify Records header controls
+
+### Solved
+- Removed the visible Time range label.
+- Removed the gray range-control background and replaced it with a lighter border.
+- Aligned Import and Export to the right side of the Records header.
+- Preserved a stacked layout on mobile.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- The gray range-control container and left-positioned transfer actions did not match the requested header hierarchy.
+
+## 2026-09-09 — Order Records header actions
+
+### Solved
+- Ordered the header actions as Export, Import, then Load example.
+- Placed Load example at the far right of the guest header.
+- Kept Import and Export grouped immediately to its left.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- `/records` returned `200` after deployment.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- Placing Load example before the transfer actions left the guest action order visually backwards.
+
+## 2026-09-09 — Improve phone sidebar navigation
+
+### Solved
+- Restored chat history visibility inside the mobile sidebar drawer.
+- Added body scroll locking while the drawer is open.
+- Improved mobile drawer width, safe-area spacing, touch targets, and visual separation.
+- Hid the desktop collapse control on phones.
+
+### Verified
+- `npm run build` passed after the sidebar pass.
+
+### Unresolved
+- Browser visual QA remains pending.
+
+### Disproved
+- Hiding `.session-nav` on phones made the drawer useful only for navigation buttons, not chat history.
+
+## 2026-09-09 — Improve phone Records layout
+
+### Solved
+- Tightened Records page spacing for narrow screens.
+- Made transfer, demo, range, date, and pagination controls easier to tap.
+- Allowed insight dates, values, and chart tooltips to wrap.
+- Removed desktop-only timeline width reservations and made timeline times flow below content on phones.
+- Made day edit controls visible on touch screens.
+
+### Verified
+- `npm run build` passed after the Records pass.
+- Restarted only PM2 app `inschat`.
+- Guest `/`, `/records`, and redirected `/records/full` returned `200`.
+
+### Unresolved
+- Browser visual QA remains pending because no browser executable was available in the shell environment.
+
+### Disproved
+- Desktop timeline spacing and hover-only actions were not suitable for narrow touch layouts.
+
+## 2026-09-10 — Keep report pictures local
+
+### Solved
+- Stored authenticated chat image references instead of image bytes in session messages.
+- Associated original-session report entries with local image keys.
+- Hydrated report pictures from browser IndexedDB and added an unavailable-on-this-device state.
+- Kept report export/import metadata-only so local image data is never transferred.
+- Prevented the legacy share endpoint from accepting or returning image bytes.
+
+### Verified
+- `npm run build` passed after the persistence, report, and rendering passes.
+
+### Unresolved
+- Existing MongoDB documents may still contain image bytes from before this change; new writes and API responses no longer persist or expose them.
+- Images are intentionally unavailable on other devices because the browser-local sidecar is not synchronized.
+
+### Disproved
+- Persisting authenticated chat image data in MongoDB is incompatible with the local-only image requirement.
+
+## 2026-09-10 — Include earlier session photos in reports
+
+### Solved
+- Added an explicit report-mode image flag to the chat request.
+- Preserved earlier local photo parts for insulin/session-report model turns.
+- Kept ordinary text turns on the existing text-only path.
+
+### Verified
+- Production build and guest route checks are required after this pass.
+
+### Unresolved
+- Report analysis still depends on the configured vision-capable model accepting the transient image request.
+
+### Disproved
+- Treating only the latest message as image context prevented later session reports from analyzing an earlier photo.
+
+## 2026-09-10 — Preserve current image keys when saving reports
+
+### Solved
+- Report saves now collect image keys from the exact message snapshot that generated the report.
+- Existing report updates also retain image keys from the parsed conclusion as a fallback.
+
+### Verified
+- `npm run build` passed.
+- Restarted only PM2 app `inschat`.
+- Guest `/` and `/records` returned `200`.
+
+### Unresolved
+- A report cannot display a photo if browser-local IndexedDB storage failed before the report was saved.
+
+### Disproved
+- Reading only the asynchronous React message ref was reliable enough for auto-saving the just-uploaded photo.
+
+## 2026-09-10 — Show pictures inside chat reports
+
+### Solved
+- Added the local report-image gallery to the in-chat report modal.
+- Reused the same local preview and unavailable-image behavior as the Records page.
+
+### Verified
+- Production build and guest route checks are required after this UI pass.
+
+### Unresolved
+- The gallery still depends on the original browser’s local IndexedDB image sidecar.
+
+### Disproved
+- Saving picture references alone was sufficient when the in-chat report itself had no image presentation.
+
+## 2026-09-10 — Replace report image thumbnails with meal buttons
+
+### Solved
+- Replaced direct image display in both report locations with a Photos button.
+- Positioned the button beside each meal name.
+- Kept the gallery and full-screen preview behind the button.
+
+### Verified
+- Production build and guest route checks are required after this UI pass.
+
+### Unresolved
+- Each meal button currently opens the session’s complete local image set because image-to-meal mapping is not stored.
+
+### Disproved
+- Showing every report image inline was the requested report interaction.
+
+## 2026-09-10 — Fix combined image and text requests
+
+### Solved
+- Split a user instruction and its attached images into consecutive provider-safe user messages instead of one mixed text/image content array.
+- Classified provider timeouts as model-chain failures so the next vision model can be attempted.
+
+### Verified
+- Production build and guest image-plus-text chat check are required after this fix.
+
+### Unresolved
+- Vision availability still depends on the upstream provider and its model catalog.
+
+### Disproved
+- PC tab switching was the cause of the 120-second image request failure.
+
+## 2026-09-10 — Hide unavailable vision-provider errors
+
+### Solved
+- Confirmed `qwen3.5-plus` currently returns an upstream model-unavailable error.
+- Replaced leaked provider error text with a clear retry message when all image-capable models fail.
+
+### Verified
+- Production build and guest image failure-path check are required after this change.
+
+### Unresolved
+- The application cannot make an unavailable upstream vision model respond; successful image analysis still depends on provider availability.
+
+### Disproved
+- The `401 /api/auth/me` guest probe caused the vision-provider failure.
+
+## 2026-09-11 — Reduce vision-provider latency
+
+### Solved
+- Confirmed the reported 99-second response was upstream DeepSeek time-to-first-token latency: 98,049 ms of a 99,807 ms request.
+- Reordered image requests to use the responsive GLM-5.3 Flash vision model first, with DeepSeek and MiMo fallbacks.
+- Removed the currently unavailable Qwen3.5 vision fallback.
+- Reduced the per-attempt image timeout from 120 seconds to 30 seconds so a stalled vision provider fails over sooner.
+
+### Verified
+- Live provider probes returned first stream data in approximately 652 ms for DeepSeek, 866 ms for GLM-5.3 Flash, and 1.27 seconds for MiMo.
+
+### Unresolved
+- Upstream vision latency can still vary; the application cannot control provider capacity or routing.
+
+### Disproved
+- Image upload, authentication, nginx, and report persistence were not responsible for the 99-second delay.
+
+## 2026-09-10 — Enforce Qwen3.8 Flash as the primary model
+
+### Solved
+- Enforced `qwen3.8-flash` as the primary model for text messages, conclusions, and image requests.
+- Removed paid DeepSeek fallbacks from automatic chains; balance or availability failures now move to free models.
+- Disabled manual model pins and `CONCLUDE_MODEL` overrides so they cannot change the enforced routing policy.
+- Updated model-page text, routing display, README, and environment example to match the policy.
+
+### Verified
+- Production build passed twice after the routing changes.
+- Guest `GET /api/models` correctly remains protected with `401 Not signed in`.
+- Live provider fallback behavior was not exercised to avoid spending quota; it remains the next manual check.
+
+### Unresolved
+- The existing free catalog is marked text-only; free image fallback attempts may be rejected by the provider and then show the image error.
+
+### Disproved
+- Keeping the old peak/off-peak DeepSeek routing was not compatible with the requested Qwen-only primary policy.
+
+## 2026-09-10 — Rebuild and restart InsChat
+
+### Solved
+- Rebuilt the production bundle successfully.
+- Restarted only the `inschat` PM2 process from `/home/ubuntu/inschat`.
+- Confirmed the new process starts Next.js successfully on port 3001.
+
+### Verified
+- PM2 reports `inschat` online after restart.
+- Startup logs show `Next.js 16.3.3` and `Ready` with no new startup-blocking error.
+
+### Unresolved
+- The PM2 log tail retains historical GLM requests from before the restart; a fresh image request is still needed to verify the live marker end-to-end.
+
+### Disproved
+- The `inschat` process was not left running on the old build after the requested restart.
+
+## 2026-09-10 — Health-mode Qwen image request compatibility
+
+### Solved
+- Image requests for every vision model now omit `reasoning_effort`; the gateway
+  receives no reasoning parameter whenever image content is present.
+- Text and image content are sent together in one standard multimodal user
+  message, matching the image-only request shape.
+
+### Root cause
+- Health mode uses the full health system prompt and the normal reasoning setting.
+- The OpenCode gateway rejects Qwen vision requests when reasoning metadata is present, making the failure look like a health-mode text/image mixing problem.
+- A model-specific exception list was too easy to make stale after Qwen3.8
+  became the image primary; checking for image content is the safer boundary.
+- The earlier split into consecutive text and image user messages was
+  disproved: image-only requests had two messages, while image-plus-text
+  requests had three and Qwen timed out on the latter.
+
+### Unresolved
+- A fresh guest image request still needs to be run to verify the live provider response.
+
+## 2026-09-10 — Simplify report image opening
+
+### Solved
+- Report image references now render as an icon-only trigger.
+- Clicking the icon opens the first available report image directly in the centered image viewer.
+- Removed the intermediate report image list dialog and its extra close/header layer.
+
+### Unresolved
+- Reports with multiple stored image references currently open the first image only.
+
+## 2026-09-10 — Expand image viewer controls
+
+### Solved
+- Image viewer images now use the available viewport instead of a fixed
+  720px width.
+- Explicit auto sizing preserves the full image aspect ratio without cropping.
+- Viewer overflow is hidden so opening an image does not create a scrollbar.
+- Added a black circular X close button in the top-right corner.
+
+### Verified
+- Production build passed.
+- PM2 `inschat` restarted successfully and port 3001 returns HTTP 200.
+
+## 2026-09-10 — Do not silently lose guest report edits
+
+### Solved
+- Guest report writes now retry with compacted report data when localStorage
+  quota is reached.
+- Guest record and session-conclusion updates now return success status.
+- The report editor surfaces failed guest persistence instead of updating only
+  the in-memory view.
+
+### Unresolved
+- The live deployment could not be rechecked because its page became
+  unavailable during browser verification.
+
+## 2026-09-10 — Await chat report edits before closing
+
+### Solved
+- Chat report edits now await the authenticated session-conclusion update instead of
+  firing-and-forgetting it.
+- Failed session persistence keeps the report editor open and shows the save error.
+- Auto-save now reports success or failure so clicking away cannot silently discard
+  an edit before the database write completes.
+
+### Unresolved
+- Authenticated refresh verification still requires a real logged-in browser session;
+  guest persistence remains localStorage-based by design.
+
+## 2026-09-11 — Preserve mixed-date report events and image ownership
+
+### Solved
+- Added durable event metadata to conclusions and saved records: each event
+  keeps its source message, occurrence date, extracted items/meals, and only
+  that message's image keys.
+- Health-mode conclusion tails now describe the latest user message only;
+  the client merges that event into the accumulated report without deleting
+  earlier events.
+- Fixed a stale `streamReply`/conclusion closure so later messages no longer
+  replace the first event with a single-message report.
+- Records timeline and glucose chart now use event dates and event-owned image
+  keys, while legacy report-level image keys remain supported as unscoped
+  fallback data.
+- Added English month-name parsing (`August 15, 2026`) so model-produced dates
+  are not silently interpreted as today's date.
+- Guest and authenticated persistence/API/session conclusion paths carry the
+  event list, and the guest browser flow verified separate September and
+  August entries in one chat.
+
+### Unresolved
+- Existing legacy records have report-level image keys without reliable source
+  ownership; they remain unscoped and are not guessed onto dated events.
+- No real-image browser request was run in this pass because the workspace has
+  no test image asset; the event/image-key path is covered by the implemented
+  source association but still needs a real photo regression check.
+
+### Disproved
+- The report was not losing the August/September data only because the report
+  list used one `savedAt` timestamp; stale conclusion state and English-date
+  parsing were also required to reproduce the failure.
+
+## 2026-09-10 — Route image turns to GLM-5.3 Flash
+
+### Solved
+- Kept Qwen3.8 Flash as the primary model for text chat and conclusions.
+- Changed image-only and image-plus-text chat turns to start with
+  `glm-5.3-flash`.
+- Kept the free fallback chain after the paid image model is unavailable or
+  its balance is exhausted.
+- Preserved the existing multimodal request shape: text and image parts stay
+  together in one OpenAI-compatible `messages[].content` array.
+- Image turns continue to omit `reasoning_effort`, which avoids the gateway
+  rejection seen when reasoning metadata is combined with image content.
+
+### Verified
+- Production build passed.
+- PM2 `inschat` restarted successfully and port 3001 returns HTTP 200.
+- A guest image-plus-text request returned
+  `TRYING:glm-5.3-flash`, `MODEL:glm-5.3-flash`, and the expected answer.
+- A guest image-only request returned the same GLM model markers and a correct
+  description of the test image.
+
+## 2026-09-10 — Restore report date alignment
+
+### Solved
+- Kept the meal name and image icon grouped on the left.
+- Restored the report date/time to the top-right with `margin-left: auto`.
+
+## 2026-09-10 — Keep report name and image icon adjacent
+
+### Solved
+- Wrapped the meal name and image trigger in a tight flex group.
+- Removed the flexible growth from the meal name that was pushing the icon
+  across the report header.
+
+## 2026-09-10 — Simplify report image icon placement
+
+### Solved
+- Removed the square border and padding from the report image trigger.
+- Replaced the overlapping `Images` glyph with a single `Image` glyph.
+- The icon now sits immediately to the right of the meal name in report
+  headers, with a tight 4px gap.
+
+## 2026-09-10 — Reduce viewer size and close by click
+
+### Solved
+- Reduced the standalone image bounds to 80% of the viewport.
+- Removed the X button; clicking anywhere in the overlay or pressing Escape
+  closes the image.
+
+## 2026-09-10 — Mount report image viewer outside report layout
+
+### Solved
+- Rendered `ImageViewer` through a `document.body` portal.
+- Report image overlays now escape inline report spans and their layout constraints,
+  matching the chat image viewer behavior.
+
+### Verified
+- Production build passed.
+- PM2 `inschat` restarted successfully and port 3001 returns HTTP 200.
+
+## 2026-09-10 — Persist logged-in chat report edits
+
+### Solved
+- Logged-in report edits already had PUT routes (`/api/records` and
+  `/api/sessions/:id`); the session route rejected empty summaries, which meal
+  reports often send, so MongoDB kept the original conclusion.
+- Session conclusion writes now accept an empty summary, the same as records.
+- Dish name/rank edits are copied into the event list before save, and the
+  initial chat persist now fails if the session PUT does not succeed.
+
+### Unresolved
+- Existing sessions whose first conclusion never reached MongoDB still need a
+  fresh edit after this fix.
+
+## 2026-09-10 — Session report save rejected null imageKeys
+
+### Solved
+- PUT `/api/sessions/:id` treated `imageKeys: null` as invalid, while
+  `/api/records` already accepted null as "no keys". Logged-in chat edits
+  sent that null from Mongo and got HTTP 400 (`"conclusion.imageKeys" is
+  invalid.`).
+- Session conclusion parsing now ignores null/empty imageKeys the same way
+  records do.
+
+## 2026-09-10 — Report page edits were ignored by event timeline
+
+### Solved
+- The records page timeline reads meals from `events` when that list exists.
+  Day/full editors were saving new dish names and ranks onto top-level meals
+  only, so refresh showed the original event data.
+- Editors now send the event list, match meals by time so localized names
+  still update the right event, and keep the edited events in page state.
+- The editor no longer re-hydrates from a new `result` object after every
+  autosave (that reset made edits look like they reverted). Overlapping
+  saves now wait in line instead of clearing the queue mid-flight.
+
+## 2026-09-10 — Health-mode chats were stuck named New chat
+
+### Solved
+- Image-plus-number reports in health/insulin mode created sessions titled
+  "New chat" or the raw glucose number.
+- After a successful health-mode reply, placeholder titles are renamed to a
+  compact date plus meal, such as `9/10 Dinner` / `9/10 晚餐`, using the
+  meal time from the conclusion or reply. Manual names are left alone.
+
+## 2026-09-11 — Photo dish names should not use parentheses
+
+### Solved
+- Food-photo replies were adding redundant category glosses in parentheses,
+  e.g. `番茄洋葱香菜莎莎（沙拉）`.
+- The system prompt now forbids `()` / `（）` on dish names, and saved and
+  displayed dish names strip trailing parenthetical labels.
+
+## 2026-09-11 — Phone UI audit (every guest page and modal)
+
+### Solved
+- Guest phone pass at 390×844 and 320×568: chat, drawer, Search, Settings,
+  confirm-delete, Auth, image viewer, login/signup, OpenCode, Models, Calls,
+  Usage, OpenCode-calls, Records (empty + demo), date picker, day Edit, time
+  picker. No horizontal overflow on any of those surfaces.
+- Hide-sidebar on phones was a trap: the collapse control stayed visible
+  because later `.sidebar-hide { display: flex }` beat the mobile hide rule,
+  and `.sidebar-expand { display: flex }` also beat the mobile `display: none`.
+  Collapse/expand are now hidden under 640px.
+- Search / Settings Escape could close the drawer instead of the dialog.
+  Dialogs now take Escape first; Search uses a capture listener.
+- Day Edit and Conclude sat at `scale(0.8)` with unused side margin. They now
+  fill the phone width. Range tabs wrap so "Last 1 year" / "All records" are
+  not off-screen at 320px. Composer thumbs open the image viewer.
+
+### Unresolved
+- `/records/full` still redirects to `/records`, so `RecordEditModal` is not
+  reachable for guests (`record-edit-trigger` only renders when `showFull` is
+  false). Day Edit is the editor on phones.
+- Nested `.conclude-modal-embedded` is taller than the viewport; the outer
+  day-edit sheet scrolls, which is intended.
+- Glucose chart tap on a phone jumps to that day instead of showing a hover
+  tooltip (no hover).
+- Models/Calls can show "Request failed" for guests; layout is fine.
+
+### Disproved
+- Playwright `Escape` is a bad way to close Search: the leftover backdrop
+  intercepts the next tap. Close with the X or backdrop instead.

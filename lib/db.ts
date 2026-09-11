@@ -2,10 +2,10 @@ import { Db, MongoClient, ObjectId } from "mongodb";
 import { randomBytes } from "node:crypto";
 import type {
   ApiCall,
-  ChatImage,
   ChatSession,
   ConcludeItem,
   ConcludeMeal,
+  ReportEvent,
   SavedRecord,
   SessionConclusion,
   StoredMessage,
@@ -21,8 +21,35 @@ interface RecordDoc {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  imageKeys?: string[];
   savedAt: Date;
   datetime: Date | null;
+  pinned?: boolean;
+}
+
+interface ReportEntryDoc {
+  id: string;
+  sessionId?: string;
+  title: string;
+  summary: string;
+  items: ConcludeItem[];
+  meals?: ConcludeMeal[] | null;
+  sourceText?: string | null;
+  imageKeys?: string[] | null;
+  events?: ReportEvent[] | null;
+  savedAt: Date;
+  datetime: Date | null;
+  recordedAt: Date;
+  pinned?: boolean;
+}
+
+interface AccountReportDoc {
+  _id?: ObjectId;
+  userId: ObjectId;
+  title: string;
+  entries: ReportEntryDoc[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 let clientPromise: Promise<MongoClient> | null = null;
@@ -56,8 +83,10 @@ export function toSavedRecord(doc: RecordDoc): SavedRecord {
     items: doc.items,
     meals: doc.meals,
     sourceText: doc.sourceText,
+    imageKeys: doc.imageKeys,
     savedAt: doc.savedAt.toISOString(),
     datetime: doc.datetime ? doc.datetime.toISOString() : null,
+    pinned: doc.pinned ?? false,
   };
 }
 
@@ -69,6 +98,7 @@ export async function insertRecord(
     items: ConcludeItem[];
     meals?: ConcludeMeal[];
     sourceText?: string;
+    imageKeys?: string[];
     datetime: Date | null;
   }
 ): Promise<SavedRecord> {
@@ -80,6 +110,7 @@ export async function insertRecord(
     datetime: new Date(),
     userId: new ObjectId(userId),
     savedAt: new Date(),
+    pinned: false,
   };
   const result = await db.collection<RecordDoc>("records").insertOne(doc);
   return toSavedRecord({ ...doc, _id: result.insertedId });
@@ -90,7 +121,7 @@ export async function listRecords(userId: string, limit = 100): Promise<SavedRec
   const docs = await db
     .collection<RecordDoc>("records")
     .find({ userId: new ObjectId(userId) })
-    .sort({ savedAt: -1 })
+    .sort({ pinned: -1, savedAt: -1 })
     .limit(limit)
     .toArray();
   return docs.map(toSavedRecord);
@@ -114,6 +145,8 @@ export async function updateRecord(
     items: ConcludeItem[];
     meals?: ConcludeMeal[];
     sourceText?: string;
+    imageKeys?: string[];
+    pinned?: boolean;
   }
 ): Promise<SavedRecord | null> {
   if (!ObjectId.isValid(id)) return null;
@@ -129,11 +162,249 @@ export async function updateRecord(
           items: input.items,
           meals: input.meals,
           sourceText: input.sourceText,
+          ...(input.imageKeys === undefined ? {} : { imageKeys: input.imageKeys }),
+          ...(input.pinned === undefined ? {} : { pinned: input.pinned }),
         },
       },
       { returnDocument: "after" }
     );
   return result ? toSavedRecord(result) : null;
+}
+
+function reportDate(value: string | undefined, fallback = new Date()): Date {
+  if (!value) return fallback;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? fallback : parsed;
+}
+
+function toSavedReportEntry(entry: ReportEntryDoc): SavedRecord {
+  return {
+    _id: entry.id,
+    title: entry.title,
+    summary: entry.summary,
+    items: entry.items,
+    meals: entry.meals ?? undefined,
+    sourceText: entry.sourceText ?? undefined,
+    imageKeys: entry.imageKeys ?? undefined,
+    events: entry.events ?? undefined,
+    savedAt: entry.savedAt.toISOString(),
+    datetime: entry.datetime?.toISOString() ?? null,
+    recordedAt: entry.recordedAt.toISOString(),
+    sessionId: entry.sessionId,
+    pinned: entry.pinned ?? false,
+  };
+}
+
+async function ensureAccountReport(userId: string): Promise<AccountReportDoc> {
+  const db = await getDb();
+  const reports = db.collection<AccountReportDoc>("account_reports");
+  const ownerId = new ObjectId(userId);
+  const existing = await reports.findOne({ userId: ownerId });
+  if (existing) return existing;
+
+  // Migrate old per-session records the first time the account report is read.
+  const legacy = await db
+    .collection<RecordDoc>("records")
+    .find({ userId: ownerId })
+    .sort({ savedAt: 1 })
+    .toArray();
+  const now = new Date();
+  const candidate: AccountReportDoc = {
+    _id: new ObjectId(),
+    userId: ownerId,
+    title: "Health report",
+    entries: legacy.map((record) => ({
+      id: record._id?.toString() ?? new ObjectId().toString(),
+      title: record.title,
+      summary: record.summary,
+      items: record.items,
+      meals: record.meals,
+      sourceText: record.sourceText,
+      imageKeys: record.imageKeys,
+      savedAt: record.savedAt,
+      datetime: record.datetime,
+      recordedAt: record.datetime ?? record.savedAt,
+      pinned: record.pinned ?? false,
+    })),
+    createdAt: now,
+    updatedAt: now,
+  };
+  try {
+    await reports.updateOne(
+      { userId: ownerId },
+      { $setOnInsert: candidate },
+      { upsert: true }
+    );
+  } catch {
+    // Another request may have initialized this account's report concurrently.
+  }
+  return (await reports.findOne({ userId: ownerId })) ?? candidate;
+}
+
+export async function listReportEntries(userId: string): Promise<SavedRecord[]> {
+  const report = await ensureAccountReport(userId);
+  return [...report.entries]
+    .sort(
+      (a, b) =>
+        Number(b.pinned ?? false) - Number(a.pinned ?? false) ||
+        b.recordedAt.getTime() - a.recordedAt.getTime()
+    )
+    .map(toSavedReportEntry);
+}
+
+export async function appendReportEntry(
+  userId: string,
+  input: {
+    title: string;
+    summary: string;
+    items: ConcludeItem[];
+    meals?: ConcludeMeal[];
+    sourceText?: string;
+    imageKeys?: string[];
+    events?: ReportEvent[];
+    sessionId?: string;
+    recordedAt?: string;
+  }
+): Promise<SavedRecord> {
+  const report = await ensureAccountReport(userId);
+  const now = new Date();
+  const recordedAt = reportDate(input.recordedAt, now);
+  const entry: ReportEntryDoc = {
+    id: new ObjectId().toString(),
+    sessionId: input.sessionId,
+    title: input.title,
+    summary: input.summary,
+    items: input.items,
+    meals: input.meals,
+    sourceText: input.sourceText,
+    imageKeys: input.imageKeys,
+    events: input.events,
+    savedAt: now,
+    datetime: recordedAt,
+    recordedAt,
+    pinned: false,
+  };
+  const db = await getDb();
+  const reports = db.collection<AccountReportDoc>("account_reports");
+  if (input.sessionId) {
+    const set: Record<string, unknown> = {
+      "entries.$[entry].title": input.title,
+      "entries.$[entry].summary": input.summary,
+      "entries.$[entry].items": input.items,
+      "entries.$[entry].meals": input.meals ?? null,
+      "entries.$[entry].sourceText": input.sourceText ?? null,
+      "entries.$[entry].imageKeys": input.imageKeys ?? [],
+      "entries.$[entry].events": input.events ?? [],
+      updatedAt: now,
+    };
+    if (input.recordedAt !== undefined) {
+      set["entries.$[entry].recordedAt"] = recordedAt;
+      set["entries.$[entry].datetime"] = recordedAt;
+    }
+    const updated = await reports.findOneAndUpdate(
+      { _id: report._id, "entries.sessionId": input.sessionId },
+      { $set: set },
+      {
+        arrayFilters: [{ "entry.sessionId": input.sessionId }],
+        returnDocument: "after",
+      }
+    );
+    const updatedEntry = updated?.entries.find(
+      (candidate) => candidate.sessionId === input.sessionId
+    );
+    if (updatedEntry) return toSavedReportEntry(updatedEntry);
+
+    const inserted = await reports.findOneAndUpdate(
+      { _id: report._id, "entries.sessionId": { $ne: input.sessionId } },
+      { $push: { entries: entry }, $set: { updatedAt: now } },
+      { returnDocument: "after" }
+    );
+    const insertedEntry = inserted?.entries.find(
+      (candidate) => candidate.sessionId === input.sessionId
+    );
+    if (insertedEntry) return toSavedReportEntry(insertedEntry);
+
+    const raced = await reports.findOne({ _id: report._id });
+    const racedEntry = raced?.entries.find(
+      (candidate) => candidate.sessionId === input.sessionId
+    );
+    if (racedEntry) return toSavedReportEntry(racedEntry);
+  } else {
+    await reports.updateOne(
+      { _id: report._id },
+      { $push: { entries: entry }, $set: { updatedAt: now } }
+    );
+  }
+  return toSavedReportEntry(entry);
+}
+
+export async function updateReportEntry(
+  userId: string,
+  id: string,
+  input: {
+    title: string;
+    summary: string;
+    items: ConcludeItem[];
+    meals?: ConcludeMeal[];
+    sourceText?: string;
+    imageKeys?: string[];
+    events?: ReportEvent[];
+    sessionId?: string;
+    recordedAt?: string;
+    pinned?: boolean;
+  }
+): Promise<SavedRecord | null> {
+  await ensureAccountReport(userId);
+  const now = new Date();
+  const db = await getDb();
+  const set: Record<string, unknown> = {
+    "entries.$.title": input.title,
+    "entries.$.summary": input.summary,
+    "entries.$.items": input.items,
+    "entries.$.meals": input.meals ?? null,
+    updatedAt: now,
+  };
+  if (input.sourceText !== undefined) set["entries.$.sourceText"] = input.sourceText;
+  if (input.imageKeys !== undefined) set["entries.$.imageKeys"] = input.imageKeys;
+  if (input.events !== undefined) set["entries.$.events"] = input.events;
+  if (input.sessionId !== undefined) set["entries.$.sessionId"] = input.sessionId;
+  if (input.recordedAt !== undefined) {
+    const recordedAt = reportDate(input.recordedAt, now);
+    set["entries.$.recordedAt"] = recordedAt;
+    set["entries.$.datetime"] = recordedAt;
+  }
+  if (input.pinned !== undefined) set["entries.$.pinned"] = input.pinned;
+  const result = await db.collection<AccountReportDoc>("account_reports").findOneAndUpdate(
+    { userId: new ObjectId(userId), "entries.id": id },
+    { $set: set },
+    { returnDocument: "after" }
+  );
+  const entry = result?.entries.find((candidate) => candidate.id === id);
+  return entry ? toSavedReportEntry(entry) : null;
+}
+
+export async function deleteReportEntry(userId: string, id: string): Promise<boolean> {
+  await ensureAccountReport(userId);
+  const db = await getDb();
+  const result = await db.collection<AccountReportDoc>("account_reports").updateOne(
+    { userId: new ObjectId(userId), "entries.id": id },
+    { $pull: { entries: { id } }, $set: { updatedAt: new Date() } }
+  );
+  return result.modifiedCount > 0;
+}
+
+export async function clearAllReportEntries(userId: string): Promise<void> {
+  const report = await ensureAccountReport(userId);
+  const db = await getDb();
+  await Promise.all([
+    db.collection<AccountReportDoc>("account_reports").updateOne(
+      { userId: new ObjectId(userId) },
+      { $set: { entries: [], updatedAt: new Date() } }
+    ),
+    db.collection<RecordDoc>("records").deleteMany({
+      userId: new ObjectId(userId),
+    }),
+  ]);
 }
 
 interface CallDoc {
@@ -318,10 +589,61 @@ interface MessageDoc {
   sessionId: ObjectId;
   role: "user" | "model";
   text: string;
-  images?: ChatImage[];
+  imageKeys?: string[];
   model?: string;
+  trying?: string;
   elapsed?: number;
   createdAt: Date;
+  status?: "pending" | "complete" | "failed" | "done";
+  startedAt?: Date;
+  updatedAt?: Date;
+  processSteps?: string[];
+}
+
+const MAX_MESSAGE_TEXT = 100_000;
+// Model messages stream server-side heartbeats every 10 s while a run is
+// live; a pending doc untouched for this long has missed ~9 beats, so the
+// process that owned it is gone.
+const PENDING_STALE_MS = 90_000;
+
+// A pending doc whose heartbeat went stale has no live handler left. If it
+// streamed an answer, that answer is real — only the finalizer died — so
+// close it as complete rather than flagging a complete reply "interrupted".
+function stalePendingOutcome(doc: { text?: string }): {
+  status: "complete" | "failed";
+  text: string;
+} {
+  if (doc.text?.trim()) return { status: "complete", text: doc.text };
+  return {
+    status: "failed",
+    text: "[Interrupted — the server stopped before finishing this reply.]",
+  };
+}
+
+const MAX_PROCESS_STEPS = 80;
+const MAX_PROCESS_STEP_LEN = 180;
+
+function sanitizeProcessSteps(steps: string[] | undefined): string[] | undefined {
+  if (!steps?.length) return undefined;
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of steps) {
+    if (typeof raw !== "string") continue;
+    const clean = raw.replace(/^\s*\u2192\s+/, "").trim().slice(0, MAX_PROCESS_STEP_LEN);
+    if (!clean || seen.has(clean)) continue;
+    seen.add(clean);
+    out.push(clean);
+    if (out.length >= MAX_PROCESS_STEPS) break;
+  }
+  return out.length ? out : undefined;
+}
+
+/** Normalize agent "done" to inschat "complete" for shared Mongo docs. */
+function normalizeStatus(
+  status: MessageDoc["status"] | undefined
+): StoredMessage["status"] | undefined {
+  if (status === "done") return "complete";
+  return status;
 }
 
 function toChatSession(doc: SessionDoc): ChatSession {
@@ -340,10 +662,15 @@ function toStoredMessage(doc: MessageDoc): StoredMessage {
     sessionId: doc.sessionId.toString(),
     role: doc.role,
     text: doc.text,
-    images: doc.images,
+    imageKeys: doc.imageKeys,
     model: doc.model,
+    trying: doc.trying,
     elapsed: doc.elapsed,
     createdAt: doc.createdAt.toISOString(),
+    status: normalizeStatus(doc.status),
+    startedAt: doc.startedAt?.toISOString(),
+    updatedAt: doc.updatedAt?.toISOString(),
+    processSteps: doc.processSteps,
   };
 }
 
@@ -386,6 +713,25 @@ export async function getSessionWithMessages(
     .find({ sessionId: new ObjectId(id) })
     .sort({ createdAt: 1 })
     .toArray();
+  // Safety net: a server restart kills detached runs, leaving their pending
+  // docs orphaned. Anything whose heartbeat went stale is closed here ?
+  // complete when an answer was streamed, failed only when nothing was.
+  const cutoff = Date.now() - PENDING_STALE_MS;
+  for (const doc of docs) {
+    if (doc.status !== "pending") continue;
+    if ((doc.updatedAt ?? doc.createdAt).getTime() > cutoff) continue;
+    const outcome = stalePendingOutcome(doc);
+    const now = new Date();
+    await db
+      .collection<MessageDoc>("messages")
+      .updateOne(
+        { _id: doc._id },
+        { $set: { status: outcome.status, text: outcome.text, updatedAt: now } }
+      );
+    doc.status = outcome.status;
+    doc.text = outcome.text;
+    doc.updatedAt = now;
+  }
   return {
     session: toChatSession(session),
     messages: docs.map(toStoredMessage),
@@ -438,8 +784,9 @@ export async function appendMessage(
   input: {
     role: "user" | "model";
     text: string;
-    images?: ChatImage[];
+    imageKeys?: string[];
     model?: string;
+    trying?: string;
     elapsed?: number;
   }
 ): Promise<StoredMessage | null> {
@@ -450,10 +797,13 @@ export async function appendMessage(
     sessionId: new ObjectId(sessionId),
     role: input.role,
     text: input.text,
-    images: input.images,
+    imageKeys: input.imageKeys,
     model: input.model,
+    trying: input.trying,
     elapsed: input.elapsed,
     createdAt: now,
+    status: "complete",
+    updatedAt: now,
   };
   await db.collection<MessageDoc>("messages").insertOne(doc);
   const updated = await db
@@ -464,6 +814,175 @@ export async function appendMessage(
     );
   if (updated.matchedCount === 0) return null;
   return toStoredMessage(doc);
+}
+
+export async function startPendingMessage(
+  userId: string,
+  sessionId: string,
+  input: { messageId?: string; startedAt?: Date }
+): Promise<StoredMessage | null> {
+  if (!ObjectId.isValid(sessionId)) return null;
+  const db = await getDb();
+  const now = input.startedAt ?? new Date();
+  const session = await db.collection<SessionDoc>("sessions").findOne({
+    _id: new ObjectId(sessionId),
+    userId: new ObjectId(userId),
+  });
+  if (!session) return null;
+  const doc: MessageDoc = {
+    _id: input.messageId && ObjectId.isValid(input.messageId)
+      ? new ObjectId(input.messageId)
+      : undefined,
+    sessionId: new ObjectId(sessionId),
+    role: "model",
+    text: "",
+    createdAt: now,
+    startedAt: now,
+    updatedAt: now,
+    status: "pending",
+  };
+  const result = await db.collection<MessageDoc>("messages").insertOne(doc);
+  await db.collection<SessionDoc>("sessions").updateOne(
+    { _id: new ObjectId(sessionId), userId: new ObjectId(userId) },
+    { $set: { updatedAt: now } }
+  );
+  return toStoredMessage({ ...doc, _id: result.insertedId });
+}
+
+export async function updatePendingMessage(
+  userId: string,
+  sessionId: string,
+  messageId: string,
+  patch: {
+    text: string;
+    model?: string;
+    trying?: string;
+    elapsed?: number;
+    status?: "pending" | "complete" | "failed";
+    processSteps?: string[];
+  }
+): Promise<StoredMessage | null> {
+  if (!ObjectId.isValid(sessionId) || !ObjectId.isValid(messageId)) return null;
+  const now = new Date();
+  const db = await getDb();
+  const session = await db.collection<SessionDoc>("sessions").findOne({
+    _id: new ObjectId(sessionId),
+    userId: new ObjectId(userId),
+  });
+  if (!session) return null;
+  const status = patch.status ?? "pending";
+  const set: Record<string, unknown> = {
+    text: patch.text.slice(0, MAX_MESSAGE_TEXT),
+    status,
+    updatedAt: now,
+  };
+  if (patch.model !== undefined) set.model = patch.model;
+  if (patch.trying !== undefined) set.trying = patch.trying;
+  if (patch.elapsed !== undefined) set.elapsed = patch.elapsed;
+  if (patch.processSteps !== undefined) {
+    const steps = sanitizeProcessSteps(patch.processSteps);
+    if (steps) set.processSteps = steps;
+  }
+  // Progress heartbeats must not clobber a finalized message.
+  const filter: Record<string, unknown> = {
+    _id: new ObjectId(messageId),
+    sessionId: new ObjectId(sessionId),
+    role: "model",
+  };
+  if (status === "pending") filter.status = "pending";
+  const result = await db
+    .collection<MessageDoc>("messages")
+    .findOneAndUpdate(filter, { $set: set }, { returnDocument: "after" });
+  if (!result) return null;
+  await db.collection<SessionDoc>("sessions").updateOne(
+    { _id: new ObjectId(sessionId), userId: new ObjectId(userId) },
+    { $set: { updatedAt: now } }
+  );
+  return toStoredMessage(result);
+}
+
+// Client-driven finalize: the browser received a complete answer, so close
+// the placeholder even if the handler died before its own finalize. Filtered
+// to status "pending". Client text only wins when longer than last heartbeat.
+export async function finalizePendingMessage(
+  userId: string,
+  sessionId: string,
+  messageId: string,
+  input: { text?: string; elapsed?: number }
+): Promise<boolean> {
+  if (
+    !ObjectId.isValid(userId) ||
+    !ObjectId.isValid(sessionId) ||
+    !ObjectId.isValid(messageId)
+  ) {
+    return false;
+  }
+  const db = await getDb();
+  const owned = await db
+    .collection<SessionDoc>("sessions")
+    .findOne(
+      { _id: new ObjectId(sessionId), userId: new ObjectId(userId) },
+      { projection: { _id: 1 } }
+    );
+  if (!owned) return false;
+  const doc = await db
+    .collection<MessageDoc>("messages")
+    .findOne(
+      { _id: new ObjectId(messageId), sessionId: new ObjectId(sessionId), status: "pending" },
+      { projection: { text: 1 } }
+    );
+  if (!doc) return false;
+  const set: Record<string, unknown> = { status: "complete", updatedAt: new Date() };
+  if (input.elapsed !== undefined) set.elapsed = input.elapsed;
+  if (
+    typeof input.text === "string" &&
+    input.text.trim() &&
+    input.text.length > (doc.text?.length ?? 0)
+  ) {
+    set.text = input.text.slice(0, MAX_MESSAGE_TEXT);
+  }
+  const result = await db
+    .collection<MessageDoc>("messages")
+    .updateOne({ _id: doc._id, status: "pending" }, { $set: set });
+  return result.matchedCount > 0;
+}
+
+export async function getSessionMessage(
+  userId: string,
+  sessionId: string,
+  messageId: string
+): Promise<StoredMessage | null> {
+  if (!ObjectId.isValid(sessionId) || !ObjectId.isValid(messageId)) return null;
+  const db = await getDb();
+  const session = await db.collection<SessionDoc>("sessions").findOne({
+    _id: new ObjectId(sessionId),
+    userId: new ObjectId(userId),
+  });
+  if (!session) return null;
+  let message = await db.collection<MessageDoc>("messages").findOne({
+    _id: new ObjectId(messageId),
+    sessionId: new ObjectId(sessionId),
+  });
+  if (!message) return null;
+  if (
+    message.status === "pending" &&
+    Date.now() - (message.updatedAt ?? message.createdAt).getTime() > PENDING_STALE_MS
+  ) {
+    const outcome = stalePendingOutcome(message);
+    message =
+      (await db.collection<MessageDoc>("messages").findOneAndUpdate(
+        { _id: message._id, status: "pending" },
+        {
+          $set: {
+            status: outcome.status,
+            text: outcome.text,
+            updatedAt: new Date(),
+          },
+        },
+        { returnDocument: "after" }
+      )) ?? message;
+  }
+  return toStoredMessage(message);
 }
 
 // Revert: keep the first `keep` messages of the session, delete the rest.
@@ -541,6 +1060,29 @@ export async function deleteSession(userId: string, id: string): Promise<boolean
   return result.deletedCount > 0;
 }
 
+export async function clearAllSessions(userId: string): Promise<void> {
+  const db = await getDb();
+  const ownerId = new ObjectId(userId);
+  const sessions = await db
+    .collection<SessionDoc>("sessions")
+    .find({ userId: ownerId }, { projection: { _id: 1 } })
+    .toArray();
+  const sessionIds = sessions.flatMap((session) => (session._id ? [session._id] : []));
+  await Promise.all([
+    sessionIds.length
+      ? db.collection<MessageDoc>("messages").deleteMany({ sessionId: { $in: sessionIds } })
+      : Promise.resolve(),
+    db.collection<SessionDoc>("sessions").deleteMany({ userId: ownerId }),
+  ]);
+}
+
+export async function clearAllAccountData(userId: string): Promise<void> {
+  await Promise.all([
+    clearAllSessions(userId),
+    clearAllReportEntries(userId),
+  ]);
+}
+
 interface ShareDoc {
   _id?: ObjectId;
   token: string;
@@ -549,7 +1091,6 @@ interface ShareDoc {
   messages: {
     role: "user" | "model";
     text: string;
-    image?: ChatImage;
     model?: string;
     elapsed?: number;
   }[];
@@ -567,7 +1108,12 @@ function toSharedContent(doc: ShareDoc): SharedContent {
   return {
     kind: doc.kind,
     title: doc.title,
-    messages: doc.messages,
+    messages: doc.messages.map(({ role, text, model, elapsed }) => ({
+      role,
+      text,
+      model,
+      elapsed,
+    })),
     createdAt: doc.createdAt.toISOString(),
   };
 }

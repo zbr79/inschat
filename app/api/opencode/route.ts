@@ -21,7 +21,7 @@ export async function POST(req: Request) {
         : "Invalid request body.";
     return Response.json({ error: message }, { status: 400 });
   }
-  const { messages, timeZone, language, mode } = parsed;
+  const { messages, timeZone, language, mode, reasoning, sessionId } = parsed;
   const freeMode = mode === "free";
 
   const encoder = new TextEncoder();
@@ -31,7 +31,14 @@ export async function POST(req: Request) {
         console.log("[opencode] client disconnected mid-stream");
       });
       try {
-        for await (const text of streamChat(messages, timeZone, language, freeMode)) {
+        for await (const text of streamChat(
+          messages,
+          timeZone,
+          language,
+          freeMode,
+          reasoning ?? "medium",
+          sessionId
+        )) {
           controller.enqueue(encoder.encode(text));
         }
       } catch (error) {

@@ -1,14 +1,27 @@
 "use client";
 
-import type { ChatImage, ConcludeItem, ConcludeMeal, SessionConclusion } from "./types";
+import type {
+  ChatImage,
+  ConcludeItem,
+  ConcludeMeal,
+  ReportEvent,
+  SessionConclusion,
+} from "./types";
 
 export interface GuestMessage {
+  id?: string;
   role: "user" | "model";
   text: string;
   images?: ChatImage[];
   imageKeys?: string[];
   model?: string;
+  trying?: string;
   elapsed?: number;
+  status?: "pending" | "complete" | "failed";
+  startedAt?: number;
+  updatedAt?: number;
+  createdAt?: number;
+  processSteps?: string[];
 }
 
 export interface GuestSession {
@@ -28,11 +41,24 @@ export interface GuestRecord {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  imageKeys?: string[];
+  events?: ReportEvent[];
   savedAt: string;
+  recordedAt?: string;
+  sessionId?: string;
+  pinned?: boolean;
 }
 
 const SESSIONS_KEY = "inschat_guest_sessions";
 const RECORDS_KEY = "inschat_guest_records";
+const REPORT_KEY = "inschat_guest_report";
+export const DEMO_RECORD_PREFIX = "demo-glucose-";
+
+interface GuestReport {
+  version: 1;
+  updatedAt: string;
+  entries: GuestRecord[];
+}
 
 function newId(): string {
   return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -60,15 +86,15 @@ function writeJson(key: string, value: unknown): boolean {
   }
 }
 
-function writeSessions(sessions: GuestSession[]): void {
-  if (writeJson(SESSIONS_KEY, sessions)) return;
+function writeSessions(sessions: GuestSession[]): boolean {
+  if (writeJson(SESSIONS_KEY, sessions)) return true;
   // Quota exceeded: drop images everywhere, then shrink the list, then give up.
   const withoutImages = sessions.map((session) => ({
     ...session,
     messages: session.messages.map((message) => ({ ...message, images: undefined })),
   }));
-  if (writeJson(SESSIONS_KEY, withoutImages)) return;
-  writeJson(SESSIONS_KEY, withoutImages.slice(-10));
+  if (writeJson(SESSIONS_KEY, withoutImages)) return true;
+  return writeJson(SESSIONS_KEY, withoutImages.slice(-10));
 }
 
 export function listGuestSessions(): GuestSession[] {
@@ -96,7 +122,50 @@ export function appendGuestMessage(sessionId: string, message: GuestMessage): vo
   const sessions = readJson<GuestSession[]>(SESSIONS_KEY, []);
   const target = sessions.find((session) => session.id === sessionId);
   if (!target) return;
-  target.messages.push(message);
+  const now = Date.now();
+  target.messages.push({
+    ...message,
+    id: message.id ?? newId(),
+    status: message.status ?? "complete",
+    createdAt: message.createdAt ?? now,
+    updatedAt: now,
+  });
+  target.updatedAt = now;
+  writeSessions(sessions);
+}
+
+export function startGuestPendingMessage(
+  sessionId: string,
+  messageId = newId()
+): string | null {
+  const sessions = readJson<GuestSession[]>(SESSIONS_KEY, []);
+  const target = sessions.find((session) => session.id === sessionId);
+  if (!target) return null;
+  const now = Date.now();
+  target.messages.push({
+    id: messageId,
+    role: "model",
+    text: "",
+    status: "pending",
+    startedAt: now,
+    createdAt: now,
+    updatedAt: now,
+  });
+  target.updatedAt = now;
+  writeSessions(sessions);
+  return messageId;
+}
+
+export function updateGuestMessage(
+  sessionId: string,
+  messageId: string,
+  patch: Pick<GuestMessage, "text" | "model" | "elapsed" | "status" | "processSteps">
+): void {
+  const sessions = readJson<GuestSession[]>(SESSIONS_KEY, []);
+  const target = sessions.find((session) => session.id === sessionId);
+  const message = target?.messages.find((candidate) => candidate.id === messageId);
+  if (!target || !message) return;
+  Object.assign(message, patch, { updatedAt: Date.now() });
   target.updatedAt = Date.now();
   writeSessions(sessions);
 }
@@ -105,14 +174,14 @@ export function setGuestConclusion(
   sessionId: string,
   conclusion: SessionConclusion | null,
   recordId?: string | null
-): void {
+): boolean {
   const sessions = readJson<GuestSession[]>(SESSIONS_KEY, []);
   const target = sessions.find((session) => session.id === sessionId);
-  if (!target) return;
+  if (!target) return false;
   target.conclusion = conclusion ?? null;
   if (recordId !== undefined) target.recordId = recordId ?? null;
   target.updatedAt = Date.now();
-  writeSessions(sessions);
+  return writeSessions(sessions);
 }
 
 export function renameGuestSession(sessionId: string, title: string): void {
@@ -156,10 +225,274 @@ export function clearGuestSessions(): void {
   } catch {}
 }
 
-export function listGuestRecords(): GuestRecord[] {
-  return readJson<GuestRecord[]>(RECORDS_KEY, []).sort((a, b) =>
-    b.savedAt.localeCompare(a.savedAt)
+export function clearGuestData(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(SESSIONS_KEY);
+    window.localStorage.removeItem(RECORDS_KEY);
+    window.localStorage.removeItem(REPORT_KEY);
+  } catch {}
+}
+
+function readGuestReport(): GuestReport {
+  const current = readJson<GuestReport | null>(REPORT_KEY, null);
+  if (current?.version === 1 && Array.isArray(current.entries)) return current;
+
+  const legacy = readJson<GuestRecord[]>(RECORDS_KEY, []);
+  const migrated: GuestReport = {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    entries: legacy.map((record) => ({
+      ...record,
+      recordedAt: record.recordedAt ?? record.savedAt,
+    })),
+  };
+  if (legacy.length > 0) writeJson(REPORT_KEY, migrated);
+  return migrated;
+}
+
+function reportPayload(entries: GuestRecord[]): GuestReport {
+  return {
+    version: 1,
+    updatedAt: new Date().toISOString(),
+    entries,
+  };
+}
+
+function writeGuestReport(entries: GuestRecord[]): boolean {
+  if (writeJson(REPORT_KEY, reportPayload(entries))) return true;
+  const withoutOlderSource = entries.map((record, index) =>
+    index > 20 ? { ...record, sourceText: undefined } : record
   );
+  if (writeJson(REPORT_KEY, reportPayload(withoutOlderSource))) return true;
+  return writeJson(
+    REPORT_KEY,
+    reportPayload(withoutOlderSource.map(({ sourceText: _sourceText, ...record }) => record))
+  );
+}
+
+export function listGuestRecords(): GuestRecord[] {
+  return readGuestReport().entries.sort(
+    (a, b) =>
+      Number(b.pinned ?? false) - Number(a.pinned ?? false) ||
+      (b.recordedAt ?? b.savedAt).localeCompare(a.recordedAt ?? a.savedAt)
+  );
+}
+
+function localDateKey(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function demoRecordContent(date: Date, dayIndex: number, safeDays: number): {
+  items: ConcludeItem[];
+  meals: ConcludeMeal[];
+} {
+  const key = localDateKey(date);
+  type DemoRank = "low" | "medium" | "high";
+  type DemoMealPlan = {
+    time: string;
+    dishes: Array<{ name: string; rank: DemoRank }>;
+  };
+  const spikeIndex = Math.max(1, safeDays - 5);
+  const wave = Math.round(
+    Math.sin(dayIndex * 0.62) * 5 + Math.cos(dayIndex * 0.19) * 3
+  );
+  const items: ConcludeItem[] = [];
+  const addReading = (hour: string, glucose: number) => {
+    items.push(
+      { name: "glucose", value: String(Math.round(glucose)), unit: "mg/dL" },
+      { name: "time", value: `${key} ${hour}` }
+    );
+  };
+
+  const regularMenus: DemoMealPlan[][] = [
+    [
+      {
+        time: "07:20",
+        dishes: [
+          { name: "小米粥", rank: "low" },
+          { name: "水煮鸡蛋", rank: "low" },
+        ],
+      },
+      {
+        time: "12:10",
+        dishes: [
+          { name: "糙米饭", rank: "medium" },
+          { name: "清蒸鲈鱼", rank: "low" },
+          { name: "西兰花", rank: "low" },
+        ],
+      },
+      {
+        time: "18:30",
+        dishes: [
+          { name: "荞麦面", rank: "medium" },
+          { name: "番茄炒鸡蛋", rank: "low" },
+          { name: "清炒菠菜", rank: "low" },
+        ],
+      },
+    ],
+    [
+      {
+        time: "07:40",
+        dishes: [
+          { name: "无糖豆浆", rank: "low" },
+          { name: "全麦馒头", rank: "medium" },
+          { name: "凉拌黄瓜", rank: "low" },
+        ],
+      },
+      {
+        time: "12:00",
+        dishes: [
+          { name: "杂粮饭", rank: "medium" },
+          { name: "香煎鸡胸肉", rank: "medium" },
+          { name: "蒜蓉西兰花", rank: "low" },
+        ],
+      },
+      {
+        time: "18:20",
+        dishes: [
+          { name: "日式荞麦面", rank: "medium" },
+          { name: "烤三文鱼", rank: "low" },
+          { name: "生菜沙拉", rank: "low" },
+        ],
+      },
+    ],
+    [
+      {
+        time: "07:30",
+        dishes: [
+          { name: "鸡蛋灌饼", rank: "medium" },
+          { name: "无糖豆浆", rank: "low" },
+        ],
+      },
+      {
+        time: "12:10",
+        dishes: [
+          { name: "牛肉河粉", rank: "medium" },
+          { name: "清炒上海青", rank: "low" },
+          { name: "海带汤", rank: "low" },
+        ],
+      },
+      {
+        time: "18:30",
+        dishes: [
+          { name: "糙米饭", rank: "medium" },
+          { name: "清蒸虾", rank: "low" },
+          { name: "凉拌木耳", rank: "low" },
+        ],
+      },
+    ],
+  ];
+  const spikeMenu: DemoMealPlan[] = [
+    {
+      time: "07:20",
+      dishes: [
+        { name: "小米粥", rank: "low" },
+        { name: "茶叶蛋", rank: "low" },
+      ],
+    },
+    {
+      time: "12:10",
+      dishes: [
+        { name: "白米饭", rank: "medium" },
+        { name: "红烧肉", rank: "high" },
+        { name: "清炒空心菜", rank: "low" },
+      ],
+    },
+    {
+      time: "18:30",
+      dishes: [
+        { name: "韩式炸鸡", rank: "high" },
+        { name: "辣炒年糕", rank: "high" },
+        { name: "甜辣酱", rank: "high" },
+      ],
+    },
+  ];
+  const recoveryMenu: DemoMealPlan[] = [
+    {
+      time: "07:20",
+      dishes: [
+        { name: "无糖豆浆", rank: "low" },
+        { name: "水煮鸡蛋", rank: "low" },
+      ],
+    },
+    {
+      time: "12:10",
+      dishes: [
+        { name: "杂粮饭", rank: "medium" },
+        { name: "清蒸鲈鱼", rank: "low" },
+        { name: "西兰花", rank: "low" },
+      ],
+    },
+    {
+      time: "18:30",
+      dishes: [
+        { name: "荞麦面", rank: "medium" },
+        { name: "清炒菠菜", rank: "low" },
+        { name: "凉拌黄瓜", rank: "low" },
+      ],
+    },
+  ];
+  const menu =
+    dayIndex === spikeIndex - 1
+      ? spikeMenu
+      : dayIndex === spikeIndex
+        ? recoveryMenu
+        : regularMenus[dayIndex % regularMenus.length];
+  const meals: ConcludeMeal[] = menu.map(({ time, dishes }) => ({
+    name: "",
+    time: `${key} ${time}`,
+    dishes,
+  }));
+
+  const hasLowExample =
+    dayIndex % 9 === 4 || dayIndex === Math.max(0, safeDays - 2);
+  const morning = hasLowExample ? 108 : 116 + wave;
+  const lunch = 119 + wave + (dayIndex % 11 === 6 ? 8 : 0);
+  const dinner = dayIndex === spikeIndex ? 180 : 122 + wave;
+  addReading("07:30", morning);
+  addReading("11:30", lunch);
+  addReading("17:30", dinner);
+
+  return { items, meals };
+}
+
+export function addDemoGlucoseRecords(days = 30): number {
+  if (typeof window === "undefined") return 0;
+  const safeDays = Math.max(1, Math.min(days, 180));
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const demoRecords: GuestRecord[] = [];
+  for (let offset = safeDays - 1; offset >= 0; offset -= 1) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - offset);
+    const dateKey = localDateKey(date);
+    const content = demoRecordContent(date, safeDays - 1 - offset, safeDays);
+    demoRecords.push({
+      id: `${DEMO_RECORD_PREFIX}${dateKey}`,
+      title: "",
+      summary: "",
+      items: content.items,
+      meals: content.meals,
+      savedAt: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59).toISOString(),
+      recordedAt: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 7, 30).toISOString(),
+      pinned: false,
+    });
+  }
+  const records = readGuestReport().entries.filter(
+    (record) => !record.id.startsWith(DEMO_RECORD_PREFIX)
+  );
+  return writeGuestReport([...demoRecords, ...records]) ? demoRecords.length : 0;
+}
+
+export function removeDemoGlucoseRecords(): number {
+  if (typeof window === "undefined") return 0;
+  const records = readGuestReport().entries;
+  const remaining = records.filter((record) => !record.id.startsWith(DEMO_RECORD_PREFIX));
+  const removed = records.length - remaining.length;
+  writeGuestReport(remaining);
+  return removed;
 }
 
 export function addGuestRecord(input: {
@@ -168,26 +501,47 @@ export function addGuestRecord(input: {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  imageKeys?: string[];
+  events?: ReportEvent[];
+  sessionId?: string;
+  recordedAt?: string;
 }): GuestRecord {
+  const now = new Date().toISOString();
+  const records = readGuestReport().entries;
+  const existingIndex = input.sessionId
+    ? records.findIndex((record) => record.sessionId === input.sessionId)
+    : -1;
+  if (existingIndex >= 0) {
+    const existing = records[existingIndex];
+    const updated: GuestRecord = {
+      ...existing,
+      ...input,
+      id: existing.id,
+      savedAt: existing.savedAt,
+      recordedAt: input.recordedAt ?? existing.recordedAt ?? now,
+      pinned: existing.pinned ?? false,
+    };
+    records[existingIndex] = updated;
+    writeGuestReport(records);
+    return updated;
+  }
   const record: GuestRecord = {
     ...input,
     id: newId(),
-    savedAt: new Date().toISOString(),
+    savedAt: now,
+    recordedAt: input.recordedAt ?? now,
+    pinned: false,
   };
-  const records = readJson<GuestRecord[]>(RECORDS_KEY, []);
-  if (writeJson(RECORDS_KEY, [record, ...records])) return record;
+  if (writeGuestReport([record, ...records])) return record;
   const slim = [record, ...records].map((r, index) =>
     index > 20 ? { ...r, sourceText: undefined } : r
   );
-  writeJson(RECORDS_KEY, slim);
+  writeGuestReport(slim);
   return record;
 }
 
 export function deleteGuestRecord(id: string): void {
-  writeJson(
-    RECORDS_KEY,
-    readJson<GuestRecord[]>(RECORDS_KEY, []).filter((record) => record.id !== id)
-  );
+  writeGuestReport(readGuestReport().entries.filter((record) => record.id !== id));
 }
 
 export function updateGuestRecord(
@@ -198,12 +552,26 @@ export function updateGuestRecord(
     items: ConcludeItem[];
     meals?: ConcludeMeal[];
     sourceText?: string;
+    imageKeys?: string[];
+    events?: ReportEvent[];
+    sessionId?: string;
+    recordedAt?: string;
+    pinned?: boolean;
   }
-): void {
-  writeJson(
-    RECORDS_KEY,
-    readJson<GuestRecord[]>(RECORDS_KEY, []).map((record) =>
-      record.id === id ? { ...record, ...patch } : record
-    )
-  );
+): boolean {
+  const entries = readGuestReport().entries;
+  let found = false;
+  const updated = entries.map((record) => {
+    if (record.id !== id) return record;
+    found = true;
+    return {
+      ...record,
+      ...patch,
+      recordedAt: patch.recordedAt ?? record.recordedAt,
+      imageKeys: patch.imageKeys ?? record.imageKeys,
+      events: patch.events ?? record.events,
+      sessionId: patch.sessionId ?? record.sessionId,
+    };
+  });
+  return found && writeGuestReport(updated);
 }

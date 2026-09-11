@@ -8,6 +8,8 @@ import {
 } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import type { SessionConclusion } from "@/lib/types";
+import { cleanDishName } from "@/lib/dishName";
+import { parseReportEvents } from "@/lib/reportEvents";
 
 export const runtime = "nodejs";
 
@@ -21,15 +23,32 @@ function parseConclusion(body: unknown): SessionConclusion | null {
   if (!raw || typeof raw !== "object") {
     throw new Error('"conclusion" must be an object or null.');
   }
-  const { title, summary, items, sourceText } = raw as Record<string, unknown>;
+  const {
+    title,
+    summary,
+    items,
+    sourceText,
+    imageKeys: rawImageKeys,
+    events: rawEvents,
+  } =
+    raw as Record<string, unknown>;
   if (typeof title !== "string" || !title) {
     throw new Error('"conclusion.title" must be a non-empty string.');
   }
-  if (typeof summary !== "string" || !summary) {
-    throw new Error('"conclusion.summary" must be a non-empty string.');
+  if (typeof summary !== "string" || summary.length > 2000) {
+    throw new Error('"conclusion.summary" must be a string.');
   }
   if (!Array.isArray(items)) {
     throw new Error('"conclusion.items" must be an array.');
+  }
+  if (rawImageKeys !== undefined && rawImageKeys !== null) {
+    if (
+      !Array.isArray(rawImageKeys) ||
+      rawImageKeys.length > 100 ||
+      rawImageKeys.some((key) => typeof key !== "string" || key.length > 300)
+    ) {
+      throw new Error('"conclusion.imageKeys" is invalid.');
+    }
   }
   const cleanItems = items.map((item, index) => {
     if (!item || typeof item !== "object") {
@@ -66,7 +85,7 @@ function parseConclusion(body: unknown): SessionConclusion | null {
           .map((dish) => {
             const rawDish = dish as Record<string, unknown>;
             const cleanDish: { name: string; rank?: string } = {
-              name: typeof rawDish.name === "string" ? rawDish.name : "",
+              name: typeof rawDish.name === "string" ? cleanDishName(rawDish.name) : "",
             };
             if (typeof rawDish.rank === "string" && rawDish.rank) {
               cleanDish.rank = rawDish.rank;
@@ -84,6 +103,11 @@ function parseConclusion(body: unknown): SessionConclusion | null {
     items: cleanItems,
     meals,
     sourceText: typeof sourceText === "string" ? sourceText : undefined,
+    imageKeys:
+      Array.isArray(rawImageKeys) && rawImageKeys.length
+        ? [...new Set(rawImageKeys as string[])]
+        : undefined,
+    events: parseReportEvents(rawEvents),
   };
 }
 

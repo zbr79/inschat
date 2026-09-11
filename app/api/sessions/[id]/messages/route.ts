@@ -1,9 +1,21 @@
-import { appendMessage, truncateMessages } from "@/lib/db";
+import {
+  appendMessage,
+  finalizePendingMessage,
+  truncateMessages,
+} from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 const MAX_TEXT = 100_000;
+
+function elapsedFrom(value: unknown): number | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 3600) {
+    return undefined;
+  }
+  return value;
+}
 
 export async function POST(
   req: Request,
@@ -13,20 +25,58 @@ export async function POST(
   if (auth instanceof Response) return auth;
   const { id } = await params;
 
+  let body: Record<string, unknown>;
+  try {
+    const raw: unknown = await req.json();
+    if (!raw || typeof raw !== "object") {
+      return Response.json({ error: "Request body must be a JSON object." }, { status: 400 });
+    }
+    body = raw as Record<string, unknown>;
+  } catch {
+    return Response.json({ error: "Invalid request body." }, { status: 400 });
+  }
+
+  // Client-driven finalize: the browser saw the whole answer, so close the
+  // server-side pending placeholder even if the /api/chat handler died.
+  if (body.finalizePending === true) {
+    const messageId = typeof body.messageId === "string" ? body.messageId : "";
+    const rawText = body.text;
+    if (!messageId || messageId.length > 64) {
+      return Response.json({ error: '"messageId" is invalid.' }, { status: 400 });
+    }
+    if (rawText !== undefined && (typeof rawText !== "string" || rawText.length > MAX_TEXT)) {
+      return Response.json({ error: '"text" must be a string within size limits.' }, { status: 400 });
+    }
+    try {
+      const finalized = await finalizePendingMessage(auth._id, id, messageId, {
+        text: typeof rawText === "string" ? rawText : undefined,
+        elapsed: elapsedFrom(body.elapsed),
+      });
+      return Response.json({ finalized });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not finalize the message.";
+      return Response.json({ error: message }, { status: 500 });
+    }
+  }
+
   let role: "user" | "model";
   let text: string;
-  let images: { mimeType: string; data: string }[] | undefined;
+  let imageKeys: string[] | undefined;
   let model: string | undefined;
   let elapsed: number | undefined;
   try {
-    const body: unknown = await req.json();
-    if (!body || typeof body !== "object") {
-      throw new Error("Request body must be a JSON object.");
-    }
-    const { role: rawRole, text: rawText, images: rawImages, model: rawModel, elapsed: rawElapsed } = body as {
+    const {
+      role: rawRole,
+      text: rawText,
+      images: rawImages,
+      imageKeys: rawImageKeys,
+      model: rawModel,
+      elapsed: rawElapsed,
+    } = body as {
       role?: unknown;
       text?: unknown;
       images?: unknown;
+      imageKeys?: unknown;
       model?: unknown;
       elapsed?: unknown;
     };
@@ -39,20 +89,17 @@ export async function POST(
     }
     text = rawText;
     if (rawImages !== undefined && rawImages !== null) {
-      if (!Array.isArray(rawImages) || rawImages.length > 3) {
-        throw new Error('"images" must be an array of at most 3 images.');
+      throw new Error('"images" are local-only; send imageKeys instead.');
+    }
+    if (rawImageKeys !== undefined && rawImageKeys !== null) {
+      if (
+        !Array.isArray(rawImageKeys) ||
+        rawImageKeys.length > 3 ||
+        rawImageKeys.some((key) => typeof key !== "string" || key.length > 200)
+      ) {
+        throw new Error('"imageKeys" must contain at most 3 valid local keys.');
       }
-      images = rawImages.map((rawImage) => {
-        if (
-          typeof rawImage !== "object" ||
-          rawImage === null ||
-          typeof (rawImage as { mimeType?: unknown }).mimeType !== "string" ||
-          typeof (rawImage as { data?: unknown }).data !== "string"
-        ) {
-          throw new Error('"images" contains an invalid image.');
-        }
-        return rawImage as { mimeType: string; data: string };
-      });
+      imageKeys = rawImageKeys as string[];
     }
     if (rawModel !== undefined && rawModel !== null) {
       if (typeof rawModel !== "string" || rawModel.length > 100) {
@@ -74,7 +121,13 @@ export async function POST(
   }
 
   try {
-    const message = await appendMessage(auth._id, id, { role, text, images, model, elapsed });
+    const message = await appendMessage(auth._id, id, {
+      role,
+      text,
+      imageKeys,
+      model,
+      elapsed,
+    });
     if (!message) {
       return Response.json({ error: "Session not found." }, { status: 404 });
     }

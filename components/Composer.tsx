@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { ArrowUp, Plus, Square, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ArrowUp, Plus, Sparkles, Square, X } from "lucide-react";
 import type { ChatImage } from "@/lib/types";
 import { MAX_IMAGES } from "@/lib/types";
 import { STR, useUiLang } from "@/lib/i18n";
-import { useCompressImages, useReasoningEffort, type ReasoningEffort } from "@/lib/prefs";
+import { useCompressImages, useReasoningEffort } from "@/lib/prefs";
 import { compressImage } from "@/lib/imageCompress";
+import ImageViewer from "./ImageViewer";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
@@ -15,7 +16,6 @@ interface ComposerProps {
   onSend: (text: string, images?: ChatImage[]) => void;
   onStop: () => void;
   disabled?: boolean;
-  placeholder?: string;
 }
 
 function readImage(
@@ -39,21 +39,24 @@ function readImage(
   });
 }
 
-export default function Composer({ sending, onSend, onStop, disabled = false, placeholder }: ComposerProps) {
+export default function Composer({ sending, onSend, onStop, disabled = false }: ComposerProps) {
   const lang = useUiLang();
   const t = STR[lang];
   const [compressOn] = useCompressImages();
   const [reasoning, setReasoning] = useReasoningEffort();
   const [text, setText] = useState("");
   const [images, setImages] = useState<ChatImage[]>([]);
+  const [viewer, setViewer] = useState<ChatImage | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
 
-  const reasoningLabels: Record<ReasoningEffort, string> = {
-    max: t["composer.reasoning.max"],
-    medium: t["composer.reasoning.medium"],
-    low: t["composer.reasoning.low"],
-  };
+  useEffect(() => {
+    const input = textInputRef.current;
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
+  }, [text]);
 
   const canSend = (text.trim().length > 0 || images.length > 0) && !sending && !disabled;
 
@@ -119,11 +122,15 @@ export default function Composer({ sending, onSend, onStop, disabled = false, pl
         <div className="preview-grid">
           {images.map((image, index) => (
             <div key={index} className="preview">
-               <img src={`data:${image.mimeType};base64,${image.data}`} alt={t["composer.previewAlt"]} />
+              <img
+                src={`data:${image.mimeType};base64,${image.data}`}
+                alt={t["composer.previewAlt"]}
+                onClick={() => setViewer(image)}
+              />
               <button
                 type="button"
                 onClick={() => removeImage(index)}
-                 aria-label={t["composer.removeImage"]}
+                aria-label={t["composer.removeImage"]}
               >
                 <X size={16} />
               </button>
@@ -151,28 +158,27 @@ export default function Composer({ sending, onSend, onStop, disabled = false, pl
           <Plus size={18} />
         </button>
         <textarea
+          ref={textInputRef}
           rows={1}
           value={text}
-           placeholder={placeholder ?? t["composer.placeholder"]}
+          placeholder=""
           disabled={disabled}
           onChange={(event) => setText(event.target.value)}
           onKeyDown={handleKeyDown}
            aria-label={t["composer.message"]}
         />
-        <select
-          className="composer-reasoning"
-          value={reasoning}
-          onChange={(event) => setReasoning(event.target.value as ReasoningEffort)}
+        <button
+          type="button"
+          className={`composer-reasoning${reasoning === "max" ? " active" : ""}`}
+          onClick={() => setReasoning(reasoning === "max" ? "medium" : "max")}
           aria-label={t["composer.reasoning"]}
+          aria-pressed={reasoning === "max"}
           title={t["composer.reasoning"]}
           disabled={disabled}
         >
-          {(Object.keys(reasoningLabels) as ReasoningEffort[]).map((level) => (
-            <option key={level} value={level}>
-              {reasoningLabels[level]}
-            </option>
-          ))}
-        </select>
+          <Sparkles size={14} />
+          <span>{t["composer.reasoning.max"]}</span>
+        </button>
         {sending ? (
            <button type="button" className="send-button" onClick={onStop} aria-label={t["composer.stop"]}>
             <Square size={15} fill="currentColor" />
@@ -190,6 +196,13 @@ export default function Composer({ sending, onSend, onStop, disabled = false, pl
         )}
       </div>
       {imageError && <p className="hint">{imageError}</p>}
+      {viewer && (
+        <ImageViewer
+          src={`data:${viewer.mimeType};base64,${viewer.data}`}
+          alt={t["composer.previewAlt"]}
+          onClose={() => setViewer(null)}
+        />
+      )}
     </div>
   );
 }
