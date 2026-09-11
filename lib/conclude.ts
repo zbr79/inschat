@@ -1,7 +1,10 @@
 import {
   completeOpenCode,
+  isBalanceError,
   isOverloadedError,
   isQuotaError,
+  isServerError,
+  isTimeoutError,
   isUnavailableError,
 } from "./opencode";
 import { ChatValidationError } from "./errors";
@@ -157,7 +160,10 @@ export async function concludeMessage(
         lastError = error;
         const skip =
           isQuotaError(error) ||
+          isBalanceError(error) ||
           isUnavailableError(error) ||
+          isServerError(error) ||
+          isTimeoutError(error) ||
           error instanceof SyntaxError;
         if (skip) {
           insertCall({
