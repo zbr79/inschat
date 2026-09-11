@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import type { ConcludeResult } from "@/lib/types";
+import { applyReportEdits, sameMeal } from "@/lib/reportEvents";
 import { addGuestRecord, updateGuestRecord } from "@/lib/guestStore";
 import { STR, useUiLang } from "@/lib/i18n";
 import { formatDateTimeDisplay, formatDateTimeNoYear, localizeReadingPhase, mealNameForTime, READING_PHASES, readingPhase, parseFlexibleDateTime } from "@/lib/mealTime";
@@ -353,7 +354,7 @@ export default function ConcludeModal({
   imageKeys?: string[];
   embedded?: boolean;
   onClose: () => void;
-  onSaved: (edited: ConcludeResult, savedRecordId: string | null) => void;
+  onSaved: (edited: ConcludeResult, savedRecordId: string | null) => void | Promise<void>;
 }) {
   const lang = useUiLang();
   const t = STR[lang];
@@ -369,9 +370,7 @@ export default function ConcludeModal({
     meal: NonNullable<ConcludeResult["meals"]>[number]
   ): string[] | undefined => {
     const event = result?.events?.find((candidate) =>
-      candidate.meals?.some(
-        (candidateMeal) => candidateMeal.name === meal.name && candidateMeal.time === meal.time
-      )
+      candidate.meals?.some((candidateMeal) => sameMeal(candidateMeal, meal))
     );
     return event ? event.imageKeys : result?.events ? undefined : imageKeys ?? result?.imageKeys;
   };
@@ -379,23 +378,25 @@ export default function ConcludeModal({
 // Auto-save: every edit saves immediately. Saves serialize (a save started
 // while another is in flight chains after it), so a refresh never loses the
 // last edit — there is no debounce window to fall into.
-const saveRef = useRef<() => Promise<void>>(async () => undefined);
-const saveQueueRef = useRef<Promise<void> | null>(null);
-const doSave = (): Promise<void> => {
-  const run = () =>
-    saveRef.current().finally(() => {
-      saveQueueRef.current = null;
-    });
-  if (saveQueueRef.current) {
-    saveQueueRef.current = saveQueueRef.current.then(run, run);
-    return saveQueueRef.current;
-  }
-  saveQueueRef.current = run();
-  return saveQueueRef.current;
+const saveRef = useRef<() => Promise<boolean>>(async () => true);
+const saveQueueRef = useRef<Promise<boolean> | null>(null);
+const doSave = (): Promise<boolean> => {
+  const previous = saveQueueRef.current ?? Promise.resolve(true);
+  const next = previous.then(
+    () => saveRef.current(),
+    () => saveRef.current()
+  );
+  saveQueueRef.current = next;
+  void next.finally(() => {
+    if (saveQueueRef.current === next) saveQueueRef.current = null;
+  });
+  return next;
 };
 const closeRef = useRef<() => void>(() => undefined);
 closeRef.current = () => {
-  void doSave().finally(() => onClose());
+  void doSave().then((saved) => {
+    if (saved) onClose();
+  });
 };
 
   // Dialog behavior: Escape closes (auto-saving when editing); focus moves
@@ -442,6 +443,9 @@ closeRef.current = () => {
     };
   }, [open, onClose]);
 
+  // Hydrate when the modal opens or the language changes. Parent result
+  // objects are recreated after every autosave, and first save can assign a
+  // record id; resetting from those updates would wipe in-progress edits.
   useEffect(() => {
     if (!open || !result) return;
     setItems(result.items.map((item) => ({ ...item })));
@@ -496,7 +500,7 @@ closeRef.current = () => {
     setReadings(paired);
     setInsulins(pairedInsulin);
     setError(null);
-  }, [open, result, lang]);
+  }, [open, lang]);
 
   if (!open || !result) return null;
 
@@ -569,7 +573,7 @@ closeRef.current = () => {
     setMeals((prev) => prev.filter((_, i) => i !== mealIndex));
   };
 
-  const save = async () => {
+  const save = async (): Promise<boolean> => {
     setBusy(true);
     setError(null);
     const savedMeals = meals.map((meal) => ({
@@ -612,17 +616,17 @@ closeRef.current = () => {
     }
     const edited: ConcludeResult = {
       title: firstMealName || t["summary.report"],
-      summary: result.summary,
+      summary: result.summary ?? "",
       items: builtItems,
       meals: savedMeals.length ? savedMeals : undefined,
-      imageKeys: imageKeys ?? result.imageKeys,
-      events: result.events,
+      imageKeys: imageKeys ?? result.imageKeys ?? undefined,
+      events: applyReportEdits(result.events, builtItems, savedMeals),
     };
     try {
       let savedId: string | null = recordId;
       if (guest) {
         if (recordId) {
-          updateGuestRecord(recordId, {
+          const saved = updateGuestRecord(recordId, {
             title: edited.title,
             summary: edited.summary,
             items: edited.items,
@@ -632,6 +636,7 @@ closeRef.current = () => {
             events: edited.events,
             sessionId: sessionId ?? undefined,
           });
+          if (!saved) throw new Error(t["summary.saveFailed"]);
         } else {
           const record = addGuestRecord({
             title: edited.title,
@@ -671,9 +676,11 @@ closeRef.current = () => {
           savedId = body?.record?._id ?? null;
         }
       }
-      onSaved(edited, savedId);
+      await onSaved(edited, savedId);
+      return true;
     } catch (err) {
       setError(err instanceof Error ? err.message : t["summary.saveFailed"]);
+      return false;
     } finally {
       setBusy(false);
     }

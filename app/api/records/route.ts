@@ -13,7 +13,7 @@ export const runtime = "nodejs";
 
 const MAX_TITLE = 200;
 const MAX_SUMMARY = 2000;
-const MAX_ITEMS = 20;
+const MAX_ITEMS = 100;
 const MAX_NAME = 100;
 const MAX_VALUE = 500;
 const MAX_SOURCE = 16000;

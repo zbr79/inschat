@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { SavedRecord } from "@/lib/types";
+import type { ConcludeResult, SavedRecord } from "@/lib/types";
+import { applyReportEdits, reportEditorResult } from "@/lib/reportEvents";
 import {
   addDemoGlucoseRecords,
   DEMO_RECORD_PREFIX,
@@ -78,6 +79,23 @@ function toSavedRecord(record: {
     datetime: record.recordedAt ?? null,
     recordedAt: record.recordedAt,
     sessionId: record.sessionId,
+  };
+}
+
+function applyEditedRecord(
+  record: SavedRecord,
+  edited: ConcludeResult,
+  savedRecordId: string | null
+): SavedRecord {
+  return {
+    ...record,
+    _id: savedRecordId ?? record._id,
+    title: edited.title,
+    summary: edited.summary,
+    items: edited.items,
+    meals: edited.meals,
+    imageKeys: edited.imageKeys ?? record.imageKeys,
+    events: edited.events ?? record.events,
   };
 }
 
@@ -259,16 +277,7 @@ export default function RecordsPanel({
   }, []);
 
   const editingResult = useMemo(
-    () =>
-      editingRecord
-        ? {
-            title: editingRecord.title,
-            summary: editingRecord.summary,
-            items: editingRecord.items,
-            meals: editingRecord.meals,
-            imageKeys: editingRecord.imageKeys,
-          }
-        : null,
+    () => (editingRecord ? reportEditorResult(editingRecord) : null),
     [editingRecord]
   );
 
@@ -346,12 +355,14 @@ export default function RecordsPanel({
       return;
     }
     try {
+      const events = applyReportEdits(record.events, draft.items, draft.meals);
       let updated: SavedRecord = {
         ...record,
         title: draft.title,
         summary: draft.summary,
         items: draft.items,
         meals: draft.meals,
+        events,
       };
       if (guest) {
         updateGuestRecord(record._id, {
@@ -361,6 +372,7 @@ export default function RecordsPanel({
           meals: draft.meals,
           sourceText: record.sourceText,
           imageKeys: record.imageKeys,
+          events,
           sessionId: record.sessionId,
           recordedAt: record.recordedAt ?? record.datetime ?? record.savedAt,
         });
@@ -375,6 +387,7 @@ export default function RecordsPanel({
             meals: draft.meals,
             sourceText: record.sourceText,
             imageKeys: record.imageKeys,
+            events,
             sessionId: record.sessionId,
             recordedAt: record.recordedAt ?? record.datetime ?? record.savedAt,
           }),
@@ -883,15 +896,7 @@ export default function RecordsPanel({
           onClose={() => setEditingDay(null)}
           guest={guest === true}
           onSaved={(record, edited, savedRecordId) => {
-            const id = savedRecordId ?? record._id;
-            const updated = {
-              ...record,
-              _id: id,
-              title: edited.title,
-              summary: edited.summary,
-              items: edited.items,
-              meals: edited.meals,
-            };
+            const updated = applyEditedRecord(record, edited, savedRecordId);
             setRecords((prev) =>
               prev?.map((current) => (current._id === record._id ? updated : current)) ??
               null
@@ -924,19 +929,10 @@ export default function RecordsPanel({
             imageKeys={editingRecord.imageKeys}
             onClose={() => setEditingRecord(null)}
             onSaved={(edited, savedRecordId) => {
-              const id = savedRecordId ?? editingRecord._id;
+              const updated = applyEditedRecord(editingRecord, edited, savedRecordId);
               setRecords((prev) =>
                 prev?.map((record) =>
-                  record._id === editingRecord._id
-                    ? {
-                        ...record,
-                        _id: id,
-                        title: edited.title,
-                        summary: edited.summary,
-                        items: edited.items,
-                        meals: edited.meals,
-                      }
-                    : record
+                  record._id === editingRecord._id ? updated : record
                 ) ?? null
               );
               setError(null);

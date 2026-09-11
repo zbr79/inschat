@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import type { ConcludeResult, SavedRecord } from "@/lib/types";
+import { reportEditorResult } from "@/lib/reportEvents";
 import ConcludeModal from "./ConcludeModal";
 
 interface FullDayEditModalProps {
@@ -50,16 +51,12 @@ export default function FullDayEditModal({
               key={record._id}
               open
               embedded
-              result={{
-                title: record.title,
-                summary: record.summary,
-                items: record.items,
-                meals: record.meals,
-              }}
+              result={reportEditorResult(record)}
               sourceText={record.sourceText ?? ""}
               guest={guest}
               recordId={record._id}
               sessionId={record.sessionId}
+              imageKeys={record.imageKeys}
               onClose={onClose}
               onSaved={(edited, savedRecordId) =>
                 onSaved(record, edited, savedRecordId)
