@@ -3278,6 +3278,32 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Production build passed.
 - PM2 `inschat` restarted successfully and port 3001 returns HTTP 200.
 
+## 2026-09-10 — Do not silently lose guest report edits
+
+### Solved
+- Guest report writes now retry with compacted report data when localStorage
+  quota is reached.
+- Guest record and session-conclusion updates now return success status.
+- The report editor surfaces failed guest persistence instead of updating only
+  the in-memory view.
+
+### Unresolved
+- The live deployment could not be rechecked because its page became
+  unavailable during browser verification.
+
+## 2026-09-10 — Await chat report edits before closing
+
+### Solved
+- Chat report edits now await the authenticated session-conclusion update instead of
+  firing-and-forgetting it.
+- Failed session persistence keeps the report editor open and shows the save error.
+- Auto-save now reports success or failure so clicking away cannot silently discard
+  an edit before the database write completes.
+
+### Unresolved
+- Authenticated refresh verification still requires a real logged-in browser session;
+  guest persistence remains localStorage-based by design.
+
 ## 2026-09-11 — Preserve mixed-date report events and image ownership
 
 ### Solved
@@ -3369,3 +3395,39 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Verified
 - Production build passed.
 - PM2 `inschat` restarted successfully and port 3001 returns HTTP 200.
+
+## 2026-09-10 — Persist logged-in chat report edits
+
+### Solved
+- Logged-in report edits already had PUT routes (`/api/records` and
+  `/api/sessions/:id`); the session route rejected empty summaries, which meal
+  reports often send, so MongoDB kept the original conclusion.
+- Session conclusion writes now accept an empty summary, the same as records.
+- Dish name/rank edits are copied into the event list before save, and the
+  initial chat persist now fails if the session PUT does not succeed.
+
+### Unresolved
+- Existing sessions whose first conclusion never reached MongoDB still need a
+  fresh edit after this fix.
+
+## 2026-09-10 — Session report save rejected null imageKeys
+
+### Solved
+- PUT `/api/sessions/:id` treated `imageKeys: null` as invalid, while
+  `/api/records` already accepted null as "no keys". Logged-in chat edits
+  sent that null from Mongo and got HTTP 400 (`"conclusion.imageKeys" is
+  invalid.`).
+- Session conclusion parsing now ignores null/empty imageKeys the same way
+  records do.
+
+## 2026-09-10 — Report page edits were ignored by event timeline
+
+### Solved
+- The records page timeline reads meals from `events` when that list exists.
+  Day/full editors were saving new dish names and ranks onto top-level meals
+  only, so refresh showed the original event data.
+- Editors now send the event list, match meals by time so localized names
+  still update the right event, and keep the edited events in page state.
+- The editor no longer re-hydrates from a new `result` object after every
+  autosave (that reset made edits look like they reverted). Overlapping
+  saves now wait in line instead of clearing the queue mid-flight.

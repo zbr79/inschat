@@ -432,11 +432,11 @@ export default function ChatApp() {
       if (!sessionId) return null;
       const payload = {
         title: result.title.trim() || t["summary.report"],
-        summary: result.summary,
+        summary: result.summary ?? "",
         items: result.items,
         meals: result.meals,
         sourceText,
-        imageKeys: result.imageKeys,
+        imageKeys: result.imageKeys ?? undefined,
         events: result.events,
         sessionId,
       };
@@ -463,16 +463,16 @@ export default function ChatApp() {
           }
           if (!savedRecordId) throw new Error("The saved report has no id.");
           recordIdRef.current = savedRecordId;
-          await fetch(`/api/sessions/${sessionId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ conclusion: payload }),
-          });
-          await fetch(`/api/sessions/${sessionId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ recordId: savedRecordId }),
-          });
+          const saveSession = async (body: object) => {
+            const response = await fetch(`/api/sessions/${sessionId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            if (!response.ok) throw new Error("Could not save the report.");
+          };
+          await saveSession({ conclusion: payload });
+          await saveSession({ recordId: savedRecordId });
         } else {
           const record = addGuestRecord(payload);
           savedRecordId = record.id;
@@ -1651,7 +1651,7 @@ useEffect(() => {
         onClose={() => {
           setConcludeDraft(null);
         }}
-        onSaved={(edited, savedRecordId) => {
+        onSaved={async (edited, savedRecordId) => {
           recordIdRef.current = savedRecordId;
           setConcludeSaved(true);
           // Keep the accumulated conclusion = the edited one, so later
@@ -1669,24 +1669,30 @@ useEffect(() => {
             items: edited.items,
             meals: edited.meals,
             sourceText: concludeDraft?.sourceText ?? "",
-            imageKeys: edited.imageKeys,
+            imageKeys: edited.imageKeys ?? undefined,
             events: edited.events,
           };
           if (isAuthed) {
-            fetch(`/api/sessions/${sessionId}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ conclusion: payload }),
-            }).catch(() => {});
-            if (savedRecordId) {
-              fetch(`/api/sessions/${sessionId}`, {
+            const saveSession = async (body: object) => {
+              const response = await fetch(`/api/sessions/${sessionId}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ recordId: savedRecordId }),
-              }).catch(() => {});
+                body: JSON.stringify(body),
+              });
+              if (!response.ok) {
+                throw new Error(t["summary.saveFailed"]);
+              }
+            };
+            await saveSession({
+              conclusion: payload,
+            });
+            if (savedRecordId) {
+              await saveSession({ recordId: savedRecordId });
             }
           } else {
-            setGuestConclusion(sessionId, payload, savedRecordId);
+            if (!setGuestConclusion(sessionId, payload, savedRecordId)) {
+              throw new Error(t["summary.saveFailed"]);
+            }
           }
         }}
       />

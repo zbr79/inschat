@@ -184,3 +184,106 @@ export function mergeReportEvents(
   }
   return events;
 }
+
+export function sameMeal(left: ConcludeMeal, right: ConcludeMeal): boolean {
+  const leftTime = left.time ?? "";
+  const rightTime = right.time ?? "";
+  if (leftTime && rightTime) return leftTime === rightTime;
+  return left.name === right.name && leftTime === rightTime;
+}
+
+export function flattenReportMeals(
+  events: ReportEvent[] | undefined
+): ConcludeMeal[] | undefined {
+  if (!events?.length) return undefined;
+  const meals = events.flatMap((event) => event.meals ?? []);
+  return meals.length ? meals : undefined;
+}
+
+export function flattenReportItems(
+  events: ReportEvent[] | undefined
+): ConcludeItem[] | undefined {
+  if (!events?.length) return undefined;
+  const items = events.flatMap((event) => event.items);
+  return items.length ? items : undefined;
+}
+
+export function reportEditorResult(record: {
+  title: string;
+  summary: string;
+  items: ConcludeItem[];
+  meals?: ConcludeMeal[];
+  imageKeys?: string[];
+  events?: ReportEvent[];
+}): ConcludeResult {
+  return {
+    title: record.title,
+    summary: record.summary,
+    items: flattenReportItems(record.events) ?? record.items,
+    meals: flattenReportMeals(record.events) ?? record.meals,
+    imageKeys: record.imageKeys,
+    events: record.events,
+  };
+}
+
+function itemsFromPaired(paired: ReturnType<typeof pairTimeItems>): ConcludeItem[] {
+  const items: ConcludeItem[] = [];
+  for (const entry of paired) {
+    const item: ConcludeItem = { name: entry.item.name };
+    if (entry.item.value) item.value = entry.item.value;
+    if (entry.item.unit) item.unit = entry.item.unit;
+    items.push(item);
+    if (entry.phase) items.push({ name: "phase", value: entry.phase });
+    if (entry.time) items.push({ name: "time", value: entry.time });
+  }
+  return items;
+}
+
+function samePaired(
+  left: ReturnType<typeof pairTimeItems>[number],
+  right: ReturnType<typeof pairTimeItems>[number]
+): boolean {
+  if (left.time && right.time) return left.time === right.time;
+  return left.item.name === right.item.name && (left.time ?? "") === (right.time ?? "");
+}
+
+export function applyReportEdits(
+  events: ReportEvent[] | undefined,
+  items: ConcludeItem[],
+  meals: ConcludeMeal[] | undefined
+): ReportEvent[] | undefined {
+  if (!events?.length) return events;
+  if (events.length === 1) {
+    return [{ ...events[0], items, meals }];
+  }
+  const remainingMeals = [...(meals ?? [])];
+  const remainingItems = [...pairTimeItems(items)];
+  const next = events.map((event) => {
+    const nextMeals = (event.meals ?? []).flatMap((meal) => {
+      const index = remainingMeals.findIndex((candidate) => sameMeal(candidate, meal));
+      if (index < 0) return [];
+      const [edited] = remainingMeals.splice(index, 1);
+      return [edited];
+    });
+    const nextPaired = pairTimeItems(event.items).flatMap((entry) => {
+      const index = remainingItems.findIndex((candidate) => samePaired(candidate, entry));
+      if (index < 0) return [];
+      const [edited] = remainingItems.splice(index, 1);
+      return [edited];
+    });
+    return {
+      ...event,
+      items: nextPaired.length ? itemsFromPaired(nextPaired) : event.items,
+      meals: nextMeals.length ? nextMeals : undefined,
+    };
+  });
+  if (remainingMeals.length) {
+    const last = next[next.length - 1];
+    last.meals = [...(last.meals ?? []), ...remainingMeals];
+  }
+  if (remainingItems.length) {
+    const last = next[next.length - 1];
+    last.items = [...last.items, ...itemsFromPaired(remainingItems)];
+  }
+  return next;
+}
