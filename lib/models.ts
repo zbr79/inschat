@@ -11,15 +11,13 @@ export interface ModelInfo {
 
 // opencode-go catalog: models reachable through the OpenAI-compatible
 // /chat/completions endpoint of https://opencode.ai/zen/go/v1.
-// Vision flags come from vendor documentation research (2026-08-29):
+// Vision flags come from vendor documentation research:
 // only models with documented image input are marked vision: true.
-// Models served only via /responses (grok-*, gpt-5.6-luna,
-// muse-spark-1.2-contributor) or /messages (minimax-*, qwen3.8-*)
-// are excluded from this catalog.
+// Qwen3.8 Flash is the enforced text and image primary model.
 export const CHAT_MODELS: ModelInfo[] = [
   { name: "deepseek-v4-pro", label: "DeepSeek V4 Pro", tier: "pro", vision: false, retired: true },
   { name: "deepseek-v4-flash", label: "DeepSeek V4 Flash", tier: "flash", vision: false },
-  { name: "qwen3.8-flash", label: "Qwen3.8 Flash", tier: "flash", vision: false },
+  { name: "qwen3.8-flash", label: "Qwen3.8 Flash", tier: "flash", vision: true },
   { name: "deepseek-v4-flash-free", label: "DeepSeek V4 Flash (Free)", tier: "flash", vision: false },
   { name: "mimo-v2.5-free", label: "MiMo-V2.5 (Free)", tier: "flash", vision: false },
   { name: "big-pickle", label: "Big Pickle (Free)", tier: "flash", vision: false },
@@ -59,15 +57,14 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const MODEL_FILE = path.join(DATA_DIR, "model.json");
 
 export const AUTO_MODEL = "auto";
+export const PRIMARY_MODEL = "qwen3.8-flash";
 
-// Chat chains (opencode-go). Text: qwen3.8-flash is the primary (flat
-// pricing, cheaper than DeepSeek at every hour, fastest on the gateway);
-// deepseek-v4-flash is used only OFF-PEAK as a fallback because DeepSeek's
-// peak prices double it (Mon-Fri 01:00-04:00 & 06:00-10:00 UTC). Images
-// always go to the Go gateway's only officially image-billed model.
+// All automatic requests use Qwen3.8 Flash first. If the paid balance or
+// model availability is exhausted, text and conclusion requests fall back to
+// free models. Image requests use the same free fallback chain; those models
+// may reject image input, in which case the user receives the image error.
 const TEXT_CHAIN_FULL: string[] = [
-  "qwen3.8-flash",
-  "deepseek-v4-flash",
+  PRIMARY_MODEL,
   "deepseek-v4-flash-free",
   "mimo-v2.5-free",
   "nemotron-3-ultra-free",
@@ -77,14 +74,7 @@ const TEXT_CHAIN_FULL: string[] = [
   "big-pickle",
 ];
 export const IMAGE_CHAIN: string[] = [
-  "deepseek-v4-flash-vision-exp",
-  "qwen3.5-plus",
-];
-
-// Conclude chain: cheapest reliable text model first, then the free models.
-const CONCLUDE_CHAIN_FULL: string[] = [
-  "qwen3.8-flash",
-  "deepseek-v4-flash",
+  PRIMARY_MODEL,
   "deepseek-v4-flash-free",
   "mimo-v2.5-free",
   "nemotron-3-ultra-free",
@@ -94,85 +84,45 @@ const CONCLUDE_CHAIN_FULL: string[] = [
   "big-pickle",
 ];
 
-// DeepSeek peak hours per official docs: 01:00-04:00 and 06:00-10:00 UTC,
-// Monday through Friday (= 09:00-12:00 and 14:00-18:00 Beijing, UTC+8).
-function isDeepSeekPeak(now: Date = new Date()): boolean {
-  const day = now.getUTCDay();
-  if (day === 0 || day === 6) return false;
-  const mins = now.getUTCHours() * 60 + now.getUTCMinutes();
-  return (mins >= 60 && mins < 240) || (mins >= 360 && mins < 600);
-}
-
-// Vision chain is time-aware too: qwen3.5-plus is flat $0.20/$1.20 —
-// slightly cheaper than vision-exp's PEAK price ($0.44/$1.32) — so it goes
-// first during peak; off-peak vision-exp (only $0.66 output) goes first.
-function visionChain(): string[] {
-  return isDeepSeekPeak()
-    ? ["qwen3.5-plus", "deepseek-v4-flash-vision-exp"]
-    : ["deepseek-v4-flash-vision-exp", "qwen3.5-plus"];
-}
-
-// During peak hours deepseek-v4-flash costs 2x (output $1.32 vs $0.47 for
-// qwen3.8-flash) — drop it from the chain; keep it off-peak where it is
-// cheaper than most alternatives.
-function textChain(): string[] {
-  return isDeepSeekPeak()
-    ? TEXT_CHAIN_FULL.filter((name) => name !== "deepseek-v4-flash")
-    : TEXT_CHAIN_FULL;
-}
-
-function concludeChain(): string[] {
-  return isDeepSeekPeak()
-    ? CONCLUDE_CHAIN_FULL.filter((name) => name !== "deepseek-v4-flash")
-    : CONCLUDE_CHAIN_FULL;
-}
+// Conclusion extraction follows the same Qwen-first/free-only policy.
+const CONCLUDE_CHAIN_FULL: string[] = [
+  PRIMARY_MODEL,
+  "deepseek-v4-flash-free",
+  "mimo-v2.5-free",
+  "nemotron-3-ultra-free",
+  "nemotron-3.5-lightning-free",
+  "ling-3.0-flash-fin-free",
+  "laguna-s-2.1-free",
+  "big-pickle",
+];
 
 function filterChain(chain: string[]): string[] {
   return chain.filter((name) => findModel(name) && !findModel(name)?.retired);
 }
 
 export function defaultModel(): string {
-  return AUTO_MODEL;
+  return PRIMARY_MODEL;
 }
 
 export function getActiveModel(): string {
-  try {
-    const raw = JSON.parse(fs.readFileSync(MODEL_FILE, "utf8")) as {
-      model?: unknown;
-    };
-    if (raw && typeof raw.model === "string") {
-      if (raw.model === AUTO_MODEL) return AUTO_MODEL;
-      if (findModel(raw.model)) return raw.model;
-    }
-  } catch {}
   return defaultModel();
 }
 
 export function setActiveModel(model: string): void {
-  if (model !== AUTO_MODEL) {
-    const info = findModel(model);
-    if (!info || info.retired) {
-      throw new Error(`Unknown or unavailable model: ${model}`);
-    }
+  if (model !== AUTO_MODEL && model !== PRIMARY_MODEL) {
+    throw new Error(`${PRIMARY_MODEL} is enforced for all requests.`);
   }
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(MODEL_FILE, JSON.stringify({ model }));
+  fs.writeFileSync(MODEL_FILE, JSON.stringify({ model: PRIMARY_MODEL }));
 }
 
-// Images always route to the vision chain; a manually pinned model applies
-// to text-only requests. In auto mode, text uses the time-aware chain.
+// Every automatic request starts with Qwen3.8 Flash. The active-model file is
+// retained for compatibility with existing deployments, but explicit pins
+// cannot change this enforced routing policy.
 export function getChatChain(hasImage: boolean): string[] {
-  if (hasImage) return filterChain(visionChain());
-  const selected = getActiveModel();
-  if (selected === AUTO_MODEL) return filterChain(textChain());
-  return [selected];
+  return filterChain(hasImage ? IMAGE_CHAIN : TEXT_CHAIN_FULL);
 }
 
 export function getConcludeChain(): string[] {
-  const chain = filterChain(concludeChain());
-  const preferred = process.env.CONCLUDE_MODEL;
-  if (preferred && findModel(preferred) && preferred !== chain[0]) {
-    return [preferred, ...chain.filter((name) => name !== preferred)];
-  }
-  return chain;
+  return filterChain(CONCLUDE_CHAIN_FULL);
 }

@@ -4,7 +4,6 @@ import { STR, useUiLang } from "@/lib/i18n";
 
 const SHORT_NAMES: Record<string, string> = {
   "qwen3.8-flash": "Qwen3.8 Flash",
-  "deepseek-v4-flash": "DS V4 Flash",
   "deepseek-v4-flash-free": "DS Flash (Free)",
   "mimo-v2.5-free": "MiMo-V2.5",
   "nemotron-3-ultra-free": "Nemotron 3",
@@ -12,8 +11,6 @@ const SHORT_NAMES: Record<string, string> = {
   "ling-3.0-flash-fin-free": "Ling 3.0",
   "laguna-s-2.1-free": "Laguna S 2.1",
   "big-pickle": "Big Pickle",
-  "deepseek-v4-flash-vision-exp": "Vision Exp",
-  "qwen3.5-plus": "Qwen3.5 Plus",
 };
 
 const FREE_MODELS = [
@@ -52,18 +49,18 @@ export default function ModelRoutingTree() {
           <ul>
             <li>
             <span className="routing-when">{t["routing.peak"]}</span>
-            <Chain models={["qwen3.8-flash"]} />
+            <Chain models={["qwen3.8-flash", ...FREE_MODELS]} />
           </li>
             <li>
               <span className="routing-when">{t["routing.offpeak"]}</span>
-              <Chain models={["qwen3.8-flash", "deepseek-v4-flash"]} />
+              <Chain models={["qwen3.8-flash", ...FREE_MODELS]} />
             </li>
           </ul>
         </li>
 
         <li>
           <span className="routing-node">{t["routing.images"]}</span>
-          <Chain models={["deepseek-v4-flash-vision-exp", "qwen3.5-plus"]} />
+          <Chain models={["qwen3.8-flash", ...FREE_MODELS]} />
           <span className="routing-tag">{t["routing.imagesTag"]}</span>
         </li>
 

@@ -3151,3 +3151,106 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Disproved
 - Showing every report image inline was the requested report interaction.
+
+## 2026-09-10 — Fix combined image and text requests
+
+### Solved
+- Split a user instruction and its attached images into consecutive provider-safe user messages instead of one mixed text/image content array.
+- Classified provider timeouts as model-chain failures so the next vision model can be attempted.
+
+### Verified
+- Production build and guest image-plus-text chat check are required after this fix.
+
+### Unresolved
+- Vision availability still depends on the upstream provider and its model catalog.
+
+### Disproved
+- PC tab switching was the cause of the 120-second image request failure.
+
+## 2026-09-10 — Hide unavailable vision-provider errors
+
+### Solved
+- Confirmed `qwen3.5-plus` currently returns an upstream model-unavailable error.
+- Replaced leaked provider error text with a clear retry message when all image-capable models fail.
+
+### Verified
+- Production build and guest image failure-path check are required after this change.
+
+### Unresolved
+- The application cannot make an unavailable upstream vision model respond; successful image analysis still depends on provider availability.
+
+### Disproved
+- The `401 /api/auth/me` guest probe caused the vision-provider failure.
+
+## 2026-09-11 — Reduce vision-provider latency
+
+### Solved
+- Confirmed the reported 99-second response was upstream DeepSeek time-to-first-token latency: 98,049 ms of a 99,807 ms request.
+- Reordered image requests to use the responsive GLM-5.3 Flash vision model first, with DeepSeek and MiMo fallbacks.
+- Removed the currently unavailable Qwen3.5 vision fallback.
+- Reduced the per-attempt image timeout from 120 seconds to 30 seconds so a stalled vision provider fails over sooner.
+
+### Verified
+- Live provider probes returned first stream data in approximately 652 ms for DeepSeek, 866 ms for GLM-5.3 Flash, and 1.27 seconds for MiMo.
+
+### Unresolved
+- Upstream vision latency can still vary; the application cannot control provider capacity or routing.
+
+### Disproved
+- Image upload, authentication, nginx, and report persistence were not responsible for the 99-second delay.
+
+## 2026-09-10 — Enforce Qwen3.8 Flash as the primary model
+
+### Solved
+- Enforced `qwen3.8-flash` as the primary model for text messages, conclusions, and image requests.
+- Removed paid DeepSeek fallbacks from automatic chains; balance or availability failures now move to free models.
+- Disabled manual model pins and `CONCLUDE_MODEL` overrides so they cannot change the enforced routing policy.
+- Updated model-page text, routing display, README, and environment example to match the policy.
+
+### Verified
+- Production build passed twice after the routing changes.
+- Guest `GET /api/models` correctly remains protected with `401 Not signed in`.
+- Live provider fallback behavior was not exercised to avoid spending quota; it remains the next manual check.
+
+### Unresolved
+- The existing free catalog is marked text-only; free image fallback attempts may be rejected by the provider and then show the image error.
+
+### Disproved
+- Keeping the old peak/off-peak DeepSeek routing was not compatible with the requested Qwen-only primary policy.
+
+## 2026-09-10 — Rebuild and restart InsChat
+
+### Solved
+- Rebuilt the production bundle successfully.
+- Restarted only the `inschat` PM2 process from `/home/ubuntu/inschat`.
+- Confirmed the new process starts Next.js successfully on port 3001.
+
+### Verified
+- PM2 reports `inschat` online after restart.
+- Startup logs show `Next.js 16.3.3` and `Ready` with no new startup-blocking error.
+
+### Unresolved
+- The PM2 log tail retains historical GLM requests from before the restart; a fresh image request is still needed to verify the live marker end-to-end.
+
+### Disproved
+- The `inschat` process was not left running on the old build after the requested restart.
+
+## 2026-09-10 — Health-mode Qwen image request compatibility
+
+### Solved
+- Image requests for every vision model now omit `reasoning_effort`; the gateway
+  receives no reasoning parameter whenever image content is present.
+- Text and image content are sent together in one standard multimodal user
+  message, matching the image-only request shape.
+
+### Root cause
+- Health mode uses the full health system prompt and the normal reasoning setting.
+- The OpenCode gateway rejects Qwen vision requests when reasoning metadata is present, making the failure look like a health-mode text/image mixing problem.
+- A model-specific exception list was too easy to make stale after Qwen3.8
+  became the image primary; checking for image content is the safer boundary.
+- The earlier split into consecutive text and image user messages was
+  disproved: image-only requests had two messages, while image-plus-text
+  requests had three and Qwen timed out on the latter.
+
+### Unresolved
+- A fresh guest image request still needs to be run to verify the live provider response.
