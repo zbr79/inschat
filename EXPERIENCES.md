@@ -3479,3 +3479,78 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - Playwright `Escape` is a bad way to close Search: the leftover backdrop
   intercepts the next tap. Close with the X or backdrop instead.
+
+## 2026-09-11 — Clarification answer flow
+
+### Solved
+- Added an inline answer card beneath the latest model message when the
+  completed reply ends in a likely clarifying question or explicitly asks the
+  user to choose between options.
+- The card now follows the Claude Code style: prompt text, selectable option
+  rows with descriptions, an `Other` row, a free-text field, and one explicit
+  Continue button.
+- Unit choices include the model's conversion explanations when available,
+  while answers still use the existing send path.
+- Answers use the existing `send` path, so they remain normal user messages,
+  preserve the full conversation context, and work for guests and accounts.
+
+### Unresolved
+- Detection is intentionally conservative and heuristic; explicit choices are
+  detected across the whole reply, while unrelated questions remain answerable
+  through the regular composer.
+
+### Disproved
+- A separate API or waiting state was unnecessary; the existing follow-up
+  message flow already persists and sends clarification answers correctly.
+
+## 2026-09-11 — Port agent question-card interaction
+
+### Solved
+- Inspected `/home/ubuntu/agent`: its prompt explicitly tells the model to call
+  a structured `question` tool for real forks, the server emits
+  `QUESTION`/`QUESTION_CLEAR` stream markers, and answers are posted to the
+  question endpoint instead of being sent as ordinary prose.
+- Ported the adjacent project's question-card presentation into InsChat:
+  the card is docked above the composer, uses one full-width option per row,
+  auto-submits a selected option, opens `Other` into a text field, submits
+  custom text with Enter, and provides a top-right Skip action.
+- Kept InsChat's requested purple accent for the card while preserving the
+  existing app palette elsewhere.
+- Verified the existing prose-detection feature before the UI change: options
+  rendered, selection submitted, the card cleared during the follow-up, and
+  390px layout had no horizontal overflow.
+
+### Unresolved
+- InsChat still detects clarification-shaped model prose after completion; it
+  does not yet have the adjacent project's blocking structured question tool,
+  pending-question persistence, or question-specific API.
+
+### Disproved
+- Keeping the card inside the model bubble did not match the reference
+  interaction; docking it above the composer matches the adjacent project and
+  keeps the answer control close to the input area.
+
+## 2026-09-12 — Add structured model question tool
+
+### Solved
+- Added the `ask_user_question` function tool to the existing OpenAI-compatible
+  tool loop and instructed both normal and free-mode prompts to call it for
+  missing preferences or explicit option requests instead of writing prose.
+- Added validated question payloads, in-memory pending-question waiters,
+  `QUESTION`/`QUESTION_CLEAR` stream markers, and `/api/chat/question` for
+  reply or Skip actions.
+- The client now locks the composer, renders the generated options, submits a
+  validated choice, and lets the same model turn resume with the tool result.
+- Live guest verification triggered model-generated options and resumed with a
+  real response after selecting one; the phone layout had no horizontal
+  overflow.
+
+### Unresolved
+- Pending questions are process-local and expire after 30 minutes; a server
+  restart or browser refresh cannot resume one. Durable database-backed
+  pending-question persistence would be the next hardening step.
+
+### Disproved
+- Prompt-only instructions were insufficient: without an actual callable
+  `ask_user_question` tool and a resume path, the model correctly returned
+  ordinary paragraphs with options.
