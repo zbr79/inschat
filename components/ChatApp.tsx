@@ -1706,6 +1706,7 @@ useEffect(() => {
             onSend={send}
             onStop={stop}
             sending={sending}
+            signedIn={isAuthed === true}
           />
         </main>
       ) : (
@@ -1780,6 +1781,7 @@ useEffect(() => {
             onStop={stop}
             sending={sending}
             disabled={Boolean(pendingQuestion)}
+            signedIn={isAuthed === true}
           />
         </>
       )}
