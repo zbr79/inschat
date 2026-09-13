@@ -315,7 +315,7 @@ const ASK_USER_QUESTION_TOOL = {
   function: {
     name: "ask_user_question",
     description:
-      "Pause the response and ask the user to choose between 2–4 concise options when a missing preference or detail changes the answer. Do not use this for rhetorical questions or information the user already provided.",
+      "Pause the response only when a user decision or missing fact is required to produce a correct, useful answer. Ask the user to choose between 2–4 concise options. Do not use this for optional preferences, rhetorical questions, follow-up curiosity, information already provided, or ordinary questions.",
     parameters: {
       type: "object",
       properties: {
