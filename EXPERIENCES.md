@@ -3554,3 +3554,27 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Prompt-only instructions were insufficient: without an actual callable
   `ask_user_question` tool and a resume path, the model correctly returned
   ordinary paragraphs with options.
+
+## 2026-09-12 — Copy Agent voice dictation into InsChat
+
+### Solved
+- Reused the existing `whisper-stt` sidecar on `127.0.0.1:9081` (ggml-base-q5_1,
+  multilingual). Did not start a second Whisper process on this 2-vCPU box.
+- Added client WAV conversion (`lib/audioRecorder.ts`), `/api/transcribe`
+  (guests allowed, 60s/10MB caps, no disk/Mongo/`/calls` log), OpenCC
+  Traditional→Simplified, composer mic via `lib/useVoiceInput.ts`.
+- nginx `location /api/transcribe` on inschat.renstoolbox.com (POST/OPTIONS,
+  12m body, 180s timeout) — without it `location /` would 405 POSTs.
+- Verified: JFK sample returns the expected sentence locally and through
+  HTTPS; GET is 405; duration over guest cap is 413; guest UI records
+  (red mic + timer) then transcribes (blue ring) without auto-sending.
+
+### Unresolved
+- Very short silent clips can still hallucinate a word such as "you" instead
+  of matching the no-speech sentinels; Agent has the same Whisper behavior.
+- Optional later: send UI language (`zh`/`en`) instead of `auto` for more
+  stable Chinese logging dictation.
+
+### Disproved
+- Copying Agent's composer wholesale is unnecessary; grafting the mic into
+  InsChat's existing input row and sharing the sidecar is enough.
