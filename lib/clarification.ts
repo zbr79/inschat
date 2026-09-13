@@ -62,17 +62,12 @@ function explicitOptions(
 }
 
 export function detectClarification(text: string): Clarification | null {
+  const options = explicitOptions(text);
+  if (!options) return null;
+
   const lines = meaningfulLines(text);
   const question = questionLine(lines);
   if (!question || question.length > 280) return null;
-
-  const endsWithQuestionMark = /[?？]\s*$/.test(question);
-  const soundsLikeQuestion =
-    /^(?:what|which|who|when|where|why|how|can|could|would|should|is|are|do|does|did|please (?:tell|confirm|specify)|请问|是否|能否|可以|需要|哪个|什么|多少|何时|哪里|为什么|怎么)/i.test(
-      question
-    );
-  const options = explicitOptions(text);
-  if (!options && !endsWithQuestionMark && !soundsLikeQuestion) return null;
 
   return { question, options };
 }

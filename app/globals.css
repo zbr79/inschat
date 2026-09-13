@@ -4913,6 +4913,16 @@ span.conclude-rank-badge {
   gap: 8px;
 }
 
+.question-other-row {
+  min-width: 0;
+}
+
+.question-other-row.open {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
 .question-option {
   position: relative;
   min-height: 52px;
@@ -4967,6 +4977,12 @@ span.conclude-rank-badge {
   font-size: 12px;
 }
 
+.question-other-row.open .question-option {
+  width: auto;
+  flex: 0 1 38%;
+  min-width: 0;
+}
+
 .question-custom {
   width: 100%;
   margin-top: 10px;
@@ -4976,6 +4992,13 @@ span.conclude-rank-badge {
   background: var(--bg);
   color: var(--text);
   font: inherit;
+}
+
+.question-other-row.open .question-custom {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  margin-top: 0;
 }
 
 .question-custom:focus {
@@ -6001,6 +6024,11 @@ span.conclude-rank-badge {
   padding-bottom: 4px;
   justify-content: space-between;
   align-items: center;
+}
+
+.composer-toggles.bottom.locked {
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 .composer-toggle {

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MessageBubble from "./MessageBubble";
 import Composer from "./Composer";
-import ClarificationReply from "./ClarificationReply";
 import QuestionCard from "./QuestionCard";
 import ConcludeButton from "./ConcludeButton";
 import ConcludeModal from "./ConcludeModal";
@@ -23,7 +22,6 @@ import {
   sanitizeConcludeMeals,
 } from "@/lib/dishName";
 import { elapsedSeconds, trimStreamingEnd } from "@/lib/format";
-import { detectClarification } from "@/lib/clarification";
 import type { PendingQuestion } from "@/lib/question";
 import {
   addGuestRecord,
@@ -356,7 +354,6 @@ export default function ChatApp() {
   pendingQuestionRef.current = pendingQuestion;
   const [questionBusy, setQuestionBusy] = useState(false);
   const [questionError, setQuestionError] = useState<string | null>(null);
-  const [dismissedClarificationId, setDismissedClarificationId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   const [concludeDraft, setConcludeDraft] = useState<{
@@ -1664,21 +1661,6 @@ useEffect(() => {
 */
 
   const concludeReady = concludeResult !== null;
-  const lastMessage = messages[messages.length - 1];
-  const clarification =
-    !sending &&
-    lastMessage?.id !== dismissedClarificationId &&
-    lastMessage?.role === "model" &&
-    !lastMessage.streaming &&
-    !lastMessage.failed &&
-    lastMessage.text
-      ? (() => {
-          const detected = detectClarification(lastMessage.text);
-          return detected
-            ? { messageId: lastMessage.id, ...detected }
-            : null;
-        })()
-      : null;
   const sessionImageKeys = [
     ...new Set(messages.flatMap((message) => message.imageKeys ?? [])),
   ];
@@ -1729,26 +1711,6 @@ useEffect(() => {
           }}
         />
       )}
-      {messages.length > 0 && (
-        <div className="composer-toggles bottom">
-          <button
-            type="button"
-            className={`composer-toggle${insulinMode ? " active" : ""}`}
-            onClick={() => toggleInsulinMode(!insulinMode)}
-            aria-pressed={insulinMode}
-          >
-            {t["settings.insulinMode"]}
-          </button>
-          {summaryError && <p className="conclusion-error">{summaryError}</p>}
-          <ConcludeButton
-            onClick={() => {
-              if (concludeReady) setConcludeDraft(concludeResult);
-            }}
-            ready={concludeReady}
-            disabled={!concludeReady || sending}
-          />
-        </div>
-      )}
       {freeNotice && (
         <p className="free-note-overlay" onClick={() => setFreeNotice(false)}>
           {t["free.notice"]}
@@ -1769,13 +1731,29 @@ useEffect(() => {
                 void postQuestion("reject");
               }}
             />
-          ) : clarification ? (
-            <ClarificationReply
-              clarification={clarification}
-              onSubmit={send}
-              onDismiss={() => setDismissedClarificationId(clarification.messageId)}
-            />
           ) : null}
+          <div
+            className={`composer-toggles bottom${pendingQuestion ? " locked" : ""}`}
+            aria-disabled={Boolean(pendingQuestion)}
+          >
+            <button
+              type="button"
+              className={`composer-toggle${insulinMode ? " active" : ""}`}
+              onClick={() => toggleInsulinMode(!insulinMode)}
+              aria-pressed={insulinMode}
+              disabled={Boolean(pendingQuestion)}
+            >
+              {t["settings.insulinMode"]}
+            </button>
+            {summaryError && <p className="conclusion-error">{summaryError}</p>}
+            <ConcludeButton
+              onClick={() => {
+                if (concludeReady) setConcludeDraft(concludeResult);
+              }}
+              ready={concludeReady}
+              disabled={!concludeReady || sending || Boolean(pendingQuestion)}
+            />
+          </div>
           <Composer
             onSend={send}
             onStop={stop}

@@ -101,46 +101,48 @@ export default function QuestionCard({
               );
             })}
             {allowCustom(index) ? (
-              <button
-                type="button"
-                className={`question-option${customOpen[index] ? " selected" : ""}`}
-                disabled={busy}
-                aria-pressed={customOpen[index]}
-                onClick={() => openCustom(index)}
-              >
-                <span className="question-option-label">{t["question.other"]}</span>
-              </button>
+              <div className={`question-other-row${customOpen[index] ? " open" : ""}`}>
+                <button
+                  type="button"
+                  className={`question-option${customOpen[index] ? " selected" : ""}`}
+                  disabled={busy}
+                  aria-pressed={customOpen[index]}
+                  onClick={() => openCustom(index)}
+                >
+                  <span className="question-option-label">{t["question.other"]}</span>
+                </button>
+                {customOpen[index] ? (
+                  <input
+                    className="question-custom"
+                    value={customText[index] ?? ""}
+                    disabled={busy}
+                    maxLength={500}
+                    autoFocus
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      const next = customText.map((text, itemIndex) =>
+                        itemIndex === index ? value : text
+                      );
+                      setCustomText(next);
+                      setPicked((prev) =>
+                        prev.map((current, itemIndex) =>
+                          itemIndex === index ? [] : current
+                        )
+                      );
+                      sendIfComplete(resolve(picked, customOpen));
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        sendIfComplete(resolve(picked, customOpen));
+                      }
+                    }}
+                    aria-label={item.question}
+                  />
+                ) : null}
+              </div>
             ) : null}
           </div>
-          {customOpen[index] ? (
-            <input
-              className="question-custom"
-              value={customText[index] ?? ""}
-              disabled={busy}
-              maxLength={500}
-              autoFocus
-              onChange={(event) => {
-                const value = event.target.value;
-                const next = customText.map((text, itemIndex) =>
-                  itemIndex === index ? value : text
-                );
-                setCustomText(next);
-                setPicked((prev) =>
-                  prev.map((current, itemIndex) =>
-                    itemIndex === index ? [] : current
-                  )
-                );
-                sendIfComplete(resolve(picked, customOpen));
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  sendIfComplete(resolve(picked, customOpen));
-                }
-              }}
-              aria-label={item.question}
-            />
-          ) : null}
         </div>
       ))}
       {error ? <p className="question-error">{error}</p> : null}

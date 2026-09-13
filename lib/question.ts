@@ -65,7 +65,7 @@ function sanitizeItem(raw: unknown): QuestionItem | null {
   const options = Array.isArray(rec.options)
     ? rec.options.map(sanitizeOption).filter((option): option is QuestionOption => Boolean(option))
     : [];
-  if (options.length === 0 || options.length > MAX_OPTIONS) return null;
+  if (options.length < 2 || options.length > MAX_OPTIONS) return null;
   const item: QuestionItem = { header, question, options };
   if (rec.custom === false) item.custom = false;
   return item;

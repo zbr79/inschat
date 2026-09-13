@@ -3578,3 +3578,52 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - Copying Agent's composer wholesale is unnecessary; grafting the mic into
   InsChat's existing input row and sharing the sidecar is enough.
+
+## 2026-09-12 — Only show selection UI for actual options
+
+### Solved
+- Removed the prose clarification fallback so only the model's explicit
+  `ask_user_question` tool call can open a selectable question card.
+- Normal model questions without options now remain ordinary assistant text and
+  do not open the question panel.
+- Enforced at least two validated options and tightened the model instructions
+  to require an answer before using the tool.
+
+### Unresolved
+- The model still makes the judgment about whether missing information truly
+  blocks a correct answer; prompt and tool constraints guide that judgment.
+
+### Disproved
+- A question mark or ordinary prose question is not a valid trigger for the
+  selection UI.
+
+## 2026-09-12 — Inline custom question answer
+
+### Solved
+- Moved the custom-answer input beside the `Other` option after it is opened,
+  reducing vertical space in the question card.
+- Kept the option full-width before activation and made the inline row shrink
+  safely on phone-sized layouts.
+
+### Unresolved
+- Very narrow screens may still give the custom input less width than desktop;
+  the row intentionally stays horizontal per the requested interaction.
+
+### Disproved
+- Rendering the custom field below every option unnecessarily increased the
+  height of the question card.
+
+## 2026-09-12 — Keep composer controls behind question card
+
+### Solved
+- Moved the Health mode toggle and the full bottom composer-controls row after
+  the pending question card in the layout.
+- Locked the entire row while a question is pending, so users must answer or
+  skip it before using those composer-row controls.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- Keeping the toggle row before the question card allowed users to change
+  unrelated composer features while a required answer was pending.
