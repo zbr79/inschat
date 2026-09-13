@@ -4,11 +4,22 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { ChatValidationError } from "./errors";
 import { getSystemPrompt } from "./prompt";
-import { encodeFreeMarker, encodeModelMarker, encodeTryingMarker } from "./markers";
+import {
+  encodeFreeMarker,
+  encodeModelMarker,
+  encodeQuestionClearMarker,
+  encodeQuestionMarker,
+  encodeTryingMarker,
+} from "./markers";
 import { getChatChain } from "./models";
 import { insertCall } from "./db";
 import { fetchPageText, searchWeb } from "./webfetch";
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type ChatMessage } from "./types";
+import { waitForQuestionAnswer } from "./pendingQuestion";
+import {
+  parseQuestionToolInput,
+  type QuestionAnswer,
+} from "./question";
 
 export const OPENCODE_BASE_URL = "https://opencode.ai/zen/go/v1";
 export const OPENCODE_FREE_BASE_URL = "https://opencode.ai/zen/v1";
@@ -299,6 +310,57 @@ const WEB_SEARCH_TOOL = {
   },
 };
 
+const ASK_USER_QUESTION_TOOL = {
+  type: "function",
+  function: {
+    name: "ask_user_question",
+    description:
+      "Pause the response and ask the user to choose between 2–4 concise options when a missing preference or detail changes the answer. Do not use this for rhetorical questions or information the user already provided.",
+    parameters: {
+      type: "object",
+      properties: {
+        questions: {
+          type: "array",
+          minItems: 1,
+          maxItems: 4,
+          items: {
+            type: "object",
+            properties: {
+              header: {
+                type: "string",
+                description: "Short label for the choice, such as Output format.",
+              },
+              question: {
+                type: "string",
+                description: "The direct question shown to the user.",
+              },
+              options: {
+                type: "array",
+                minItems: 2,
+                maxItems: 6,
+                items: {
+                  type: "object",
+                  properties: {
+                    label: { type: "string" },
+                    description: { type: "string" },
+                  },
+                  required: ["label"],
+                },
+              },
+              custom: {
+                type: "boolean",
+                description: "Whether the user may enter a custom answer. Defaults to true.",
+              },
+            },
+            required: ["question", "options"],
+          },
+        },
+      },
+      required: ["questions"],
+    },
+  },
+};
+
 interface DeltaToolCall {
   index?: number;
   id?: string;
@@ -393,7 +455,9 @@ async function* streamOpenCodeOnce(
   // should be visual analysis only; this applies to every vision model and
   // avoids model-specific allowlists going stale.
   if (!hasImageParts) body.reasoning_effort = reasoningLevel;
-  if (tools) body.tools = [WEB_SEARCH_TOOL, WEB_FETCH_TOOL];
+  if (tools) {
+    body.tools = [WEB_SEARCH_TOOL, WEB_FETCH_TOOL, ASK_USER_QUESTION_TOOL];
+  }
   const startedAt = Date.now();
   console.log(
     `[opencode:${requestId}] start — model ${model}, ${messages.length} messages${tools ? ", tools on" : ""}`
@@ -594,8 +658,29 @@ async function executeTool(
 
 const MAX_TOOL_ROUNDS = 6;
 
-// Chat with web search/fetch tools: images → vision model (no tools); text →
-// pinned model or pro→flash chain, with a direct tool loop.
+function parseToolArguments(raw: string): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return parsed && typeof parsed === "object"
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function questionToolMessage(call: ToolCall, answer: QuestionAnswer): OpenAiMessage {
+  return {
+    role: "tool",
+    tool_call_id: call.id,
+    content: answer.rejected
+      ? "The user skipped this question. Continue without guessing; ask in prose only if necessary."
+      : JSON.stringify({ answers: answer.answers }),
+  };
+}
+
+// Chat with web search/fetch/question tools: images → vision model (no tools);
+// text → pinned model or pro→flash chain, with a direct tool loop.
 export async function* streamChat(
   messages: ChatMessage[],
   timeZone?: string,
@@ -695,9 +780,35 @@ export async function* streamChat(
           return; // final answer already streamed
         }
 
-        const toolMessages = await Promise.all(
-          toolCalls.map((call) => executeTool(requestId, call))
-        );
+        const toolMessages: OpenAiMessage[] = [];
+        for (const call of toolCalls) {
+          if (call.name !== "ask_user_question") {
+            toolMessages.push(await executeTool(requestId, call));
+            continue;
+          }
+
+          const input = parseToolArguments(call.arguments);
+          const questionRequestId = randomUUID();
+          const question = parseQuestionToolInput(
+            input,
+            questionRequestId,
+            sessionId
+          );
+          if (!question) {
+            toolMessages.push({
+              role: "tool",
+              tool_call_id: call.id,
+              content:
+                "Invalid question payload. Ask the user in normal prose and do not guess.",
+            });
+            continue;
+          }
+          const answerPromise = waitForQuestionAnswer(question);
+          yield encodeQuestionMarker(question);
+          const answer = await answerPromise;
+          yield encodeQuestionClearMarker(question.requestId);
+          toolMessages.push(questionToolMessage(call, answer));
+        }
         working = [
           ...working,
           {
