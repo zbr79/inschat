@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MessageBubble from "./MessageBubble";
 import Composer from "./Composer";
+import ClarificationReply from "./ClarificationReply";
+import QuestionCard from "./QuestionCard";
 import ConcludeButton from "./ConcludeButton";
 import ConcludeModal from "./ConcludeModal";
 import type {
@@ -21,6 +23,8 @@ import {
   sanitizeConcludeMeals,
 } from "@/lib/dishName";
 import { elapsedSeconds, trimStreamingEnd } from "@/lib/format";
+import { detectClarification } from "@/lib/clarification";
+import type { PendingQuestion } from "@/lib/question";
 import {
   addGuestRecord,
   appendGuestMessage,
@@ -347,6 +351,12 @@ export default function ChatApp() {
 
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [sending, setSending] = useState(false);
+  const [pendingQuestion, setPendingQuestion] = useState<PendingQuestion | null>(null);
+  const pendingQuestionRef = useRef<PendingQuestion | null>(null);
+  pendingQuestionRef.current = pendingQuestion;
+  const [questionBusy, setQuestionBusy] = useState(false);
+  const [questionError, setQuestionError] = useState<string | null>(null);
+  const [dismissedClarificationId, setDismissedClarificationId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
   const [concludeDraft, setConcludeDraft] = useState<{
@@ -1141,9 +1151,25 @@ useEffect(() => {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const { text, model, trying, free } = parser.push(
+          const {
+            text,
+            model,
+            trying,
+            free,
+            questions,
+            questionClear,
+          } = parser.push(
             decoder.decode(value, { stream: true })
           );
+          if (questions) {
+            setPendingQuestion(questions);
+            setQuestionError(null);
+          }
+          if (questionClear) {
+            setPendingQuestion((current) =>
+              !current || current.requestId === questionClear ? null : current
+            );
+          }
           if (free) {
             setFreeNotice(true);
           }
@@ -1555,9 +1581,57 @@ useEffect(() => {
   }, [messages, createShare]);
 */
 
+  const postQuestion = useCallback(
+    async (action: "reply" | "reject", answers?: string[][]) => {
+      const pending = pendingQuestionRef.current;
+      const sessionId = sessionIdRef.current;
+      if (!pending) return false;
+      setQuestionBusy(true);
+      setQuestionError(null);
+      try {
+        const response = await fetch("/api/chat/question", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            requestId: pending.requestId,
+            sessionId,
+            action,
+            answers,
+          }),
+        });
+        if (response.status === 410) {
+          setPendingQuestion(null);
+          setQuestionError(t["question.expired"]);
+          return false;
+        }
+        if (!response.ok) {
+          let detail = "";
+          try {
+            const data = (await response.json()) as { error?: unknown };
+            if (typeof data.error === "string") detail = data.error;
+          } catch {}
+          setQuestionError(detail || t["question.failed"]);
+          return false;
+        }
+        setPendingQuestion(null);
+        return true;
+      } catch {
+        setQuestionError(t["question.failed"]);
+        return false;
+      } finally {
+        setQuestionBusy(false);
+      }
+    },
+    [t]
+  );
+
   const stop = useCallback(() => {
+    if (pendingQuestionRef.current) {
+      void postQuestion("reject");
+      return;
+    }
     abortRef.current?.abort();
-  }, []);
+  }, [postQuestion]);
 
 /* Revert feature commented out (2026-08-30) — edit/regenerate replaced it.
   // Revert: drop everything after the chosen message (locally + persisted).
@@ -1590,6 +1664,21 @@ useEffect(() => {
 */
 
   const concludeReady = concludeResult !== null;
+  const lastMessage = messages[messages.length - 1];
+  const clarification =
+    !sending &&
+    lastMessage?.id !== dismissedClarificationId &&
+    lastMessage?.role === "model" &&
+    !lastMessage.streaming &&
+    !lastMessage.failed &&
+    lastMessage.text
+      ? (() => {
+          const detected = detectClarification(lastMessage.text);
+          return detected
+            ? { messageId: lastMessage.id, ...detected }
+            : null;
+        })()
+      : null;
   const sessionImageKeys = [
     ...new Set(messages.flatMap((message) => message.imageKeys ?? [])),
   ];
@@ -1665,11 +1754,34 @@ useEffect(() => {
         </p>
       )}
       {messages.length > 0 && (
-        <Composer
-          onSend={send}
-          onStop={stop}
-          sending={sending}
-        />
+        <>
+          {pendingQuestion ? (
+            <QuestionCard
+              key={pendingQuestion.requestId}
+              pending={pendingQuestion}
+              busy={questionBusy}
+              error={questionError}
+              onReply={(answers) => {
+                void postQuestion("reply", answers);
+              }}
+              onReject={() => {
+                void postQuestion("reject");
+              }}
+            />
+          ) : clarification ? (
+            <ClarificationReply
+              clarification={clarification}
+              onSubmit={send}
+              onDismiss={() => setDismissedClarificationId(clarification.messageId)}
+            />
+          ) : null}
+          <Composer
+            onSend={send}
+            onStop={stop}
+            sending={sending}
+            disabled={Boolean(pendingQuestion)}
+          />
+        </>
       )}
       <ConcludeModal
         open={concludeDraft !== null}
