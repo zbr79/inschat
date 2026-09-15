@@ -3627,3 +3627,267 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - Keeping the toggle row before the question card allowed users to change
   unrelated composer features while a required answer was pending.
+
+## 2026-09-13 — Phase 1 document support
+
+### Solved
+- Added a server-only multipart upload endpoint at `/api/documents` for TXT,
+  PDF, DOCX, and XLSX files.
+- Added explicit limits: three documents per message, 12 MB per file, 80,000
+  extracted characters per document, and 160,000 characters in one message.
+- Added source locators for text line ranges, PDF pages, DOCX paragraphs, and
+  spreadsheet sheet/row references.
+- Added document chips, file size/type labels, remove controls, upload
+  progress, and non-blocking processing errors in the composer.
+- Persisted extracted document context in guest and authenticated chat
+  messages, and injected labeled source blocks into the model context.
+- Added citation guidance so document-based answers can reference exact source
+  headers.
+- Kept the parser packages external to Turbopack so PDF parsing uses the native
+  Node runtime; live checks passed for TXT, PDF, DOCX, and XLSX extraction.
+- Changed batch processing to return successful documents alongside per-file
+  errors, so one invalid attachment no longer discards valid attachments.
+- Added the public nginx `/api/documents` POST proxy and reloaded nginx; the
+  deployed endpoint had been returning 405 before this route existed.
+
+### Unresolved
+- `exceljs` introduces two moderate transitive `uuid` advisories in the
+  current dependency graph; no high-severity advisory remains. Revisit the
+  spreadsheet parser when a maintained fix or safer replacement is available.
+- Scanned/image-only PDFs do not receive OCR in this phase.
+- Parsed text is stored in message documents; a separate attachment store may
+  be needed if file retention or much larger documents are added later.
+
+### Disproved
+- Sending document binaries directly through the chat stream was unnecessary:
+  server-side extraction plus bounded, labeled text preserves the existing
+  OpenAI-compatible message path and keeps client payloads predictable.
+
+## 2026-09-13 — Document upload progress UI
+
+### Solved
+- Replaced the single raw processing label with a compact upload panel showing
+  selected filenames, document count, progress, and an explicit server
+  processing stage.
+- Added ready-state metadata and a separate error panel for partial batch
+  failures, while keeping valid documents visible.
+- Verified the upload panel, ready chip, and no-horizontal-overflow behavior
+  at a 390px mobile viewport.
+
+### Unresolved
+- Browser automation cannot hold the response-header-to-body interval long
+  enough to visually capture the processing stage for tiny files, but the XHR
+  response boundary now transitions to that state when the server takes time
+  to process an upload.
+
+### Disproved
+- A single absolute “Processing document…” line was insufficient feedback for
+  a multi-file upload because it did not identify the files, progress, or
+  partial failures.
+
+## 2026-09-13 — Immutable chat modes
+
+### Solved
+- Added persistent `health` and `general` modes to authenticated and guest
+  sessions.
+- Added New Health Chat and New General Chat creation choices.
+- Split the sidebar into Health chats and General chats sections with separate
+  collapsible lists.
+- Made mode immutable after session creation and rejected authenticated API
+  attempts to change it.
+- Mapped legacy sessions without a mode to General.
+- Removed the global Health/Insulin toggle from Settings, the composer, and
+  OpenCode; OpenCode remains a general chat surface.
+- Added a visible mode badge to the conversation header.
+- Verified both modes, sidebar placement, mobile drawer behavior, reload
+  persistence, and 390px no-overflow behavior as a guest.
+
+### Unresolved
+- Guest mode is enforced by the local session state rather than an
+  authenticated server-owned session record; a user who deliberately edits
+  browser storage or network payloads can bypass that UI rule.
+
+### Disproved
+- A global browser preference was not sufficient for two permanent chat
+  categories because changing it also changed the behavior of existing
+  conversations.
+
+## 2026-09-13 — Flatten chat sidebar sections
+
+### Solved
+- Removed the redundant parent Chats layer from the sidebar.
+- Health chats and General chats are now the direct top-level chat sections.
+- Removed the decorative mode icons from those section headers.
+- Verified the flattened structure and no-overflow behavior at a 390px
+  viewport.
+
+### Unresolved
+- The section chevrons and per-section new-chat controls remain because they
+  communicate collapse and creation actions rather than chat categories.
+
+### Disproved
+- Nesting Health and General under another Chats heading added hierarchy
+  without adding useful navigation context.
+
+## 2026-09-13 — Folder-specific new chat actions
+
+### Solved
+- Removed the standalone global New Chat control.
+- Added a writing-icon New chat action inside each Health chats and General
+  chats section.
+- Each action routes to the correct immutable mode.
+- Added reserved top spacing before the first folder.
+- Verified both buttons at a 390px mobile viewport and confirmed no overflow.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- A shared New Chat menu added an unnecessary mode-selection step after the
+  sidebar already separates chats by permanent mode.
+
+## 2026-09-13 — Chinese conversation labels
+
+### Solved
+- Renamed the Chinese chat navigation label from “聊天” to “对话”.
+- Renamed health and general mode labels to “健康对话” and “普通对话”
+  throughout the sidebar, empty states, creation tooltips, and mode badge.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- None.
+
+## 2026-09-13 — Health records placement
+
+### Solved
+- Moved the Records button into the Health section.
+- Kept Records as the first Health section item, above the health session list.
+- Removed the duplicate standalone Records row.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- Keeping Records outside the Health section made the health workspace order
+  less clear.
+
+## 2026-09-13 — Sidebar folder hierarchy
+
+### Solved
+- Added folder icons before the Health and General section names.
+- Indented session entries beneath their parent folder.
+- Indented the Health Records entry consistently with the Health sessions.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- A flat session alignment did not clearly communicate folder ownership.
+
+## 2026-09-13 — Simplified folder headers
+
+### Solved
+- Removed the collapsible arrow from folder headers.
+- Kept folder headers clickable so sections can still expand and collapse.
+- Changed folder names and folder icons to black with a lighter font weight.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- A separate arrow was redundant once the folder icon communicated the
+  section hierarchy.
+
+## 2026-09-13 — Hidden empty chat folders
+
+### Solved
+- Removed the “暂无健康对话” and “暂无普通对话” empty-state lines.
+- Empty folders now retain only their headers and available actions.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- Empty-state text was not needed for folders whose purpose is already clear.
+
+## 2026-09-13 — Records row styling
+
+### Solved
+- Removed the visible Records button border while retaining its original
+  gradient color treatment.
+- Increased only its row padding/height; retained the original text styling.
+- Retained the original 15px Records icon and hover/active colors.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- The bordered Records treatment did not fit the session list hierarchy.
+
+## 2026-09-13 — Restored Records accent color
+
+### Solved
+- Restored the blue accent on the borderless Records icon and label.
+- Kept the darker blue hover and active states.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- Removing the border did not require removing the Records color accent.
+
+## 2026-09-13 — Restored Records visual design
+
+### Solved
+- Restored the original Records text weight, accent colors, and icon size.
+- Limited the change to border removal and session-matching row sizing.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- Matching session geometry did not require changing the Records visual design.
+
+## 2026-09-14 — Short English folder labels
+
+### Solved
+- Changed the English folder labels from “Health chats” and “General chats”
+  to “Health” and “General”.
+- Applied the Records blue accent to the Health folder icon and label.
+- Kept General neutral.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- Repeating “chats” in every folder label was not necessary in the chat list.
+
+## 2026-09-14 — Health session active accent
+
+### Solved
+- Kept all session rows neutral by default.
+- Added a subtle blue background and left accent only to the active Health
+  session.
+- Left General session styling unchanged.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- Coloring every Health session row would add unnecessary visual noise.
+
+## 2026-09-14 — Matched Health folder emphasis
+
+### Solved
+- Increased the Health folder label weight to `650`, matching the Records
+  label emphasis.
+- Kept the General folder and session rows unchanged.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- A lighter Health folder label made the Records action appear more important
+  than its parent folder.

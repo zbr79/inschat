@@ -11,6 +11,7 @@ import { encodeKeepMarker, ModelMarkerParser } from "@/lib/markers";
 import { getUserFromRequest } from "@/lib/auth";
 import {
   getSessionMessage,
+  getSessionChatMode,
   startPendingMessage,
   updatePendingMessage,
 } from "@/lib/db";
@@ -121,19 +122,32 @@ export async function POST(req: Request) {
     timeZone,
     language,
     mode,
-    includeImages,
+    chatMode,
     reasoning,
     sessionId,
     pendingMessageId,
   } = parsed;
-  const freeMode = mode === "free";
+  const user = await getUserFromRequest(req);
+  let effectiveChatMode = chatMode ?? (mode === "preset" ? "health" : "general");
+  if (user && sessionId) {
+    try {
+      const storedChatMode = await getSessionChatMode(user._id, sessionId);
+      if (!storedChatMode) {
+        return Response.json({ error: "Session not found." }, { status: 404 });
+      }
+      effectiveChatMode = storedChatMode;
+    } catch {
+      return Response.json({ error: "Could not load the session." }, { status: 500 });
+    }
+  }
+  const freeMode = effectiveChatMode === "general";
+  const effectiveIncludeImages = effectiveChatMode === "health";
   // Normal text turns only inspect the latest message. Session-report turns
   // explicitly keep earlier local photos in the transient model request.
   const lastMessage = messages[messages.length - 1];
-  const hasImage = includeImages
+  const hasImage = effectiveIncludeImages
     ? messages.some((message) => (message.images?.length ?? 0) > 0)
     : (lastMessage?.images?.length ?? 0) > 0;
-  const user = await getUserFromRequest(req);
   let persistedMessageId: string | undefined;
   if (sessionId && user) {
     try {
@@ -237,7 +251,7 @@ export async function POST(req: Request) {
           freeMode,
           reasoning,
           sessionId,
-          includeImages
+          effectiveIncludeImages
         )) {
           const parsedChunk = parser.push(text);
           visibleText += parsedChunk.text;

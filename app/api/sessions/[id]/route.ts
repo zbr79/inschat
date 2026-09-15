@@ -140,6 +140,12 @@ export async function PUT(
   const { id } = await params;
   try {
     const body: unknown = await req.json().catch(() => undefined);
+    if (body && typeof body === "object" && "chatMode" in body) {
+      return Response.json(
+        { error: '"chatMode" cannot be changed after chat creation.' },
+        { status: 400 }
+      );
+    }
     const rawTitle = body && typeof body === "object"
       ? (body as { title?: unknown }).title
       : undefined;

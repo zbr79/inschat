@@ -61,7 +61,7 @@ export function formatUiText(
 
 export const STR: Record<UiLang, Record<string, string>> = {
   zh: {
-    "nav.chat": "聊天",
+    "nav.chat": "对话",
     "nav.opencode": "OpenCode",
     "nav.opencodeCalls": "OpenCode 调用",
     "nav.records": "记录",

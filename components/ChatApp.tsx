@@ -7,8 +7,10 @@ import Composer from "./Composer";
 import QuestionCard from "./QuestionCard";
 import ConcludeButton from "./ConcludeButton";
 import ConcludeModal from "./ConcludeModal";
+import ChatModeBadge from "./ChatModeBadge";
 import type {
   ChatImage,
+  ChatMode,
   ChatMessage,
   ConcludeResult,
   ReportEvent,
@@ -35,13 +37,15 @@ import {
 } from "@/lib/guestStore";
 import { putGuestImage, getGuestImage } from "@/lib/guestImages";
 import { STR, useUiLang } from "@/lib/i18n";
-import { useInsulinMode, useReasoningEffort } from "@/lib/prefs";
+import { useReasoningEffort } from "@/lib/prefs";
+import type { DocumentAttachment } from "@/lib/documents/types";
 
 interface UiMessage {
   id: number;
   role: "user" | "model";
   text: string;
   images?: ChatImage[];
+  documents?: DocumentAttachment[];
   imageKeys?: string[];
   createdAt?: string;
   streaming?: boolean;
@@ -115,6 +119,7 @@ interface StoredLike {
   text: string;
   images?: ChatImage[];
   imageKeys?: string[];
+  documents?: DocumentAttachment[];
   createdAt?: string;
   model?: string;
   trying?: string;
@@ -156,6 +161,7 @@ function mapStoredMessages(
       ),
       images: message.images,
       imageKeys: message.imageKeys,
+      documents: message.documents,
       createdAt: message.createdAt,
       model: message.model,
       hideModelMeta: pending,
@@ -242,9 +248,10 @@ function toApiMessages(messages: UiMessage[]): ChatMessage[] {
   return messages
     .filter(
       (message) =>
-        !message.failed && (message.text || (message.images?.length ?? 0) > 0)
+        !message.failed &&
+        (message.text || (message.images?.length ?? 0) > 0 || (message.documents?.length ?? 0) > 0)
     )
-    .map(({ role, text, images }) => ({ role, text, images }));
+    .map(({ role, text, images, documents }) => ({ role, text, images, documents }));
 }
 
 function persistMessage(
@@ -253,6 +260,7 @@ function persistMessage(
     role: "user" | "model";
     text: string;
     imageKeys?: string[];
+    documents?: DocumentAttachment[];
     model?: string;
     elapsed?: number;
   }
@@ -342,9 +350,11 @@ export default function ChatApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionParam = searchParams.get("session");
+  const requestedChatMode: ChatMode =
+    searchParams.get("newMode") === "health" ? "health" : "general";
   const lang = useUiLang();
   const t = STR[lang];
-  const [insulinMode, toggleInsulinMode] = useInsulinMode();
+  const [chatMode, setChatMode] = useState<ChatMode>(requestedChatMode);
   const [reasoningEffort] = useReasoningEffort();
 
   const [messages, setMessages] = useState<UiMessage[]>([]);
@@ -742,6 +752,7 @@ useEffect(() => {
     if (!id) {
       sessionIdRef.current = null;
       sessionTitleRef.current = null;
+      setChatMode(requestedChatMode);
       setLoading(false);
       return;
     }
@@ -755,7 +766,7 @@ useEffect(() => {
         })
         .then(
           (body: {
-            session?: { title?: string };
+            session?: { title?: string; chatMode?: ChatMode };
             messages: {
               role: string;
               text: string;
@@ -774,6 +785,7 @@ useEffect(() => {
           }) => {
             if (sessionIdRef.current !== id) return;
             sessionTitleRef.current = body.session?.title ?? null;
+            setChatMode(body.session?.chatMode === "health" ? "health" : "general");
             return Promise.all(body.messages.map(async (message) => {
                 const status = normalizeUiStatus(
                   (message as { status?: StoredStatus }).status ??
@@ -864,6 +876,7 @@ useEffect(() => {
       if (local) {
         sessionIdRef.current = id;
         sessionTitleRef.current = local.title;
+        setChatMode(local.chatMode);
         Promise.all(
           local.messages.map(async (message, index) => {
             const status = normalizeUiStatus(message.status as StoredStatus);
@@ -882,6 +895,7 @@ useEffect(() => {
               role: (message.role === "model" ? "model" : "user") as "user" | "model",
               text: visibleMessageText(message.text),
               images,
+              documents: message.documents,
               imageKeys: message.imageKeys,
               createdAt: message.createdAt
                 ? new Date(message.createdAt).toISOString()
@@ -1012,6 +1026,7 @@ useEffect(() => {
     }
   }, [
     sessionParam,
+    requestedChatMode,
     isAuthed,
     router,
     startResume,
@@ -1114,8 +1129,9 @@ useEffect(() => {
             messages: history,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             language: lang,
-            mode: insulinMode ? "preset" : "free",
-            includeImages: insulinMode,
+            mode: chatMode === "health" ? "preset" : "free",
+            chatMode,
+            includeImages: chatMode === "health",
             reasoning: reasoningEffort,
             sessionId,
             pendingMessageId,
@@ -1246,7 +1262,7 @@ useEffect(() => {
         // Single-call recording: in health mode the reply itself carries the
         // <CONCLUDE> JSON tail — parse it instead of calling /api/conclude.
         let savedText = modelText;
-        if (insulinMode) {
+        if (chatMode === "health") {
           const match = modelText.match(/<CONCLUDE>([\s\S]*?)<\/CONCLUDE>/);
           if (match) {
             const visibleText = cleanDishNamesInReply(
@@ -1309,7 +1325,7 @@ useEffect(() => {
           const renamed = await maybeRenameHealthSession({
             sessionId,
             authed: Boolean(isAuthed),
-            insulinMode,
+            insulinMode: chatMode === "health",
             currentTitle: sessionTitleRef.current,
             lang,
             result: parsedConclude,
@@ -1367,7 +1383,7 @@ useEffect(() => {
     [
       isAuthed,
       lang,
-      insulinMode,
+      chatMode,
       mergeConclusion,
       persistConclusionRecord,
       reasoningEffort,
@@ -1375,9 +1391,19 @@ useEffect(() => {
   );
 
   const send = useCallback(
-    async (text: string, images?: ChatImage[]) => {
+    async (
+      text: string,
+      images?: ChatImage[],
+      documents?: DocumentAttachment[]
+    ) => {
       const trimmed = text.trim();
-      if ((!trimmed && (images?.length ?? 0) === 0) || sending || isAuthed === null) return;
+      if (
+        (!trimmed && (images?.length ?? 0) === 0 && (documents?.length ?? 0) === 0) ||
+        sending ||
+        isAuthed === null
+      ) {
+        return;
+      }
       const authed = isAuthed;
 
       let sessionId = sessionIdRef.current;
@@ -1388,16 +1414,17 @@ useEffect(() => {
             const response = await fetch("/api/sessions", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ title: createdTitle }),
+              body: JSON.stringify({ title: createdTitle, chatMode }),
             });
             const body = await response.json();
             if (!response.ok) throw new Error(t["common.requestFailed"]);
             sessionId = body.session._id;
+            setChatMode(body.session.chatMode === "health" ? "health" : "general");
           } catch {
             sessionId = null;
           }
         } else {
-          sessionId = createGuestSession(createdTitle).id;
+          sessionId = createGuestSession(createdTitle, chatMode).id;
         }
         if (sessionId) {
           sessionIdRef.current = sessionId;
@@ -1416,31 +1443,39 @@ useEffect(() => {
         role: "user",
         text: trimmed,
         images,
+        documents,
         imageKeys,
         createdAt,
       };
       if (sessionId) {
         if (authed) {
-          persistMessage(sessionId, { role: "user", text: trimmed, imageKeys });
+          persistMessage(sessionId, {
+            role: "user",
+            text: trimmed,
+            imageKeys,
+            documents,
+          });
         } else if (images && images.length > 0) {
           appendGuestMessage(sessionId, {
             role: "user",
             text: trimmed,
             images: imageKeys?.length === images.length ? undefined : images,
             imageKeys,
+            documents,
             createdAt: Date.parse(createdAt),
           });
         } else {
           appendGuestMessage(sessionId, {
             role: "user",
             text: trimmed,
+            documents,
             createdAt: Date.parse(createdAt),
           });
         }
       }
       await streamReply([...messages, userMessage]);
     },
-    [messages, sending, isAuthed, router, streamReply]
+    [messages, sending, isAuthed, router, streamReply, chatMode, t]
   );
 
   // Truncate persisted state up to the given message list (revert-style).
@@ -1500,6 +1535,7 @@ useEffect(() => {
             role: "user",
             text: edited.text,
             imageKeys: edited.imageKeys,
+            documents: edited.documents,
           });
         } else {
           appendGuestMessage(sessionId, {
@@ -1508,6 +1544,7 @@ useEffect(() => {
             images:
               imageKeys?.length === editedImages?.length ? undefined : editedImages,
             imageKeys,
+            documents: edited.documents,
           });
         }
       }
@@ -1667,6 +1704,9 @@ useEffect(() => {
 
   return (
     <div className="app">
+      <div className="chat-mode-header">
+        <ChatModeBadge mode={chatMode} />
+      </div>
       {loading ? (
         <main className="messages">
           <p className="empty">{t["records.loading"]}</p>
@@ -1674,16 +1714,6 @@ useEffect(() => {
       ) : messages.length === 0 ? (
         <main className="welcome">
           <h2>{t["welcome.title"]}</h2>
-          <div className="composer-toggles">
-            <button
-              type="button"
-              className={`composer-toggle${insulinMode ? " active" : ""}`}
-              onClick={() => toggleInsulinMode(!insulinMode)}
-              aria-pressed={insulinMode}
-            >
-              {t["settings.insulinMode"]}
-            </button>
-          </div>
           <Composer
             onSend={send}
             onStop={stop}
@@ -1736,15 +1766,6 @@ useEffect(() => {
             className={`composer-toggles bottom${pendingQuestion ? " locked" : ""}`}
             aria-disabled={Boolean(pendingQuestion)}
           >
-            <button
-              type="button"
-              className={`composer-toggle${insulinMode ? " active" : ""}`}
-              onClick={() => toggleInsulinMode(!insulinMode)}
-              aria-pressed={insulinMode}
-              disabled={Boolean(pendingQuestion)}
-            >
-              {t["settings.insulinMode"]}
-            </button>
             {summaryError && <p className="conclusion-error">{summaryError}</p>}
             <ConcludeButton
               onClick={() => {
