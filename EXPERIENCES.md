@@ -3938,3 +3938,34 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - Waiting for the report and session persistence requests before hiding the
   modal was necessary for data safety.
+
+## 2026-09-14 — Stable report editor size
+
+### Solved
+- Added stable responsive heights to chat report and Records editing modals.
+- Kept their inner content scrollable so larger reports do not resize the
+  outer window.
+- Applied separate desktop and mobile limits.
+
+### Unresolved
+- None identified.
+
+### Disproved
+- Letting modal height follow the number of report fields caused distracting
+  layout shifts.
+
+## 2026-09-14 — Health feature visibility setting
+
+### Solved
+- Added a persistent Health mode switch to Settings.
+- Hiding Health mode removes the Health folder and Records link from the
+  sidebar while preserving existing Health sessions and records.
+- Kept the General folder available as the only chat section when Health mode
+  is off.
+
+### Unresolved
+- The setting is stored per browser/device, like the existing image
+  compression preference.
+
+### Disproved
+- Deleting or migrating Health sessions was necessary when hiding the feature.

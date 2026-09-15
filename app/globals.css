@@ -516,6 +516,7 @@ body {
   transform: translate(-50%, -50%);
   z-index: 71;
   width: min(600px, calc(100vw - 32px));
+  height: min(640px, calc(100dvh - 80px));
   max-height: calc(100dvh - 80px);
   overflow-y: auto;
   background: var(--bg);
@@ -4073,6 +4074,7 @@ span.conclude-rank-badge {
   left: 50%;
   z-index: 121;
   width: min(720px, calc(100vw - 32px));
+  height: min(640px, calc(100dvh - 48px));
   max-height: calc(100dvh - 48px);
   transform: translate(-50%, -50%);
   overflow: auto;
@@ -4231,6 +4233,7 @@ span.conclude-rank-badge {
   left: 50%;
   z-index: 121;
   width: min(720px, calc(100vw - 32px));
+  height: min(640px, calc(100dvh - 48px));
   max-height: calc(100dvh - 48px);
   transform: translate(-50%, -50%);
   display: flex;
@@ -5349,7 +5352,13 @@ span.conclude-rank-badge {
   .full-day-edit-modal,
   .record-edit-modal {
     width: min(720px, calc(100vw - 16px));
+    height: min(620px, calc(100dvh - 16px));
     max-height: calc(100dvh - 16px);
+  }
+
+  .conclude-modal {
+    height: min(620px, calc(100dvh - 24px));
+    max-height: calc(100dvh - 24px);
   }
 
   .conclude-dish-remove {
