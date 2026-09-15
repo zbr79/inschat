@@ -1,10 +1,14 @@
 import { CHAT_MODELS, getActiveModel } from "@/lib/models";
 import { getOpenCodeUsage } from "@/lib/db";
 import { getOpenCodeOfficialUsage } from "@/lib/opencode";
+import { requireUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const auth = await requireUser(req);
+  if (auth instanceof Response) return auth;
+
   try {
     const [usage, official] = await Promise.all([
       getOpenCodeUsage(),
