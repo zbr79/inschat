@@ -4,6 +4,7 @@ import { STR, useUiLang } from "@/lib/i18n";
 
 const SHORT_NAMES: Record<string, string> = {
   "qwen3.8-flash": "Qwen3.8 Flash",
+  "glm-5.3-flash": "GLM-5.3 Flash",
   "deepseek-v4-flash-free": "DS Flash (Free)",
   "mimo-v2.5-free": "MiMo-V2.5",
   "nemotron-3-ultra-free": "Nemotron 3",
@@ -60,7 +61,7 @@ export default function ModelRoutingTree() {
 
         <li>
           <span className="routing-node">{t["routing.images"]}</span>
-          <Chain models={["qwen3.8-flash", ...FREE_MODELS]} />
+          <Chain models={["glm-5.3-flash", ...FREE_MODELS]} />
           <span className="routing-tag">{t["routing.imagesTag"]}</span>
         </li>
 

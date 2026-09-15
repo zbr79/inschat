@@ -13,7 +13,8 @@ export interface ModelInfo {
 // /chat/completions endpoint of https://opencode.ai/zen/go/v1.
 // Vision flags come from vendor documentation research:
 // only models with documented image input are marked vision: true.
-// Qwen3.8 Flash is the enforced text and image primary model.
+// Qwen3.8 Flash is the enforced text/conclusion primary; GLM-5.3 Flash is
+// the enforced image and image-plus-text primary.
 export const CHAT_MODELS: ModelInfo[] = [
   { name: "deepseek-v4-pro", label: "DeepSeek V4 Pro", tier: "pro", vision: false, retired: true },
   { name: "deepseek-v4-flash", label: "DeepSeek V4 Flash", tier: "flash", vision: false },
@@ -58,11 +59,11 @@ const MODEL_FILE = path.join(DATA_DIR, "model.json");
 
 export const AUTO_MODEL = "auto";
 export const PRIMARY_MODEL = "qwen3.8-flash";
+export const IMAGE_PRIMARY_MODEL = "glm-5.3-flash";
 
-// All automatic requests use Qwen3.8 Flash first. If the paid balance or
-// model availability is exhausted, text and conclusion requests fall back to
-// free models. Image requests use the same free fallback chain; those models
-// may reject image input, in which case the user receives the image error.
+// Text and conclusion requests use Qwen3.8 Flash first; image requests use
+// GLM-5.3 Flash first. If paid balance or model availability is exhausted,
+// both paths fall back to the free chain. Free models may reject image input.
 const TEXT_CHAIN_FULL: string[] = [
   PRIMARY_MODEL,
   "deepseek-v4-flash-free",
@@ -74,7 +75,7 @@ const TEXT_CHAIN_FULL: string[] = [
   "big-pickle",
 ];
 export const IMAGE_CHAIN: string[] = [
-  PRIMARY_MODEL,
+  IMAGE_PRIMARY_MODEL,
   "deepseek-v4-flash-free",
   "mimo-v2.5-free",
   "nemotron-3-ultra-free",
@@ -84,7 +85,7 @@ export const IMAGE_CHAIN: string[] = [
   "big-pickle",
 ];
 
-// Conclusion extraction follows the same Qwen-first/free-only policy.
+// Conclusion extraction follows the Qwen-first/free-only policy.
 const CONCLUDE_CHAIN_FULL: string[] = [
   PRIMARY_MODEL,
   "deepseek-v4-flash-free",
@@ -116,9 +117,8 @@ export function setActiveModel(model: string): void {
   fs.writeFileSync(MODEL_FILE, JSON.stringify({ model: PRIMARY_MODEL }));
 }
 
-// Every automatic request starts with Qwen3.8 Flash. The active-model file is
-// retained for compatibility with existing deployments, but explicit pins
-// cannot change this enforced routing policy.
+// The active-model file is retained for compatibility with existing
+// deployments, but explicit pins cannot change the enforced routing policy.
 export function getChatChain(hasImage: boolean): string[] {
   return filterChain(hasImage ? IMAGE_CHAIN : TEXT_CHAIN_FULL);
 }

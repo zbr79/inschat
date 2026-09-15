@@ -3,25 +3,33 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Menu, X, SquarePen, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronDown, ChevronRight, Languages, Activity, FileText, Gauge, LogOut, ImageDown } from "lucide-react";
-import type { ChatSession } from "@/lib/types";
+import { Menu, X, SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronRight, Languages, FileText, Gauge, LogOut, ImageDown } from "lucide-react";
+import type { ChatMode, ChatSession } from "@/lib/types";
 import {
   clearGuestData,
   deleteGuestSession,
   listGuestSessions,
   pinGuestSession,
   renameGuestSession,
+  type GuestSession,
 } from "@/lib/guestStore";
 import { STR, useUiLang, setUiLang } from "@/lib/i18n";
 import SearchModal from "./SearchModal";
 import AuthModal from "./AuthModal";
 import ConfirmModal from "./ConfirmModal";
-import { useInsulinMode, useCompressImages } from "@/lib/prefs";
+import { useCompressImages } from "@/lib/prefs";
 import { SESSIONS_CHANGED_EVENT } from "@/lib/sessionTitle";
 
 interface MeUser {
   _id: string;
   username: string;
+}
+
+interface SidebarSession {
+  id: string;
+  title: string;
+  pinned?: boolean;
+  chatMode: ChatMode;
 }
 
 const COLLAPSED_KEY = "inschat_sidebar_collapsed";
@@ -59,18 +67,18 @@ export default function Sidebar() {
   const [user, setUser] = useState<MeUser | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [sessions, setSessions] = useState<ChatSession[] | null>(null);
-  const [guestSessions, setGuestSessions] = useState<{ id: string; title: string; pinned?: boolean }[]>([]);
+  const [guestSessions, setGuestSessions] = useState<GuestSession[]>([]);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarScrolled, setSidebarScrolled] = useState(false);
-  const [chatsCollapsed, setChatsCollapsed] = useState(false);
+  const [healthCollapsed, setHealthCollapsed] = useState(false);
+  const [generalCollapsed, setGeneralCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteDataOpen, setDeleteDataOpen] = useState(false);
   const [clearAccountDataOpen, setClearAccountDataOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authNonce, setAuthNonce] = useState(0);
-  const [insulinMode, toggleInsulinMode] = useInsulinMode();
   const [compressImages, setCompressImages] = useCompressImages();
   const [menuFor, setMenuFor] = useState<{
     id: string;
@@ -288,10 +296,25 @@ export default function Sidebar() {
 
   const ownerList = (sessions ?? []).sort(
     (a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false)
-  );
+  ).map((session) => ({
+    id: session._id,
+    title: session.title,
+    pinned: session.pinned,
+    chatMode: session.chatMode,
+  }));
   const guestList = guestSessions.sort(
     (a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false)
-  );
+  ).map((session) => ({
+    id: session.id,
+    title: session.title,
+    pinned: session.pinned,
+    chatMode: session.chatMode,
+  }));
+
+  const startNewChat = (chatMode: ChatMode) => {
+    setMenuOpen(false);
+    router.push(`/?newMode=${chatMode}`);
+  };
 
   const renderSessionRow = (
     id: string,
@@ -405,6 +428,62 @@ export default function Sidebar() {
     </div>
   );
 
+  const renderSessionSection = (
+    chatMode: ChatMode,
+    title: string,
+    sessionsForMode: SidebarSession[],
+    collapsedSection: boolean,
+    setCollapsedSection: (collapsed: boolean) => void
+  ) => {
+    return (
+      <section className={`session-section ${chatMode}`}>
+        <div className="session-section-head">
+          <button
+            type="button"
+            className="catalog-toggle"
+            onClick={() => setCollapsedSection(!collapsedSection)}
+            aria-expanded={!collapsedSection}
+            title={title}
+          >
+            <Folder size={15} className="session-folder-icon" aria-hidden="true" />
+            <span className="sidebar-label sidebar-catalog-label">{title}</span>
+          </button>
+          <button
+            type="button"
+            className="section-new-chat"
+            onClick={() => startNewChat(chatMode)}
+            aria-label={chatMode === "health" ? t["nav.newHealthChat"] : t["nav.newGeneralChat"]}
+            title={chatMode === "health" ? t["nav.newHealthChat"] : t["nav.newGeneralChat"]}
+          >
+            <SquarePen size={14} aria-hidden="true" />
+          </button>
+        </div>
+        {!collapsedSection && (
+          <>
+            {chatMode === "health" && (
+              <Link
+                href="/records"
+                className={`sidebar-records-button health-records-button${pathname.startsWith("/records") ? " active" : ""}`}
+                onClick={() => setMenuOpen(false)}
+                aria-current={pathname.startsWith("/records") ? "page" : undefined}
+              >
+                <FileText size={15} aria-hidden="true" />
+                <span className="sidebar-label sidebar-catalog-label">{t["nav.records"]}</span>
+              </Link>
+            )}
+            {sessionsForMode.length > 0 && (
+              <div className="session-list">
+                {sessionsForMode.map((session) =>
+                  renderSessionRow(session.id, session.title, Boolean(session.pinned))
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </section>
+    );
+  };
+
   return (
     <>
       <div className="mobile-bar">
@@ -471,83 +550,32 @@ export default function Sidebar() {
             <PanelLeft size={16} />
           </button>
         </div>
-        <Link
-          href="/"
-          className={`sidebar-new${pathname === "/" && !currentSession ? " active" : ""}`}
-          onClick={() => setMenuOpen(false)}
-        >
-          <SquarePen size={16} />
-          {t["nav.newChat"]}
-        </Link>
         </div>
       {authChecked && (
         <div className="session-nav">
-          <div className="session-label-row">
-            <button
-              type="button"
-              className="catalog-toggle"
-              onClick={() => setChatsCollapsed((value) => !value)}
-              aria-expanded={!chatsCollapsed}
-              title={t["nav.chats"]}
-            >
-              <span className="sidebar-label sidebar-catalog-label">{t["nav.chats"]}</span>
-              <ChevronDown
-                size={14}
-                className={`catalog-chevron${chatsCollapsed ? " collapsed" : ""}`}
-                aria-hidden="true"
-              />
-            </button>
-            <button
-              type="button"
-              className="session-new-btn"
-              onClick={() => {
-                setMenuOpen(false);
-                router.push("/");
-              }}
-              aria-label={t["nav.newChat"]}
-              title={t["nav.newChat"]}
-            >
-              <SquarePen size={13} />
-            </button>
-          </div>
-          {!chatsCollapsed && (
-            <div className="session-list">
-              {user ? (
-                <>
-                  {sessions === null && <p className="session-hint">{t["nav.loading"]}</p>}
-                  {sessions !== null && ownerList.length === 0 && (
-                    <p className="session-hint">{t["nav.noSessions"]}</p>
-                  )}
-                  {ownerList.map((session) =>
-                    renderSessionRow(session._id, session.title, Boolean(session.pinned))
-                  )}
-                </>
-              ) : (
-                <>
-                  {guestList.length === 0 && (
-                    <p className="session-hint">{t["nav.guestHint"]}</p>
-                  )}
-                  {guestList.map((session) =>
-                    renderSessionRow(session.id, session.title, Boolean(session.pinned))
-                  )}
-                </>
+          {user && sessions === null ? (
+            <p className="session-hint">{t["nav.loading"]}</p>
+          ) : (
+            <>
+              {renderSessionSection(
+                "health",
+                t["nav.healthChats"],
+                (user ? ownerList : guestList).filter((session) => session.chatMode === "health"),
+                healthCollapsed,
+                setHealthCollapsed
               )}
-            </div>
+              {renderSessionSection(
+                "general",
+                t["nav.generalChats"],
+                (user ? ownerList : guestList).filter((session) => session.chatMode === "general"),
+                generalCollapsed,
+                setGeneralCollapsed
+              )}
+            </>
           )}
         </div>
       )}
         </div>
-      {authChecked && (
-        <Link
-          href="/records"
-          className={`sidebar-records-button${pathname.startsWith("/records") ? " active" : ""}`}
-          onClick={() => setMenuOpen(false)}
-          aria-current={pathname.startsWith("/records") ? "page" : undefined}
-        >
-          <FileText size={15} aria-hidden="true" />
-          <span className="sidebar-label sidebar-catalog-label">{t["nav.records"]}</span>
-        </Link>
-      )}
       <div className="sidebar-foot">
         {user ? (
           <div className="account-row">
@@ -633,22 +661,6 @@ export default function Sidebar() {
               <option value="zh">中文</option>
               <option value="en">English</option>
             </select>
-          </label>
-          <label className="settings-row">
-            <span className="settings-row-icon">
-              <Activity size={16} />
-            </span>
-            <span className="settings-label">{t["settings.insulinMode"]}</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={insulinMode}
-              className={`switch${insulinMode ? " on" : ""}`}
-              onClick={() => toggleInsulinMode(!insulinMode)}
-              aria-label={t["settings.insulinMode"]}
-            >
-              <span className="switch-knob" />
-            </button>
           </label>
           <label className="settings-row">
             <span className="settings-row-icon">

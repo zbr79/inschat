@@ -4,6 +4,9 @@ import {
   truncateMessages,
 } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { parseDocumentAttachment } from "@/lib/chatRequest";
+import { MAX_DOCUMENTS, MAX_TOTAL_DOCUMENT_TEXT } from "@/lib/documents/limits";
+import type { DocumentAttachment } from "@/lib/documents/types";
 
 export const runtime = "nodejs";
 
@@ -62,6 +65,7 @@ export async function POST(
   let role: "user" | "model";
   let text: string;
   let imageKeys: string[] | undefined;
+  let documents: DocumentAttachment[] | undefined;
   let model: string | undefined;
   let elapsed: number | undefined;
   try {
@@ -70,6 +74,7 @@ export async function POST(
       text: rawText,
       images: rawImages,
       imageKeys: rawImageKeys,
+      documents: rawDocuments,
       model: rawModel,
       elapsed: rawElapsed,
     } = body as {
@@ -77,6 +82,7 @@ export async function POST(
       text?: unknown;
       images?: unknown;
       imageKeys?: unknown;
+      documents?: unknown;
       model?: unknown;
       elapsed?: unknown;
     };
@@ -100,6 +106,15 @@ export async function POST(
         throw new Error('"imageKeys" must contain at most 3 valid local keys.');
       }
       imageKeys = rawImageKeys as string[];
+    }
+    if (rawDocuments !== undefined && rawDocuments !== null) {
+      if (!Array.isArray(rawDocuments) || rawDocuments.length > MAX_DOCUMENTS) {
+        throw new Error(`"documents" must contain at most ${MAX_DOCUMENTS} documents.`);
+      }
+      documents = rawDocuments.map((document) => parseDocumentAttachment(document));
+      if (documents.reduce((sum, document) => sum + document.text.length, 0) > MAX_TOTAL_DOCUMENT_TEXT) {
+        throw new Error('"documents" contain too much extracted text.');
+      }
     }
     if (rawModel !== undefined && rawModel !== null) {
       if (typeof rawModel !== "string" || rawModel.length > 100) {
@@ -125,6 +140,7 @@ export async function POST(
       role,
       text,
       imageKeys,
+      documents,
       model,
       elapsed,
     });

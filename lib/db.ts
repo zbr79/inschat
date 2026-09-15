@@ -2,6 +2,7 @@ import { Db, MongoClient, ObjectId } from "mongodb";
 import { randomBytes } from "node:crypto";
 import type {
   ApiCall,
+  ChatMode,
   ChatSession,
   ConcludeItem,
   ConcludeMeal,
@@ -10,6 +11,7 @@ import type {
   SessionConclusion,
   StoredMessage,
 } from "./types";
+import type { DocumentAttachment } from "./documents/types";
 
 const DB_NAME = process.env.MONGODB_DB || "inschat";
 
@@ -579,6 +581,7 @@ interface SessionDoc {
   title: string;
   createdAt: Date;
   updatedAt: Date;
+  chatMode?: ChatMode;
   pinned?: boolean;
   conclusion?: SessionConclusion | null;
   recordId?: string | null;
@@ -590,6 +593,7 @@ interface MessageDoc {
   role: "user" | "model";
   text: string;
   imageKeys?: string[];
+  documents?: DocumentAttachment[];
   model?: string;
   trying?: string;
   elapsed?: number;
@@ -652,6 +656,7 @@ function toChatSession(doc: SessionDoc): ChatSession {
     title: doc.title,
     createdAt: doc.createdAt.toISOString(),
     updatedAt: doc.updatedAt.toISOString(),
+    chatMode: doc.chatMode === "health" ? "health" : "general",
     pinned: doc.pinned,
   };
 }
@@ -663,6 +668,7 @@ function toStoredMessage(doc: MessageDoc): StoredMessage {
     role: doc.role,
     text: doc.text,
     imageKeys: doc.imageKeys,
+    documents: doc.documents,
     model: doc.model,
     trying: doc.trying,
     elapsed: doc.elapsed,
@@ -674,12 +680,36 @@ function toStoredMessage(doc: MessageDoc): StoredMessage {
   };
 }
 
-export async function insertSession(userId: string, title: string): Promise<ChatSession> {
+export async function insertSession(
+  userId: string,
+  title: string,
+  chatMode: ChatMode
+): Promise<ChatSession> {
   const db = await getDb();
   const now = new Date();
-  const doc: SessionDoc = { userId: new ObjectId(userId), title, createdAt: now, updatedAt: now };
+  const doc: SessionDoc = {
+    userId: new ObjectId(userId),
+    title,
+    createdAt: now,
+    updatedAt: now,
+    chatMode,
+  };
   const result = await db.collection<SessionDoc>("sessions").insertOne(doc);
   return toChatSession({ ...doc, _id: result.insertedId });
+}
+
+export async function getSessionChatMode(
+  userId: string,
+  id: string
+): Promise<ChatMode | null> {
+  if (!ObjectId.isValid(id)) return null;
+  const db = await getDb();
+  const session = await db.collection<SessionDoc>("sessions").findOne(
+    { _id: new ObjectId(id), userId: new ObjectId(userId) },
+    { projection: { chatMode: 1 } }
+  );
+  if (!session) return null;
+  return session.chatMode === "health" ? "health" : "general";
 }
 
 export async function listSessions(userId: string, limit = 50): Promise<ChatSession[]> {
@@ -785,6 +815,7 @@ export async function appendMessage(
     role: "user" | "model";
     text: string;
     imageKeys?: string[];
+    documents?: DocumentAttachment[];
     model?: string;
     trying?: string;
     elapsed?: number;
@@ -798,6 +829,7 @@ export async function appendMessage(
     role: input.role,
     text: input.text,
     imageKeys: input.imageKeys,
+    documents: input.documents,
     model: input.model,
     trying: input.trying,
     elapsed: input.elapsed,

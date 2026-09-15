@@ -1,3 +1,5 @@
+import type { DocumentAttachment } from "./documents/types";
+
 export interface ChatImage {
   mimeType: string;
   data: string;
@@ -7,6 +9,7 @@ export interface ChatMessage {
   role: "user" | "model";
   text: string;
   images?: ChatImage[];
+  documents?: DocumentAttachment[];
 }
 
 export interface ConcludeItem {
@@ -91,11 +94,14 @@ export interface ApiCall {
   };
 }
 
+export type ChatMode = "health" | "general";
+
 export interface ChatSession {
   _id: string;
   title: string;
   createdAt: string;
   updatedAt: string;
+  chatMode: ChatMode;
   pinned?: boolean;
 }
 
@@ -105,6 +111,7 @@ export interface StoredMessage {
   role: "user" | "model";
   text: string;
   imageKeys?: string[];
+  documents?: DocumentAttachment[];
   model?: string;
   trying?: string;
   elapsed?: number;

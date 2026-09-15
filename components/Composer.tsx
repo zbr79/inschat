@@ -1,20 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUp, Mic, Plus, Sparkles, Square, X } from "lucide-react";
+import { ArrowUp, Mic, Paperclip, Plus, Sparkles, Square, X } from "lucide-react";
+import type { DocumentAttachment } from "@/lib/documents/types";
 import type { ChatImage } from "@/lib/types";
 import { MAX_IMAGES } from "@/lib/types";
 import { STR, useUiLang } from "@/lib/i18n";
 import { useCompressImages, useReasoningEffort } from "@/lib/prefs";
 import { compressImage } from "@/lib/imageCompress";
 import { formatVoiceElapsed, useVoiceInput } from "@/lib/useVoiceInput";
+import DocumentPicker from "./DocumentPicker";
 import ImageViewer from "./ImageViewer";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
 interface ComposerProps {
   sending: boolean;
-  onSend: (text: string, images?: ChatImage[]) => void;
+  onSend: (
+    text: string,
+    images?: ChatImage[],
+    documents?: DocumentAttachment[]
+  ) => void;
   onStop: () => void;
   disabled?: boolean;
   signedIn?: boolean;
@@ -54,6 +60,8 @@ export default function Composer({
   const [reasoning, setReasoning] = useReasoningEffort();
   const [text, setText] = useState("");
   const [images, setImages] = useState<ChatImage[]>([]);
+  const [documents, setDocuments] = useState<DocumentAttachment[]>([]);
+  const [documentBusy, setDocumentBusy] = useState(false);
   const [viewer, setViewer] = useState<ChatImage | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -62,6 +70,8 @@ export default function Composer({
   textRef.current = text;
   const imagesRef = useRef(images);
   imagesRef.current = images;
+  const documentsRef = useRef(documents);
+  documentsRef.current = documents;
 
   useEffect(() => {
     const input = textInputRef.current;
@@ -95,6 +105,7 @@ export default function Composer({
   const clearComposer = () => {
     setText("");
     setImages([]);
+    setDocuments([]);
     setImageError(null);
   };
 
@@ -103,9 +114,10 @@ export default function Composer({
       const merged = insertAtCaret(transcript);
       if (!autoSend) return;
       const imgs = imagesRef.current;
+      const docs = documentsRef.current;
       const trimmed = merged.trim();
-      if (trimmed || imgs.length > 0) {
-        onSend(trimmed, imgs.length > 0 ? imgs : undefined);
+      if (trimmed || imgs.length > 0 || docs.length > 0) {
+        onSend(trimmed, imgs.length > 0 ? imgs : undefined, docs.length > 0 ? docs : undefined);
         clearComposer();
       }
     },
@@ -131,7 +143,11 @@ export default function Composer({
     onTranscript,
   });
 
-  const canSend = (text.trim().length > 0 || images.length > 0) && !sending && !disabled;
+  const canSend =
+    (text.trim().length > 0 || images.length > 0 || documents.length > 0) &&
+    !sending &&
+    !disabled &&
+    !documentBusy;
   const voiceBusy = voiceStatus !== "idle" && !sending && !disabled;
   const shouldShowSendBusy = voiceStatus === "transcribing" && !sending && !disabled;
   const hint = voiceHint || imageError;
@@ -154,7 +170,11 @@ export default function Composer({
       return;
     }
     if (!canSend) return;
-    onSend(text.trim(), images.length > 0 ? images : undefined);
+    onSend(
+      text.trim(),
+      images.length > 0 ? images : undefined,
+      documents.length > 0 ? documents : undefined
+    );
     clearComposer();
   };
 
@@ -247,6 +267,24 @@ export default function Composer({
         >
           <Plus size={18} />
         </button>
+        <DocumentPicker
+          documents={documents}
+          onChange={setDocuments}
+          onBusyChange={setDocumentBusy}
+          disabled={disabled}
+          renderTrigger={(open, triggerDisabled) => (
+            <button
+              type="button"
+              className="icon-button"
+              onClick={open}
+              aria-label={t["composer.attachDocument"]}
+              title={t["composer.attachDocument"]}
+              disabled={triggerDisabled}
+            >
+              <Paperclip size={17} />
+            </button>
+          )}
+        />
         <textarea
           ref={textInputRef}
           rows={1}

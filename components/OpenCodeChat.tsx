@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
 import Composer from "./Composer";
+import type { DocumentAttachment } from "@/lib/documents/types";
 import type { ChatImage, ChatMessage } from "@/lib/types";
 import { ModelMarkerParser } from "@/lib/markers";
 import {
@@ -14,13 +15,14 @@ import {
 } from "@/lib/format";
 import { AlertTriangle } from "lucide-react";
 import { STR, useUiLang } from "@/lib/i18n";
-import { useInsulinMode, useReasoningEffort } from "@/lib/prefs";
+import { useReasoningEffort } from "@/lib/prefs";
 
 interface UiMessage {
   id: number;
   role: "user" | "model";
   text: string;
   images?: ChatImage[];
+  documents?: DocumentAttachment[];
   streaming?: boolean;
   failed?: boolean;
   model?: string;
@@ -34,15 +36,15 @@ function toApiMessages(messages: UiMessage[]): ChatMessage[] {
   return messages
     .filter(
       (message) =>
-        !message.failed && (message.text || (message.images?.length ?? 0) > 0)
+        !message.failed &&
+        (message.text || (message.images?.length ?? 0) > 0 || (message.documents?.length ?? 0) > 0)
     )
-    .map(({ role, text, images }) => ({ role, text, images }));
+    .map(({ role, text, images, documents }) => ({ role, text, images, documents }));
 }
 
 export default function OpenCodeChat() {
   const lang = useUiLang();
   const t = STR[lang];
-  const [insulinMode, toggleInsulinMode] = useInsulinMode();
   const [reasoningEffort] = useReasoningEffort();
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [sending, setSending] = useState(false);
@@ -52,15 +54,21 @@ export default function OpenCodeChat() {
   const sessionIdRef = useRef<string | null>(null);
 
   const send = useCallback(
-    async (text: string, images?: ChatImage[]) => {
+    async (text: string, images?: ChatImage[], documents?: DocumentAttachment[]) => {
       const trimmed = text.trim();
-      if ((!trimmed && (images?.length ?? 0) === 0) || sending) return;
+      if (
+        (!trimmed && (images?.length ?? 0) === 0 && (documents?.length ?? 0) === 0) ||
+        sending
+      ) {
+        return;
+      }
 
       const userMessage: UiMessage = {
         id: nextId++,
         role: "user",
         text: trimmed,
         images,
+        documents,
       };
       const modelMessage: UiMessage = {
         id: nextId++,
@@ -99,7 +107,7 @@ export default function OpenCodeChat() {
             messages: history,
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             language: lang,
-            mode: insulinMode ? "preset" : "free",
+            mode: "free",
             reasoning: reasoningEffort,
             sessionId,
           }),
@@ -199,7 +207,7 @@ export default function OpenCodeChat() {
         abortRef.current = null;
       }
     },
-    [messages, sending, lang, insulinMode, reasoningEffort]
+    [messages, sending, lang, reasoningEffort]
   );
 
   const stop = useCallback(() => {
@@ -230,16 +238,6 @@ export default function OpenCodeChat() {
               {t["limit.banner"].replace("{time}", limitTimeLabel)}
             </p>
           )}
-          <div className="composer-toggles">
-            <button
-              type="button"
-              className={`composer-toggle${insulinMode ? " active" : ""}`}
-              onClick={() => toggleInsulinMode(!insulinMode)}
-              aria-pressed={insulinMode}
-            >
-              {t["settings.insulinMode"]}
-            </button>
-          </div>
           <Composer
             sending={sending}
             onSend={send}

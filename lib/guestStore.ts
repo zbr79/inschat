@@ -6,7 +6,9 @@ import type {
   ConcludeMeal,
   ReportEvent,
   SessionConclusion,
+  ChatMode,
 } from "./types";
+import type { DocumentAttachment } from "./documents/types";
 
 export interface GuestMessage {
   id?: string;
@@ -14,6 +16,7 @@ export interface GuestMessage {
   text: string;
   images?: ChatImage[];
   imageKeys?: string[];
+  documents?: DocumentAttachment[];
   model?: string;
   trying?: string;
   elapsed?: number;
@@ -29,6 +32,7 @@ export interface GuestSession {
   title: string;
   updatedAt: number;
   messages: GuestMessage[];
+  chatMode: ChatMode;
   pinned?: boolean;
   conclusion?: SessionConclusion | null;
   recordId?: string | null;
@@ -59,6 +63,10 @@ interface GuestReport {
   updatedAt: string;
   entries: GuestRecord[];
 }
+
+type LegacyGuestSession = Omit<GuestSession, "chatMode"> & {
+  chatMode?: unknown;
+};
 
 function newId(): string {
   return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
@@ -97,24 +105,36 @@ function writeSessions(sessions: GuestSession[]): boolean {
   return writeJson(SESSIONS_KEY, withoutImages.slice(-10));
 }
 
+function normalizeChatMode(value: unknown): ChatMode {
+  return value === "health" ? "health" : "general";
+}
+
+function readGuestSessions(): GuestSession[] {
+  return readJson<LegacyGuestSession[]>(SESSIONS_KEY, []).map((session) => ({
+    ...session,
+    chatMode: normalizeChatMode(session.chatMode),
+  }));
+}
+
 export function listGuestSessions(): GuestSession[] {
-  return readJson<GuestSession[]>(SESSIONS_KEY, []).sort(
+  return readGuestSessions().sort(
     (a, b) => b.updatedAt - a.updatedAt
   );
 }
 
 export function getGuestSession(id: string): GuestSession | null {
-  return readJson<GuestSession[]>(SESSIONS_KEY, []).find((s) => s.id === id) ?? null;
+  return readGuestSessions().find((s) => s.id === id) ?? null;
 }
 
-export function createGuestSession(title: string): GuestSession {
+export function createGuestSession(title: string, chatMode: ChatMode): GuestSession {
   const session: GuestSession = {
     id: newId(),
     title,
     updatedAt: Date.now(),
     messages: [],
+    chatMode,
   };
-  writeSessions([session, ...readJson<GuestSession[]>(SESSIONS_KEY, [])]);
+  writeSessions([session, ...readGuestSessions()]);
   return session;
 }
 

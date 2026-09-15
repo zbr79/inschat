@@ -24,7 +24,7 @@ import {
 export const OPENCODE_BASE_URL = "https://opencode.ai/zen/go/v1";
 export const OPENCODE_FREE_BASE_URL = "https://opencode.ai/zen/v1";
 export const OPENCODE_MODEL = "qwen3.8-flash";
-export const OPENCODE_VISION_MODEL = "qwen3.8-flash";
+export const OPENCODE_VISION_MODEL = "glm-5.3-flash";
 
 // The opencode CLI stores the current subscription key here; it changes when
 // the user rotates/reconnects the key in the TUI. Prefer it over .env so the
@@ -238,10 +238,12 @@ function toOpenAiMessages(
   ];
   for (const message of messages) {
     const role = message.role === "model" ? "assistant" : "user";
+    const documentText = message.documents?.map((document) => document.text).join("\n\n") ?? "";
     if (message.images && message.images.length > 0) {
       const parts: OpenAiContentPart[] = [];
-      if (message.text.trim()) {
-        parts.push({ type: "text", text: message.text });
+      const text = [message.text.trim(), documentText].filter(Boolean).join("\n\n");
+      if (text) {
+        parts.push({ type: "text", text });
       }
       for (const image of message.images) {
         const mimeType = image.mimeType.toLowerCase();
@@ -261,13 +263,15 @@ function toOpenAiMessages(
           },
         });
       }
-      // Qwen accepts image-only and multimodal turns in the same standard
-      // content-array shape. Keep the user's text and image in one turn.
+      // GLM-5.3 Flash accepts image-only and multimodal turns in the same
+      // standard content-array shape. Keep the user's text and image in one
+      // turn.
       out.push({ role, content: parts });
       continue;
     }
-    if (!message.text.trim()) continue;
-    out.push({ role, content: message.text });
+    const text = [message.text.trim(), documentText].filter(Boolean).join("\n\n");
+    if (!text) continue;
+    out.push({ role, content: text });
   }
   return out;
 }
