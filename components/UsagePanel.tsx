@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { STR, useUiLang } from "@/lib/i18n";
+import { isFreeModelName } from "@/lib/modelLabels";
 import ModelRoutingTree from "./ModelRoutingTree";
 
 interface UsageModel {
@@ -63,6 +64,33 @@ function relativeResets(
   return duration(0, "time.minute", "time.minutes");
 }
 
+function summarizeUsageModels(
+  models: UsageModel[],
+  freeLabel: string
+): UsageModel[] {
+  const rows: UsageModel[] = [];
+  let freeUsed = 0;
+  for (const model of models) {
+    if (model.retired || model.used <= 0) continue;
+    if (isFreeModelName(model.name)) {
+      freeUsed += model.used;
+      continue;
+    }
+    rows.push(model);
+  }
+  if (freeUsed > 0) {
+    rows.push({
+      name: "free-models",
+      label: freeLabel,
+      tier: "flash",
+      vision: false,
+      retired: false,
+      used: freeUsed,
+    });
+  }
+  return rows;
+}
+
 export default function UsagePanel() {
   const [usage, setUsage] = useState<UsageData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,8 +118,11 @@ export default function UsagePanel() {
   return (
     <div className="usage-page">
       <h2>{t["usage.title"]}</h2>
+      <p className="usage-sub">{t["usage.sub"]}</p>
 
       {error && <p className="conclusion-error">{error}</p>}
+
+      <ModelRoutingTree />
 
       <section className="usage-card">
         {t["opencodeCalls.official"] && (
@@ -139,27 +170,21 @@ export default function UsagePanel() {
               </tr>
             </thead>
             <tbody>
-              {usage.models
-                .filter((model) => !model.retired && model.used > 0)
-                .map((model) => (
+              {summarizeUsageModels(usage.models, t["routing.freeModels"]).map(
+                (model) => (
                   <tr key={model.name}>
                     <td className="model-name">{model.label}</td>
                     <td className="model-used">{model.used}</td>
                     <td className="model-status">
-                      {model.used > 0 ? (
-                        <span className="status-badge used">{t["usage.inUse"]}</span>
-                      ) : (
-                        <span className="status-badge ok">{t["usage.available"]}</span>
-                      )}
+                      <span className="status-badge used">{t["usage.inUse"]}</span>
                     </td>
                   </tr>
-                ))}
+                )
+              )}
             </tbody>
           </table>
         )}
       </section>
-
-      <ModelRoutingTree />
     </div>
   );
 }

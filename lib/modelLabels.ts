@@ -38,3 +38,7 @@ const LABELS: Record<string, string> = {
 export function modelLabel(name: string): string {
   return LABELS[name] ?? name;
 }
+
+export function isFreeModelName(name: string): boolean {
+  return name.endsWith("-free") || name === "big-pickle";
+}

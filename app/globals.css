@@ -1379,7 +1379,12 @@ span.conclude-rank-badge {
 }
 
 .routing-tree > li > .routing-node {
-  min-width: 0;
+  min-width: 11em;
+  flex-shrink: 0;
+}
+
+.routing-card > .usage-sub {
+  margin-bottom: 0;
 }
 
 .routing-tree ul li {
@@ -1425,7 +1430,7 @@ span.conclude-rank-badge {
 }
 
 .routing-model code {
-  background: var(--bg-soft);
+  background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 1px 6px;
@@ -5256,6 +5261,11 @@ span.conclude-rank-badge {
 .sidebar-hide:hover {
   color: var(--text);
   background: rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-hide.active {
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .sidebar-search {

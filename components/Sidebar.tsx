@@ -174,6 +174,12 @@ export default function Sidebar() {
     };
   }, [pathname, authNonce]);
 
+  useEffect(() => {
+    if (authChecked && pathname === "/usage" && !user) {
+      router.replace("/");
+    }
+  }, [authChecked, pathname, router, user]);
+
   // Deep link /?auth=1 (redirect target of the old /login page) opens the
   // auth modal automatically.
   useEffect(() => {
@@ -541,6 +547,18 @@ export default function Sidebar() {
           >
             <Search size={16} />
           </button>
+          {user && (
+            <button
+              type="button"
+              className={`sidebar-hide${pathname === "/usage" ? " active" : ""}`}
+              onClick={() => router.push("/usage")}
+              aria-label={t["nav.usage"]}
+              title={t["nav.usage"]}
+              aria-current={pathname === "/usage" ? "page" : undefined}
+            >
+              <Gauge size={16} />
+            </button>
+          )}
           <button
             type="button"
             className="sidebar-hide sidebar-collapse"
@@ -696,21 +714,6 @@ export default function Sidebar() {
               <span className="switch-knob" />
             </button>
           </label>
-          <button
-            type="button"
-            className="settings-row settings-link"
-            onClick={() => {
-              setSettingsOpen(false);
-              setMenuOpen(false);
-              router.push("/usage");
-            }}
-          >
-            <span className="settings-row-icon">
-              <Gauge size={16} />
-            </span>
-            <span className="settings-label">{t["nav.usage"]}</span>
-            <ChevronRight size={16} />
-          </button>
           {user && (
             <button
               type="button"
