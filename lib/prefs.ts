@@ -38,6 +38,40 @@ export function useCompressImages(): [boolean, (on: boolean) => void] {
   return [on, setCompressImages];
 }
 
+const HEALTH_MODE_KEY = "inschat_health_mode";
+const HEALTH_MODE_EVENT = "inschat-health-mode";
+
+// Keep the feature visible by default so existing users keep seeing their
+// Health chats and Records until they explicitly turn it off.
+export function getHealthMode(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return window.localStorage.getItem(HEALTH_MODE_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+export function setHealthMode(on: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(HEALTH_MODE_KEY, on ? "1" : "0");
+  } catch {}
+  window.dispatchEvent(new CustomEvent(HEALTH_MODE_EVENT, { detail: on }));
+}
+
+export function useHealthMode(): [boolean, (on: boolean) => void] {
+  const [on, setOn] = useState<boolean>(() => getHealthMode());
+  useEffect(() => {
+    const handler = (event: Event) => {
+      setOn(Boolean((event as CustomEvent<boolean>).detail));
+    };
+    window.addEventListener(HEALTH_MODE_EVENT, handler);
+    return () => window.removeEventListener(HEALTH_MODE_EVENT, handler);
+  }, []);
+  return [on, setHealthMode];
+}
+
 export type ReasoningEffort = "max" | "medium";
 
 const REASONING_KEY = "inschat_reasoning";
