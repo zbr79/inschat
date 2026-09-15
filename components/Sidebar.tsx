@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Menu, X, SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronRight, Languages, FileText, Gauge, LogOut, ImageDown } from "lucide-react";
+import { Menu, X, SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronRight, Languages, FileText, Gauge, LogOut, ImageDown, HeartPulse } from "lucide-react";
 import type { ChatMode, ChatSession } from "@/lib/types";
 import {
   clearGuestData,
@@ -17,7 +17,7 @@ import { STR, useUiLang, setUiLang } from "@/lib/i18n";
 import SearchModal from "./SearchModal";
 import AuthModal from "./AuthModal";
 import ConfirmModal from "./ConfirmModal";
-import { useCompressImages } from "@/lib/prefs";
+import { useCompressImages, useHealthMode } from "@/lib/prefs";
 import { SESSIONS_CHANGED_EVENT } from "@/lib/sessionTitle";
 
 interface MeUser {
@@ -80,6 +80,7 @@ export default function Sidebar() {
   const [authOpen, setAuthOpen] = useState(false);
   const [authNonce, setAuthNonce] = useState(0);
   const [compressImages, setCompressImages] = useCompressImages();
+  const [healthMode, setHealthMode] = useHealthMode();
   const [menuFor, setMenuFor] = useState<{
     id: string;
     top: number;
@@ -557,13 +558,14 @@ export default function Sidebar() {
             <p className="session-hint">{t["nav.loading"]}</p>
           ) : (
             <>
-              {renderSessionSection(
-                "health",
-                t["nav.healthChats"],
-                (user ? ownerList : guestList).filter((session) => session.chatMode === "health"),
-                healthCollapsed,
-                setHealthCollapsed
-              )}
+              {healthMode &&
+                renderSessionSection(
+                  "health",
+                  t["nav.healthChats"],
+                  (user ? ownerList : guestList).filter((session) => session.chatMode === "health"),
+                  healthCollapsed,
+                  setHealthCollapsed
+                )}
               {renderSessionSection(
                 "general",
                 t["nav.generalChats"],
@@ -661,6 +663,22 @@ export default function Sidebar() {
               <option value="zh">中文</option>
               <option value="en">English</option>
             </select>
+          </label>
+          <label className="settings-row">
+            <span className="settings-row-icon">
+              <HeartPulse size={16} />
+            </span>
+            <span className="settings-label">{t["settings.healthMode"]}</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={healthMode}
+              className={`switch${healthMode ? " on" : ""}`}
+              onClick={() => setHealthMode(!healthMode)}
+              aria-label={t["settings.healthMode"]}
+            >
+              <span className="switch-knob" />
+            </button>
           </label>
           <label className="settings-row">
             <span className="settings-row-icon">
