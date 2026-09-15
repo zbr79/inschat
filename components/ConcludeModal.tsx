@@ -395,9 +395,8 @@ const doSave = (): Promise<boolean> => {
 };
 const closeRef = useRef<() => void>(() => undefined);
 closeRef.current = () => {
-  void doSave().then((saved) => {
-    if (saved) onClose();
-  });
+  onClose();
+  void doSave();
 };
 
   // Dialog behavior: Escape closes (auto-saving when editing); focus moves

@@ -42,50 +42,6 @@ body {
   padding: 0 16px;
 }
 
-.chat-mode-header {
-  display: flex;
-  justify-content: flex-end;
-  padding: 12px 4px 0;
-}
-
-.chat-mode-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  max-width: 100%;
-  padding: 6px 9px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--bg);
-  font-size: 12px;
-}
-
-.chat-mode-badge > span {
-  display: grid;
-  gap: 1px;
-  min-width: 0;
-}
-
-.chat-mode-badge strong {
-  font-weight: 600;
-  line-height: 1.1;
-}
-
-.chat-mode-badge small {
-  color: var(--text-muted);
-  font-size: 10px;
-  line-height: 1.1;
-}
-
-.chat-mode-badge.health {
-  border-color: rgba(108, 84, 199, 0.28);
-  color: #6c54c7;
-}
-
-.chat-mode-badge.general {
-  color: var(--text-muted);
-}
-
 .header {
   position: relative;
   padding: 20px 4px 12px;
@@ -2101,6 +2057,14 @@ span.conclude-rank-badge {
   border: 1px solid rgba(29, 29, 31, 0.14);
   border-radius: 24px;
   padding: 8px;
+}
+
+.input-row.mode-health {
+  border-color: #3b82f6;
+}
+
+.input-row.mode-health:focus-within {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
 }
 
 .input-row textarea {
@@ -4276,6 +4240,13 @@ span.conclude-rank-badge {
   border-radius: 16px;
   background: var(--bg);
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.24);
+}
+
+@media (min-width: 641px) {
+  .conclude-modal:not(.conclude-modal-embedded),
+  .full-day-edit-modal {
+    transform: translate(-50%, -50%) scale(0.8);
+  }
 }
 
 .record-edit-head {

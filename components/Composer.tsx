@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowUp, Mic, Paperclip, Plus, Sparkles, Square, X } from "lucide-react";
 import type { DocumentAttachment } from "@/lib/documents/types";
-import type { ChatImage } from "@/lib/types";
+import type { ChatImage, ChatMode } from "@/lib/types";
 import { MAX_IMAGES } from "@/lib/types";
 import { STR, useUiLang } from "@/lib/i18n";
 import { useCompressImages, useReasoningEffort } from "@/lib/prefs";
@@ -24,6 +24,7 @@ interface ComposerProps {
   onStop: () => void;
   disabled?: boolean;
   signedIn?: boolean;
+  chatMode?: ChatMode;
 }
 
 function readImage(
@@ -53,6 +54,7 @@ export default function Composer({
   onStop,
   disabled = false,
   signedIn = false,
+  chatMode = "general",
 }: ComposerProps) {
   const lang = useUiLang();
   const t = STR[lang];
@@ -248,7 +250,7 @@ export default function Composer({
           ))}
         </div>
       )}
-      <div className="input-row">
+      <div className={`input-row mode-${chatMode}`}>
         <input
           ref={fileRef}
           type="file"
