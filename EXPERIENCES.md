@@ -3891,3 +3891,50 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - A lighter Health folder label made the Records action appear more important
   than its parent folder.
+
+## 2026-09-14 — Health composer theme
+
+### Solved
+- Reused the Agent project’s mode-specific composer border and focus-ring
+  pattern.
+- Added a blue border and focus ring to Health chat composers.
+- Kept General chat composers neutral.
+- Removed the redundant top-right fixed-mode badge from the main chat view.
+
+### Unresolved
+- The standalone `ChatModeBadge` component remains available but is no longer
+  rendered by the main chat.
+
+### Disproved
+- A second top-right mode label was not needed once the composer communicates
+  the active Health theme.
+
+## 2026-09-14 — Restored desktop report modal scale
+
+### Solved
+- Restored the pre-`a1a5237` `scale(0.8)` treatment for desktop report
+  dialogs.
+- Scoped the restoration to desktop widths so mobile sizing can be handled
+  separately.
+
+### Unresolved
+- The mobile modal size and save-before-close delay still need a separate
+  decision.
+
+### Disproved
+- Applying the desktop restoration globally would be safe before deciding the
+  mobile layout.
+
+## 2026-09-14 — Immediate report modal dismissal
+
+### Solved
+- Changed report modal dismissal to close immediately when the backdrop,
+  close button, or Escape is used.
+- Kept the existing auto-save running after dismissal.
+
+### Unresolved
+- None identified for the dismissal delay.
+
+### Disproved
+- Waiting for the report and session persistence requests before hiding the
+  modal was necessary for data safety.
