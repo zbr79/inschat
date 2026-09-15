@@ -7,7 +7,6 @@ import Composer from "./Composer";
 import QuestionCard from "./QuestionCard";
 import ConcludeButton from "./ConcludeButton";
 import ConcludeModal from "./ConcludeModal";
-import ChatModeBadge from "./ChatModeBadge";
 import type {
   ChatImage,
   ChatMode,
@@ -1704,9 +1703,6 @@ useEffect(() => {
 
   return (
     <div className="app">
-      <div className="chat-mode-header">
-        <ChatModeBadge mode={chatMode} />
-      </div>
       {loading ? (
         <main className="messages">
           <p className="empty">{t["records.loading"]}</p>
@@ -1719,6 +1715,7 @@ useEffect(() => {
             onStop={stop}
             sending={sending}
             signedIn={isAuthed === true}
+            chatMode={chatMode}
           />
         </main>
       ) : (
@@ -1781,6 +1778,7 @@ useEffect(() => {
             sending={sending}
             disabled={Boolean(pendingQuestion)}
             signedIn={isAuthed === true}
+            chatMode={chatMode}
           />
         </>
       )}
