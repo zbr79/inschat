@@ -7,6 +7,7 @@ import rehypeHighlight from "rehype-highlight";
 import { Check, Copy, Pencil, RefreshCw, X } from "lucide-react";
 import "highlight.js/styles/github.css";
 import ImageViewer from "./ImageViewer";
+import type { DocumentAttachment } from "@/lib/documents/types";
 import type { ChatImage, ConcludeResult } from "@/lib/types";
 import { formatElapsed } from "@/lib/format";
 import { STR, useUiLang } from "@/lib/i18n";
@@ -17,6 +18,7 @@ interface Message {
   role: "user" | "model";
   text: string;
   images?: ChatImage[];
+  documents?: DocumentAttachment[];
   streaming?: boolean;
   failed?: boolean;
   model?: string;
@@ -27,6 +29,25 @@ interface Message {
 
 function dataUrl(image: { mimeType: string; data: string }): string {
   return `data:${image.mimeType};base64,${image.data}`;
+}
+
+function documentType(document: DocumentAttachment): string {
+  const extension = document.name.split(".").pop()?.toUpperCase();
+  return extension || document.mimeType.split("/").pop()?.toUpperCase() || "FILE";
+}
+
+function DocumentChips({ documents }: { documents?: DocumentAttachment[] }) {
+  if (!documents?.length) return null;
+  return (
+    <div className="message-document-chips">
+      {documents.map((document) => (
+        <span className="message-document-chip" key={document.id}>
+          <strong>{documentType(document)}</strong>
+          <span>{document.name}</span>
+        </span>
+      ))}
+    </div>
+  );
 }
 
 // Markdown collapses single newlines into spaces; convert them to hard
@@ -245,6 +266,7 @@ export default function MessageBubble({
                   </div>
                 ))}
                 <div className="bubble">
+                  <DocumentChips documents={message.documents} />
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     rehypePlugins={[rehypeHighlight]}
@@ -263,6 +285,7 @@ export default function MessageBubble({
                     onClick={() => setViewer(url)}
                   />
                 ))}
+                <DocumentChips documents={message.documents} />
                 {message.text && (
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
@@ -312,7 +335,11 @@ export default function MessageBubble({
       })}
       <div ref={endRef} />
       {viewer && (
-         <ImageViewer src={viewer} alt={t["composer.uploadedAlt"]} onClose={() => setViewer(null)} />
+         <ImageViewer
+           src={viewer}
+           alt={t["composer.uploadedAlt"]}
+           onClose={() => setViewer(null)}
+         />
       )}
     </main>
   );

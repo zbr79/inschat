@@ -10,9 +10,14 @@ const FALLBACK_PROMPT =
 const QUESTION_PROMPT =
   "Use the ask_user_question tool only when you cannot give a correct, useful answer without a decision or fact from the user. The answer must be required to proceed, not merely helpful or convenient. Do not use it for rhetorical questions, optional preferences, follow-up curiosity, information the user already gave, or any ordinary question mark. When you use it, pause and wait for the answer, provide 2–4 concise options, and allow a custom answer unless the choice must be constrained. If the user explicitly asks for a question with selectable options, use the tool.";
 
+const DOCUMENT_PROMPT =
+  "When documents are attached, treat their extracted text as user-provided source material. Use relevant document facts, do not invent missing content, and cite the exact source header in square brackets (for example, [report.pdf — Page 2], [budget.xlsx — Sheet1, row 4]) when making a claim from a document.";
+
 const FREE_PROMPT =
   "You are InsChat, a helpful and friendly general assistant. Answer the user's questions clearly and directly, matching the depth of the question; use markdown (headings, tables, lists) when it helps readability. Reply in the language the user writes in; if their message has no language cues, use the UI language mode stated below. You have web_search and web_fetch tools: search the live web for current information or sources, then fetch useful result pages when needed. Never claim you can't access the internet, and never invent numbers or facts. " +
-  QUESTION_PROMPT;
+  QUESTION_PROMPT +
+  " " +
+  DOCUMENT_PROMPT;
 
 export function isValidTimeZone(timeZone: unknown): timeZone is string {
   if (typeof timeZone !== "string" || !timeZone || timeZone.length > 64) {
@@ -68,8 +73,8 @@ export function getSystemPrompt(
         language === "en"
           ? "\n\nUI language mode: English — use English only when the user's message has no language cues (photo alone, bare number)."
           : "\n\nUI语言模式：中文 — 仅在用户消息没有语言线索（纯图片、纯数字）时使用中文。";
-      return `${prompt}\n\n${QUESTION_PROMPT}${modeLine}\n\n当前时间（${zone}）: ${currentTimeLabel(zone)}`;
+      return `${prompt}\n\n${QUESTION_PROMPT}\n\n${DOCUMENT_PROMPT}${modeLine}\n\n当前时间（${zone}）: ${currentTimeLabel(zone)}`;
     }
   } catch {}
-  return `${FALLBACK_PROMPT}\n\n${QUESTION_PROMPT}`;
+  return `${FALLBACK_PROMPT}\n\n${QUESTION_PROMPT}\n\n${DOCUMENT_PROMPT}`;
 }

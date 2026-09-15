@@ -106,7 +106,7 @@ export default function ModelsPanel() {
   };
 
   const models = data?.models ?? [];
-  const enforcedModel = "qwen3.8-flash";
+  const enforcedModels = new Set(["qwen3.8-flash", "glm-5.3-flash"]);
   const healthByModel = new Map((health?.results ?? []).map((r) => [r.model, r]));
   const visible = models.filter(
     (model) => !model.retired && healthByModel.get(model.name)?.status !== "retired"
@@ -206,7 +206,7 @@ export default function ModelsPanel() {
         {visible.map((model) => {
           const live = healthByModel.get(model.name);
           const current = model.name === data?.current;
-          const enforced = model.name !== enforcedModel;
+          const enforced = !enforcedModels.has(model.name);
           const state = current
             ? t["models.active"]
             : enforced
