@@ -365,7 +365,12 @@ export default function ConcludeModal({
   const [insulins, setInsulins] = useState<Reading[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mobileEditMode, setMobileEditMode] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) setMobileEditMode(false);
+  }, [open]);
 
   const imageKeysForMeal = (
     meal: NonNullable<ConcludeResult["meals"]>[number]
@@ -756,7 +761,9 @@ closeRef.current = () => {
         />
       )}
       <div
-        className={`conclude-modal${embedded ? " conclude-modal-embedded" : ""}`}
+        className={`conclude-modal${embedded ? " conclude-modal-embedded" : ""}${
+          mobileEditMode ? " conclude-mobile-editing" : ""
+        }`}
         role="dialog"
         aria-modal="true"
         ref={modalRef}
@@ -765,6 +772,14 @@ closeRef.current = () => {
           <div className="conclude-modal-head-text">
             <h3 className="conclude-modal-title">{t["concludeModal.title"]}</h3>
           </div>
+          <button
+            type="button"
+            className="conclude-mobile-edit-toggle"
+            onClick={() => setMobileEditMode((current) => !current)}
+            aria-pressed={mobileEditMode}
+          >
+            {mobileEditMode ? t["actions.done"] : t["actions.edit"]}
+          </button>
           <button
             type="button"
             className="conclude-modal-close"
@@ -832,16 +847,16 @@ closeRef.current = () => {
                 className="conclude-section conclude-section-report"
               >
                 <div className="conclude-meal-head">
-                  <button
-                    type="button"
-                    className="conclude-card-remove"
-                    onClick={() => removeMealAuto(entry.index)}
-                    aria-label={t["concludeModal.removeDish"]}
-                    title={t["concludeModal.removeDish"]}
-                  >
-                    <Trash2 size={14} />
-                  </button>
                   <span className="conclude-meal-title">
+                    <button
+                      type="button"
+                      className="conclude-card-remove"
+                      onClick={() => removeMealAuto(entry.index)}
+                      aria-label={t["concludeModal.removeDish"]}
+                      title={t["concludeModal.removeDish"]}
+                    >
+                      <Trash2 size={14} />
+                    </button>
                     <span className="conclude-inline-meal-name">{meal.name}</span>
                     <RecordImages
                       imageKeys={imageKeysForMeal(meal)}
@@ -926,27 +941,29 @@ closeRef.current = () => {
               className="conclude-section conclude-section-report"
             >
               <div className="conclude-catalog-head">
-                <button
-                  type="button"
-                  className="conclude-card-remove"
-                  onClick={() => remover(entry.index)}
-                  aria-label={t["concludeModal.removeDish"]}
-                  title={t["concludeModal.removeDish"]}
-                >
-                  <Trash2 size={14} />
-                </button>
-                <span className="conclude-glucose-label">
-                  {label}
-                  <span className="conclude-label-dot">·</span>
-                </span>
-                <InlineSelect
-                  className="conclude-inline-phase"
-                  value={phase}
-                  options={READING_PHASES[lang]}
-                  onCommit={(next) => setter(entry.index, { phase: next })}
-                  ariaLabel={t["concludeModal.phase"]}
-                  showPen={false}
-                />
+                <div className="conclude-reading-label">
+                  <button
+                    type="button"
+                    className="conclude-card-remove"
+                    onClick={() => remover(entry.index)}
+                    aria-label={t["concludeModal.removeDish"]}
+                    title={t["concludeModal.removeDish"]}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <span className="conclude-glucose-label">
+                    {label}
+                    <span className="conclude-label-dot">·</span>
+                  </span>
+                  <InlineSelect
+                    className="conclude-inline-phase"
+                    value={phase}
+                    options={READING_PHASES[lang]}
+                    onCommit={(next) => setter(entry.index, { phase: next })}
+                    ariaLabel={t["concludeModal.phase"]}
+                    showPen={false}
+                  />
+                </div>
                 <div className="conclude-inline-reading-value">
                   <InlineText
                     className="conclude-inline-value"

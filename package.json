@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:lighthouse": "npm run build && node scripts/lighthouse.mjs",
+    "test": "npm run test:e2e && npm run test:lighthouse"
   },
   "dependencies": {
     "exceljs": "^4.4.0",
@@ -23,9 +27,11 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "lighthouse": "^13.4.1",
     "typescript": "^5.7.0"
   }
 }
