@@ -36,8 +36,8 @@ import {
 } from "@/lib/guestStore";
 import { putGuestImage, getGuestImage } from "@/lib/guestImages";
 import { STR, useUiLang } from "@/lib/i18n";
-import { useReasoningEffort } from "@/lib/prefs";
 import type { DocumentAttachment } from "@/lib/documents/types";
+import { useAuth } from "@/lib/authContext";
 
 interface UiMessage {
   id: number;
@@ -353,8 +353,8 @@ export default function ChatApp() {
     searchParams.get("newMode") === "health" ? "health" : "general";
   const lang = useUiLang();
   const t = STR[lang];
+  const { user: authUser, authChecked } = useAuth();
   const [chatMode, setChatMode] = useState<ChatMode>(requestedChatMode);
-  const [reasoningEffort] = useReasoningEffort();
 
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [sending, setSending] = useState(false);
@@ -364,7 +364,7 @@ export default function ChatApp() {
   const [questionBusy, setQuestionBusy] = useState(false);
   const [questionError, setQuestionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAuthed, setIsAuthed] = useState<boolean | null>(null);
+  const isAuthed = authChecked ? Boolean(authUser) : null;
   const [concludeDraft, setConcludeDraft] = useState<{
     result: ConcludeResult;
     sourceText: string;
@@ -694,42 +694,6 @@ export default function ChatApp() {
 
   useEffect(() => stopResume, [stopResume]);
 
-  // Auth state refresh: runs on mount, on URL changes, and when the sidebar
-// signals login/logout ("inschat-auth") — ChatApp never remounts for those,
-// so the initial check alone leaves isAuthed stale and messages silently go
-// to the guest store.
-useEffect(() => {
-  let alive = true;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 4000);
-  const check = () =>
-    fetch("/api/auth/me", { signal: controller.signal })
-      .then((response) => {
-        if (alive) setIsAuthed(response.status === 200);
-      })
-      .catch(() => {
-        if (alive) setIsAuthed(false);
-      });
-  check().finally(() => clearTimeout(timer));
-  const onAuth = () => {
-    const ctrl = new AbortController();
-    fetch("/api/auth/me", { signal: ctrl.signal })
-      .then((response) => {
-        if (alive) setIsAuthed(response.status === 200);
-      })
-      .catch(() => {
-        if (alive) setIsAuthed(false);
-      });
-  };
-  window.addEventListener("inschat-auth", onAuth);
-  return () => {
-    alive = false;
-    controller.abort();
-    clearTimeout(timer);
-    window.removeEventListener("inschat-auth", onAuth);
-  };
-}, [searchParams]);
-
   /*
    * The remainder of this effect is kept below in the existing session
    * hydration path.
@@ -921,8 +885,12 @@ useEffect(() => {
           if (sessionIdRef.current !== id) return;
           setMessages(hydrated);
           setSending(hydrated.some((message) => message.status === "pending"));
+          const pendingLocal = hydrated.find(
+            (message) => message.status === "pending" && message._id
+          );
           // Rejoin a server-side guest run after refresh (trail + pending).
-          try {
+          if (pendingLocal) {
+            try {
             const response = await fetch(`/api/guest-runs/${id}`);
             if (!response.ok || sessionIdRef.current !== id) return;
             const body = (await response.json()) as {
@@ -977,9 +945,6 @@ useEffect(() => {
               return [...prev, mapped];
             });
             setSending(pending);
-            const pendingLocal = hydrated.find(
-              (message) => message.status === "pending" && message._id
-            );
             const resumeId = run?._id ?? pendingLocal?._id;
             if ((pending || pendingLocal) && resumeId) {
               startGuestResume(
@@ -998,8 +963,9 @@ useEffect(() => {
                 status,
               });
             }
-          } catch {
-            /* local user prompt still shows */
+            } catch {
+              /* local user prompt still shows */
+            }
           }
         });
         if (local.conclusion) {
@@ -1083,16 +1049,42 @@ useEffect(() => {
       const startedAt = Date.now();
       let elapsedValue = 0;
       let contentStarted = false;
-      const elapsedTimer = setInterval(() => {
-        elapsedValue = elapsedSeconds(startedAt);
+      let renderTimer: ReturnType<typeof setTimeout> | null = null;
+      let pendingRender: Partial<UiMessage> | null = null;
+      let streamSteps: string[] = [];
+      const flushStreamRender = () => {
+        if (renderTimer) {
+          clearTimeout(renderTimer);
+          renderTimer = null;
+        }
+        const patch = pendingRender;
+        pendingRender = null;
+        if (!patch) return;
         setMessages((prev) =>
           prev.map((message) =>
-            message.id === modelMessage.id
-              ? { ...message, elapsed: elapsedValue }
-              : message
+            message.id === modelMessage.id ? { ...message, ...patch } : message
           )
         );
-      }, 100);
+      };
+      const scheduleStreamRender = (patch: Partial<UiMessage>) => {
+        pendingRender = { ...pendingRender, ...patch };
+        if (renderTimer) return;
+        renderTimer = setTimeout(() => {
+          renderTimer = null;
+          const next = pendingRender;
+          pendingRender = null;
+          if (!next) return;
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === modelMessage.id ? { ...message, ...next } : message
+            )
+          );
+        }, 50);
+      };
+      const elapsedTimer = setInterval(() => {
+        elapsedValue = elapsedSeconds(startedAt);
+        scheduleStreamRender({ elapsed: elapsedValue });
+      }, 250);
 
       // The reply is perceived as "done" once the first words arrive — freeze
       // the elapsed timer there instead of counting the whole stream tail
@@ -1102,13 +1094,7 @@ useEffect(() => {
           contentStarted = true;
           elapsedValue = elapsedSeconds(startedAt);
           clearInterval(elapsedTimer);
-          setMessages((prev) =>
-            prev.map((message) =>
-              message.id === modelMessage.id
-                ? { ...message, elapsed: elapsedValue }
-                : message
-            )
-          );
+          scheduleStreamRender({ elapsed: elapsedValue });
         }
       };
 
@@ -1131,7 +1117,7 @@ useEffect(() => {
             mode: chatMode === "health" ? "preset" : "free",
             chatMode,
             includeImages: chatMode === "health",
-            reasoning: reasoningEffort,
+            reasoning: "max",
             sessionId,
             pendingMessageId,
           }),
@@ -1187,25 +1173,10 @@ useEffect(() => {
           }
           if (model) {
             modelName = model;
-            setMessages((prev) =>
-              prev.map((message) =>
-                message.id === modelMessage.id
-                  ? { ...message, model: modelName, trying: undefined }
-                  : message
-              )
-            );
+            scheduleStreamRender({ model: modelName, trying: undefined });
           } else if (trying) {
-            setMessages((prev) =>
-              prev.map((message) => {
-                if (message.id !== modelMessage.id) return message;
-                const steps = appendProcessStep(message.processSteps ?? [], trying);
-                return {
-                  ...message,
-                  trying,
-                  processSteps: steps,
-                };
-              })
-            );
+            streamSteps = appendProcessStep(streamSteps, trying);
+            scheduleStreamRender({ trying, processSteps: streamSteps });
           }
           if (text) {
             freezeElapsed();
@@ -1218,13 +1189,7 @@ useEffect(() => {
                 openIdx === -1 ? modelText : modelText.slice(0, openIdx)
               )
             );
-            setMessages((prev) =>
-              prev.map((message) =>
-                message.id === modelMessage.id
-                  ? { ...message, text: visible }
-                  : message
-              )
-            );
+            scheduleStreamRender({ text: visible });
           }
         }
         const tail = parser.flush();
@@ -1236,15 +1201,10 @@ useEffect(() => {
               openIdx === -1 ? modelText : modelText.slice(0, openIdx)
             )
           );
-          setMessages((prev) =>
-            prev.map((message) =>
-              message.id === modelMessage.id
-                ? { ...message, text: visible }
-                : message
-            )
-          );
+          scheduleStreamRender({ text: visible });
         }
         if (!contentStarted) elapsedValue = elapsedSeconds(startedAt);
+        flushStreamRender();
         setMessages((prev) =>
           prev.map((message) =>
             message.id === modelMessage.id
@@ -1358,6 +1318,7 @@ useEffect(() => {
         }
       } catch (error) {
         aborted = error instanceof DOMException && error.name === "AbortError";
+        flushStreamRender();
         setMessages((prev) =>
           prev.map((message) =>
             message.id === modelMessage.id
@@ -1375,6 +1336,7 @@ useEffect(() => {
         );
       } finally {
         clearInterval(elapsedTimer);
+        if (renderTimer) clearTimeout(renderTimer);
         setSending(false);
         abortRef.current = null;
       }
@@ -1385,7 +1347,6 @@ useEffect(() => {
       chatMode,
       mergeConclusion,
       persistConclusionRecord,
-      reasoningEffort,
     ]
   );
 
@@ -1700,6 +1661,15 @@ useEffect(() => {
   const sessionImageKeys = [
     ...new Set(messages.flatMap((message) => message.imageKeys ?? [])),
   ];
+  const reportButton = (
+    <ConcludeButton
+      onClick={() => {
+        if (concludeReady) setConcludeDraft(concludeResult);
+      }}
+      ready={concludeReady}
+      disabled={!concludeReady || sending || Boolean(pendingQuestion)}
+    />
+  );
 
   return (
     <div className="app">
@@ -1759,19 +1729,7 @@ useEffect(() => {
               }}
             />
           ) : null}
-          <div
-            className={`composer-toggles bottom${pendingQuestion ? " locked" : ""}`}
-            aria-disabled={Boolean(pendingQuestion)}
-          >
-            {summaryError && <p className="conclusion-error">{summaryError}</p>}
-            <ConcludeButton
-              onClick={() => {
-                if (concludeReady) setConcludeDraft(concludeResult);
-              }}
-              ready={concludeReady}
-              disabled={!concludeReady || sending || Boolean(pendingQuestion)}
-            />
-          </div>
+          {summaryError && <p className="conclusion-error">{summaryError}</p>}
           <Composer
             onSend={send}
             onStop={stop}
@@ -1779,6 +1737,7 @@ useEffect(() => {
             disabled={Boolean(pendingQuestion)}
             signedIn={isAuthed === true}
             chatMode={chatMode}
+            reportButton={reportButton}
           />
         </>
       )}

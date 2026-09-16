@@ -31,6 +31,7 @@ import RecordEditModal, { type RecordEditDraft } from "./RecordEditModal";
 import RecordInsights from "./RecordInsights";
 import RecordImages from "./RecordImages";
 import ReportTransferControls from "./ReportTransferControls";
+import { useAuth } from "@/lib/authContext";
 import {
   extractGlucosePoints,
   filterGlucosePoints,
@@ -254,7 +255,8 @@ export default function RecordsPanel({
 }) {
   const showBrief = merged || !fullReport;
   const showFull = merged || fullReport;
-  const [guest, setGuest] = useState<boolean | null>(null);
+  const { user, authChecked } = useAuth();
+  const guest = authChecked ? !user : null;
   const [records, setRecords] = useState<SavedRecord[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -299,20 +301,6 @@ export default function RecordsPanel({
       setError(err instanceof Error ? err.message : t["common.requestFailed"]);
     }
   }, [guest, lang]);
-
-  useEffect(() => {
-    let alive = true;
-    fetch("/api/auth/me")
-      .then((response) => {
-        if (alive) setGuest(response.status !== 200);
-      })
-      .catch(() => {
-        if (alive) setGuest(true);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   useEffect(() => {
     const onRecordsChanged = () => {

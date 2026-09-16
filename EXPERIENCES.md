@@ -3969,3 +3969,90 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Disproved
 - Deleting or migrating Health sessions was necessary when hiding the feature.
+
+## 2026-09-15 — Diagnose sidebar and chat loading performance
+
+### Solved
+- Live guest navigation measured a fast document shell: approximately 59ms
+  public TTFB and 166ms browser load on the tested connection.
+- Confirmed sidebar hydration prefetches Records plus every visible session
+  link, with duplicate RSC requests appearing in the waterfall.
+- Confirmed saved guest-chat hydration waits on `/api/guest-runs/:id`, which
+  performed a MongoDB lookup and took 176ms in the tested session.
+- Confirmed the model provider dominates reply latency: the probe returned its
+  first token in 1121ms, while recent server samples ranged from 2963ms to
+  3874ms.
+- Identified repeated whole-message rerenders during streaming: the elapsed
+  timer updates every 100ms, each token reparses all ReactMarkdown bubbles,
+  and each message update triggers smooth scrolling.
+
+### Unresolved
+- Authenticated sidebar/session timings still need a real signed-in browser
+  session; guest testing was required by the workspace test policy.
+- The Chrome DevTools tracing plugin was unavailable because its configured
+  Chrome executable was missing, so no CPU/LCP trace was captured.
+
+### Disproved
+- The initial HTML document or network connection is the primary bottleneck
+  on the tested public deployment.
+
+## 2026-09-15 — Reduce sidebar and chat streaming work
+
+### Solved
+- Shared `/api/auth/me` through an `AuthProvider`, removing duplicate auth
+  requests from Sidebar, ChatApp, and RecordsPanel while keeping login/logout
+  updates synchronized.
+- Disabled Next.js prefetching for session and Records links and stopped
+  refetching the session list when only the selected session changes.
+- Skipped guest-run recovery requests unless local hydration contains a pending
+  response.
+- Started authenticated and guest persistence in parallel with model streaming,
+  while serializing progress writes behind the pending insert to avoid races.
+- Throttled streaming bubble updates to 50ms, reduced elapsed updates to 250ms,
+  memoized completed Markdown content, and scheduled one scroll per animation
+  frame without smooth-scroll animation.
+- Kept the question tool available for text chats but only sent web-search and
+  web-fetch schemas when the latest prompt requests live web information.
+
+### Unresolved
+- Provider first-token latency remains the dominant cost and depends on model
+  availability, quota, and upstream load.
+- Authenticated browser timing still needs a real signed-in session.
+
+### Disproved
+- A shared auth state alone was not enough to improve chat latency; the
+  remaining gains required reducing guest recovery, persistence, rendering, and
+  tool-schema work.
+
+## 2026-09-15 — Fix text reasoning policy and simplify composer
+
+### Solved
+- Removed the user-facing reasoning-effort button and its unused styling,
+  preference state, and translations.
+- Enforced `max` reasoning for text requests in both chat streaming routes.
+- Preserved the existing provider guard that omits `reasoning_effort` whenever
+  image content is present.
+
+### Unresolved
+- Max reasoning can increase text latency and token usage by design.
+
+### Disproved
+- A per-user reasoning toggle was not needed once the product chose one fixed
+  text policy.
+
+## 2026-09-15 — Move session reports into the composer
+
+### Solved
+- Moved the existing session-report button into the former reasoning-control
+  position inside the composer.
+- Kept it disabled until the current chat has a report, then preserved its
+  existing ready color and session-report modal behavior.
+- Raised it by 2px to align visually with the adjacent voice control.
+
+### Unresolved
+- The full Records page remains available from the Health section of the
+  sidebar.
+
+### Disproved
+- Opening `/records` would have shown the account-wide report rather than the
+  current chat's session report.

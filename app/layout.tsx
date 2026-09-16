@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import Sidebar from "@/components/Sidebar";
+import { AuthProvider } from "@/lib/authContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,12 +18,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <div className="shell">
-          <Suspense>
-            <Sidebar />
-          </Suspense>
-          <div className="main">{children}</div>
-        </div>
+        <AuthProvider>
+          <div className="shell">
+            <Suspense>
+              <Sidebar />
+            </Suspense>
+            <div className="main">{children}</div>
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );
