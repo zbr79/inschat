@@ -46,11 +46,27 @@ test.describe("guest phone UI", () => {
               title: "Mobile edit test",
               summary: "Saved report for the phone edit-mode test.",
               items: [{ name: "Glucose", value: "110", unit: "mg/dL" }],
+              imageKeys: ["mobile-meal-image"],
               meals: [
                 {
                   name: "Dinner",
                   time: "2026-09-15T19:00:00",
                   dishes: [{ name: "Rice", rank: "High" }],
+                },
+              ],
+              events: [
+                {
+                  id: "mobile-meal-event",
+                  occurredAt: "2026-09-15T19:00:00",
+                  items: [],
+                  meals: [
+                    {
+                      name: "Dinner",
+                      time: "2026-09-15T19:00:00",
+                      dishes: [{ name: "Rice", rank: "High" }],
+                    },
+                  ],
+                  imageKeys: ["mobile-meal-image"],
                 },
               ],
             },
@@ -66,6 +82,7 @@ test.describe("guest phone UI", () => {
     const remove = page.locator(".conclude-reading-label > .conclude-card-remove");
     await expect(remove).toHaveCount(1);
     await expect(remove).toBeHidden();
+    await expect(page.locator(".conclude-mobile-edit-toggle")).not.toBeFocused();
     const layout = await page.locator(".conclude-catalog-head").evaluate((head) => {
       const box = (selector: string) => {
         const rect = head.querySelector(selector)?.getBoundingClientRect();
@@ -121,6 +138,26 @@ test.describe("guest phone UI", () => {
     await expect(page.locator(".conclude-inline-dish-name")).toHaveCSS("font-size", "14px");
     await expect(page.locator(".conclude-inline-value")).toHaveCSS("font-size", "14px");
     await expect(page.locator(".conclude-rank-badge")).toHaveCSS("font-size", "12px");
+    const mealImage = page.locator(".conclude-meal-title .record-images-trigger");
+    await expect(mealImage).toBeVisible();
+    await expect(mealImage.locator("svg")).toHaveCSS("width", "17px");
+    await mealImage.hover();
+    await expect(mealImage).toHaveCSS("outline-style", "none");
+    const mealIconAlignment = await mealImage.evaluate((icon) => {
+      const name = icon.parentElement?.querySelector(".conclude-inline-meal-name");
+      if (!name) return false;
+      const iconBox = icon.getBoundingClientRect();
+      const nameBox = name.getBoundingClientRect();
+      return Math.abs(iconBox.top + iconBox.height / 2 - (nameBox.top + nameBox.height / 2)) <= 2;
+    });
+    expect(mealIconAlignment).toBe(true);
+    const rankRight = await page.locator(".conclude-rank-badge").evaluate((rank) => {
+      const row = rank.closest(".conclude-dish-row");
+      return row
+        ? rank.getBoundingClientRect().right >= row.getBoundingClientRect().right - 1
+        : false;
+    });
+    expect(rankRight).toBe(true);
 
     const editToggle = page.locator(".conclude-mobile-edit-toggle");
     await expect(editToggle).toHaveText("Edit");

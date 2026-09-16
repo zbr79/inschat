@@ -3109,12 +3109,16 @@ span.conclude-rank-badge {
   cursor: pointer;
 }
 
+.record-images-trigger svg {
+  width: 17px;
+  height: 17px;
+}
+
 .record-images-trigger:hover,
 .record-images-trigger:focus-visible {
   color: var(--text);
-  background: var(--bg-soft);
-  outline: 2px solid var(--text);
-  outline-offset: 1px;
+  background: transparent;
+  outline: none;
 }
 
 .record-images-dialog {
@@ -5863,7 +5867,7 @@ span.conclude-rank-badge {
     grid-area: title;
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-start;
+    align-items: center;
     overflow: visible;
     min-width: 0;
   }
@@ -6041,15 +6045,59 @@ span.conclude-rank-badge {
   }
 
   .conclude-dish-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
     min-width: 0;
     min-height: 36px;
     gap: 4px;
+  }
+
+  .conclude-meal-title .record-images-trigger {
+    width: 24px;
+    height: 24px;
+  }
+
+  .conclude-meal-title .record-images-trigger svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .conclude-meal-title .record-images-trigger:hover,
+  .conclude-meal-title .record-images-trigger:focus-visible {
+    outline: none;
+    background: transparent;
   }
 
   .conclude-dish-row .conclude-dish-remove {
     width: 24px;
     height: 24px;
     flex: 0 0 24px;
+  }
+
+  .conclude-dish-row .conclude-inline-dish-name {
+    width: 100%;
+  }
+
+  .conclude-dish-row .conclude-rank-badge {
+    margin-left: 0;
+    justify-self: end;
+  }
+
+  .conclude-mobile-editing .conclude-dish-row {
+    grid-template-columns: 24px minmax(0, 1fr) auto;
+  }
+
+  .conclude-mobile-editing .conclude-dish-row .conclude-dish-remove {
+    grid-column: 1;
+  }
+
+  .conclude-mobile-editing .conclude-dish-row .conclude-inline-dish-name {
+    grid-column: 2;
+  }
+
+  .conclude-mobile-editing .conclude-dish-row .conclude-rank-badge {
+    grid-column: 3;
   }
 
   .conclude-modal .conclude-inline-dish-name,

@@ -3852,6 +3852,62 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - None.
 
+## 2026-09-16 — Disable initial report focus selection
+
+### Solved
+- Removed automatic focus from the first report control when the modal opens.
+- Preserved Escape handling and Tab focus trapping for keyboard navigation.
+- Added a Playwright assertion that the edit toggle is not focused by default.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- Automatically focusing the first editable report control was necessary for
+  the default mobile experience.
+
+## 2026-09-16 — Improve phone meal image and rank placement
+
+### Solved
+- Increased the phone meal image icon from 15px to 17px.
+- Explicitly anchored the `High` rank chip to the right edge of each dish cell.
+- Added a Playwright assertion for image icon sizing and rank alignment.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- Relying only on the inherited flex margin did not make the phone rank
+  position explicit enough.
+
+## 2026-09-16 — Center phone meal image icon
+
+### Solved
+- Vertically centered the larger meal image icon with the meal name.
+- Removed the phone hover/focus black ring from the image button.
+- Added a Playwright check for visual centering and ring removal.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- `align-items: flex-start` made the image icon visibly sit above the meal
+  text.
+
+## 2026-09-16 — Apply meal image treatment on desktop
+
+### Solved
+- Promoted the 17px meal image icon size to all viewports.
+- Removed the black hover/focus ring on desktop as well as mobile.
+- Added a desktop Playwright regression check for the icon and ring.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- Keeping the icon treatment phone-only matched the requested cross-device
+  behavior.
+
 ## 2026-09-13 — Health records placement
 
 ### Solved

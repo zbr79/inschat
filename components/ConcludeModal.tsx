@@ -404,8 +404,8 @@ closeRef.current = () => {
   void doSave();
 };
 
-  // Dialog behavior: Escape closes (auto-saving when editing); focus moves
-  // into the modal on open and is trapped inside (Tab wraps) while open.
+  // Dialog behavior: Escape closes (auto-saving when editing); focus stays
+  // with the opener on open and is trapped inside once the user tabs in.
   useEffect(() => {
     if (!open) return;
     const focusables = () =>
@@ -437,14 +437,8 @@ closeRef.current = () => {
       }
     };
     document.addEventListener("keydown", onKey);
-    const timer = setTimeout(() => {
-      // Land on the first content control (skip the close button).
-      const first = focusables().find((el) => !el.classList.contains("conclude-modal-close"));
-      (first ?? focusables()[0])?.focus();
-    }, 30);
     return () => {
       document.removeEventListener("keydown", onKey);
-      clearTimeout(timer);
     };
   }, [open, onClose]);
 
