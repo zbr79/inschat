@@ -77,11 +77,27 @@ test.describe("guest desktop UI", () => {
               title: "UI test report",
               summary: "A saved report used only by the isolated browser test.",
               items: [{ name: "Glucose", value: "110", unit: "mg/dL" }],
+              imageKeys: ["e2e-meal-image"],
               meals: [
                 {
                   name: "Dinner",
                   time: "2026-09-15T19:00:00",
                   dishes: [{ name: "Rice", rank: "High" }],
+                },
+              ],
+              events: [
+                {
+                  id: "e2e-meal-event",
+                  occurredAt: "2026-09-15T19:00:00",
+                  items: [],
+                  meals: [
+                    {
+                      name: "Dinner",
+                      time: "2026-09-15T19:00:00",
+                      dishes: [{ name: "Rice", rank: "High" }],
+                    },
+                  ],
+                  imageKeys: ["e2e-meal-image"],
                 },
               ],
             },
@@ -100,6 +116,11 @@ test.describe("guest desktop UI", () => {
     await expect(page.getByRole("heading", { name: "Conclusion" })).toBeVisible();
     await expect(page.getByRole("button", { name: "110" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Remove dish" })).toHaveCount(3);
+    const mealImage = page.locator(".conclude-meal-title .record-images-trigger");
+    await expect(mealImage).toBeVisible();
+    await expect(mealImage.locator("svg")).toHaveCSS("width", "17px");
+    await mealImage.hover();
+    await expect(mealImage).toHaveCSS("outline-style", "none");
   });
 
   test("guest usage route returns to chat instead of exposing private usage", async ({
