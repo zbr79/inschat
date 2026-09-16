@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import type { TimelineRange } from "@/lib/recordTimeline";
 
 interface GlucoseRangeControlProps {
@@ -30,20 +31,26 @@ export default function GlucoseRangeControl({
 
   return (
     <div className="records-range-control">
-      <div className="records-range-tabs" role="tablist" aria-label={labels.range}>
+      <select
+        className="records-range-select"
+        aria-label={labels.range}
+        value={range}
+        onChange={(event) =>
+          onRangeChange(event.target.value as TimelineRange)
+        }
+      >
         {options.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            role="tab"
-            aria-selected={range === option.value}
-            className={range === option.value ? "active" : ""}
-            onClick={() => onRangeChange(option.value)}
-          >
+          <option key={option.value} value={option.value}>
             {option.label}
-          </button>
+          </option>
         ))}
-      </div>
+      </select>
+      <ChevronDown
+        className="records-range-chevron"
+        size={16}
+        strokeWidth={2.25}
+        aria-hidden="true"
+      />
     </div>
   );
 }

@@ -2538,54 +2538,39 @@ span.conclude-rank-badge {
 }
 
 .records-range-control {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  padding: 2px;
-  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
-  border-radius: 10px;
-  background: transparent;
-}
-
-.records-range-tabs {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
   min-width: 0;
-  overflow-x: auto;
-  padding: 2px;
-  scrollbar-width: none;
 }
 
-.records-range-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.records-range-tabs button {
-  flex: 0 0 auto;
-  border: 1px solid transparent;
+.records-range-select {
+  appearance: none;
+  -webkit-appearance: none;
+  min-width: 9.5rem;
+  max-width: 100%;
+  border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 7px 10px;
-  background: transparent;
-  color: var(--text-muted);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 550;
-  line-height: 1.2;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.records-range-tabs button:hover {
+  padding: 7px 32px 7px 10px;
   background: var(--bg);
   color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.2;
+  cursor: pointer;
+  outline: none;
 }
 
-.records-range-tabs button.active {
+.records-range-select:focus {
   border-color: #b7cdf8;
-  background: var(--bg);
-  color: #2563eb;
-  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.1);
+}
+
+.records-range-chevron {
+  position: absolute;
+  right: 10px;
+  pointer-events: none;
+  color: var(--text-muted);
 }
 
 .glucose-chart-frame {
@@ -2686,7 +2671,7 @@ span.conclude-rank-badge {
 }
 
 .records-page-head > .records-demo-actions {
-  margin-left: 0;
+  margin-left: auto;
 }
 
 .report-transfer-controls {
@@ -2998,36 +2983,19 @@ span.conclude-rank-badge {
 
 .records-demo-actions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 5px;
-  max-width: 320px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
 }
 
-.records-demo-buttons {
-  display: flex;
-  gap: 8px;
+.records-demo-load {
+  border-color: #a6e3c1 !important;
+  background: #ecfdf3 !important;
+  color: #087443 !important;
 }
 
-.records-demo-buttons button {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 7px 10px;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font);
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.records-demo-buttons button:hover {
-  background: var(--bg-soft);
-}
-
-.records-demo-buttons button:disabled {
-  cursor: wait;
-  opacity: 0.55;
+.records-demo-load:hover:not(:disabled) {
+  background: #d8f8e7 !important;
 }
 
 .records-demo-remove {
@@ -3482,66 +3450,78 @@ span.conclude-rank-badge {
   }
 
   .records-page-head {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .records-range-control {
-    justify-self: stretch;
-    width: 100%;
-  }
-
-  .records-range-tabs {
-    flex: 1;
-    width: 100%;
-    flex-wrap: wrap;
-    overflow-x: visible;
-  }
-
-  .records-range-tabs button {
-    min-height: 40px;
-  }
-
-  .report-transfer-controls {
-    width: 100%;
-    justify-content: stretch;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "title range transfer";
+    align-items: center;
     gap: 8px;
   }
 
+  .records-page-title {
+    grid-area: title;
+    min-width: 0;
+  }
+
+  .records-page-title h2 {
+    margin-bottom: 0;
+    white-space: nowrap;
+  }
+
+  .records-range-control {
+    grid-area: range;
+    justify-self: stretch;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .records-range-select {
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+    font-size: 13px;
+  }
+
+  .report-transfer-controls {
+    grid-area: transfer;
+    position: relative;
+    width: auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+
   .report-transfer-controls button {
-    flex: 1 1 0;
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0;
     justify-content: center;
-    min-height: 42px;
+    gap: 0;
+  }
+
+  .report-transfer-controls button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .report-transfer-label {
+    display: none;
   }
 
   .report-transfer-message,
   .report-transfer-error {
-    flex-basis: 100%;
-    width: 100%;
-  }
-
-  .records-demo-actions {
-    width: 100%;
-    max-width: none;
-    align-items: stretch;
-  }
-
-  .records-demo-buttons,
-  .records-demo-buttons button {
-    width: 100%;
-  }
-
-  .records-demo-buttons button {
-    min-height: 42px;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: max-content;
+    max-width: min(70vw, 240px);
+    flex-basis: auto;
   }
 
   .records-page-head > .report-transfer-controls {
     margin-left: 0;
-  }
-
-  .records-page-head > .records-demo-actions {
-    width: 100%;
   }
 
   .record-insights-grid {
