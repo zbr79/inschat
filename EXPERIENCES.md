@@ -4559,3 +4559,82 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Disproved
 - None.
+
+## 2026-09-16 — Records page Playwright and Lighthouse baseline
+
+### Solved
+- Added guest-only Playwright coverage for `/records` on desktop and phone,
+  including empty state, example data, date picker, tap-target sizes, and
+  no horizontal overflow at 390px and 320px. All 6 tests passed.
+- Extended Lighthouse to audit both mobile and desktop form factors and to
+  record responsive audits. `/records` scored mobile 81/98/96/91 and desktop
+  96/98/96/91 (performance / accessibility / best-practices / SEO).
+- Responsive checks passed: viewport meta, pinch-zoom allowed, touch targets,
+  image sizing. Playwright confirmed no sideways scroll with example data.
+
+### Unresolved
+- Lighthouse still fails `landmark-one-main` (`.main` is not a `<main>`),
+  `meta-description`, and `errors-in-console` from guest `GET /api/auth/me`
+  returning 401.
+- Mobile performance is the weak category: 2.8s LCP, 570ms TBT, unused JS
+  (~114 KiB), and 2.8s main-thread work. Lighthouse audited the empty page
+  only; populated records were covered by Playwright.
+
+### Disproved
+- Date-picker close cannot be selected by role name "Cancel" alone; the
+  dialog has both an aria-labelled X button and a visible Cancel button.
+
+## 2026-09-16 — Phone records import/export icon buttons
+
+### Solved
+- On viewports ≤640px, moved export/import beside the Records title as 36px
+  icon-only buttons. Labels stay in aria-label/title for assistive text.
+- Desktop still shows the labeled Export report / Import report buttons.
+- Verified with guest Playwright (7 passed) and phone/desktop screenshots.
+
+### Unresolved
+- The rest of the phone records chrome (wrapped range tabs and orphaned date
+  picker) is still the desktop layout stacked.
+
+### Disproved
+- n/a
+
+## 2026-09-16 — Guest demo controls replace import/export
+
+### Solved
+- Guests no longer see Import/Export. They get Load example data and Remove
+  example data in that same header slot (phone: 36px icons beside the title;
+  desktop: labeled buttons).
+- Signed-in users still see Import/Export in that slot.
+- Remove is disabled until example data is loaded; Load disables after.
+
+### Unresolved
+- Logged-in import/export was not browser-tested (guest-only testing rule).
+
+### Disproved
+- n/a
+
+## 2026-09-16 — Time range dropdown
+
+### Solved
+- Replaced the records time-range tab strip with a native dropdown on both
+  phone and desktop. Options are unchanged (1 day, 7 days, 3 months, 1 year,
+  all). Insights still follow the selected range.
+
+### Unresolved
+- The empty-state date picker is still a lone full-width control on phones.
+
+### Disproved
+- n/a
+
+## 2026-09-16 — Phone range dropdown on the title row
+
+### Solved
+- On phones, the time-range dropdown now sits on the same row as the Records
+  title and the guest action icons. Desktop layout was left unchanged.
+
+### Unresolved
+- The empty-state date picker is still a lone full-width control on phones.
+
+### Disproved
+- n/a

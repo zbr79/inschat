@@ -30,6 +30,7 @@ import GlucoseRangeControl from "./GlucoseRangeControl";
 import RecordEditModal, { type RecordEditDraft } from "./RecordEditModal";
 import RecordInsights from "./RecordInsights";
 import RecordImages from "./RecordImages";
+import RecordsDemoControls from "./RecordsDemoControls";
 import ReportTransferControls from "./ReportTransferControls";
 import { useAuth } from "@/lib/authContext";
 import {
@@ -406,7 +407,7 @@ export default function RecordsPanel({
   ) ?? false;
 
   const loadDemo = () => {
-    if (demoBusy || guest !== true) return;
+    if (demoBusy || guest !== true || hasDemoData) return;
     setDemoBusy(true);
     try {
       addDemoGlucoseRecords(30);
@@ -424,14 +425,6 @@ export default function RecordsPanel({
       refreshGuestRecords();
     } finally {
       setDemoBusy(false);
-    }
-  };
-
-  const toggleDemo = () => {
-    if (hasDemoData) {
-      removeDemo();
-    } else {
-      loadDemo();
     }
   };
 
@@ -525,7 +518,7 @@ export default function RecordsPanel({
   return (
     <div className="usage-page">
       <div className="records-page-head">
-        <div>
+        <div className="records-page-title">
           <h2>{merged ? t["nav.records"] : fullReport ? t["records.fullTitle"] : t["records.title"]}</h2>
         </div>
         {showBrief && (
@@ -542,7 +535,7 @@ export default function RecordsPanel({
             }}
           />
         )}
-        {showFull && records !== null && (
+        {showFull && records !== null && guest === false && (
           <ReportTransferControls
             records={records}
             guest={guest}
@@ -557,22 +550,17 @@ export default function RecordsPanel({
           />
         )}
         {showBrief && guest === true && (
-          <div className="records-demo-actions">
-            <div className="records-demo-buttons">
-              <button
-                type="button"
-                className={hasDemoData ? "records-demo-remove" : undefined}
-                onClick={toggleDemo}
-                disabled={demoBusy}
-              >
-                {demoBusy
-                  ? t["records.demo.loading"]
-                  : hasDemoData
-                    ? t["records.demo.remove"]
-                    : t["records.demo.load"]}
-              </button>
-            </div>
-          </div>
+          <RecordsDemoControls
+            hasDemoData={hasDemoData}
+            busy={demoBusy}
+            onLoad={loadDemo}
+            onRemove={removeDemo}
+            labels={{
+              load: t["records.demo.load"],
+              remove: t["records.demo.remove"],
+              loading: t["records.demo.loading"],
+            }}
+          />
         )}
       </div>
       {showFull && (
