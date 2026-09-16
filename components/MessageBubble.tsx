@@ -310,9 +310,6 @@ export default function MessageBubble({
                 )}
                 {message.streaming && !message.text && (
                   <span className="thinking">
-                    {!message.trying && message.model && (
-                      <span className="thinking-label">{t["thinking"]}</span>
-                    )}
                     <span className="thinking-dots" aria-hidden="true">
                       <i />
                       <i />
