@@ -5849,6 +5849,7 @@ span.conclude-rank-badge {
 
   .conclude-meal-head {
     display: grid;
+    width: 100%;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "title time";
@@ -5878,12 +5879,14 @@ span.conclude-rank-badge {
     justify-self: end;
     align-self: start;
     margin-left: 0;
+    text-align: right;
     font-size: clamp(10px, 2.8vw, 12px);
     white-space: nowrap;
   }
 
   .conclude-catalog-head {
     display: grid;
+    width: 100%;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "label time"
@@ -5930,9 +5933,18 @@ span.conclude-rank-badge {
     justify-self: end;
     align-self: start;
     margin-left: 0;
+    text-align: right;
     font-size: clamp(10px, 2.8vw, 12px);
     letter-spacing: -0.02em;
     white-space: nowrap;
+  }
+
+  .conclude-meal-head .conclude-inline-meal-time .edit-pen,
+  .conclude-catalog-head .conclude-inline-time .edit-pen,
+  .conclude-catalog-head .conclude-inline-unit .edit-pen {
+    order: -1;
+    margin-left: 0;
+    margin-right: 3px;
   }
 
   .conclude-modal .conclude-inline-meal-name,
@@ -5980,7 +5992,7 @@ span.conclude-rank-badge {
   }
 
   .conclude-modal .conclude-catalog-head .conclude-inline-value {
-    font-size: clamp(15px, 4.2vw, 18px);
+    font-size: 14px;
   }
 
   .conclude-modal .conclude-catalog-head .conclude-inline-unit {
@@ -6044,7 +6056,7 @@ span.conclude-rank-badge {
   .conclude-modal .conclude-view-dish-name {
     min-width: 0;
     overflow-wrap: anywhere;
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.3;
     white-space: normal;
   }
@@ -6053,7 +6065,7 @@ span.conclude-rank-badge {
     min-width: 32px;
     min-height: 32px;
     padding: 4px 5px;
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 

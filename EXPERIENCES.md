@@ -3787,6 +3787,71 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - None.
 
+## 2026-09-16 — Increase phone dish typography
+
+### Solved
+- Increased phone dish-name text from 13px to 14px.
+- Increased phone rank/level chip text from 11px to 12px.
+- Updated computed-style Playwright assertions for the new sizes.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- None.
+
+## 2026-09-16 — Align phone timestamps to card edge
+
+### Solved
+- Made phone meal and reading headers span the full card width.
+- Anchored their date/time labels to the true top-right edge.
+- Added a Playwright regression check for timestamp alignment.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- A content-width header leaves visible unused space beside the timestamp.
+
+## 2026-09-16 — Move phone timestamp pen left
+
+### Solved
+- Moved the hidden timestamp edit pen before the date/time text on phones.
+- Removed the apparent right-side gap while preserving timestamp alignment.
+- Added a Playwright assertion for the timestamp pen order.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- Hiding the pen with opacity alone does not remove its flex-space impact.
+
+## 2026-09-16 — Move phone unit pen left
+
+### Solved
+- Moved the hidden unit edit pen before the `mg/dL` text on phones.
+- Preserved the unit's right-aligned position in the blood-sugar row.
+- Added a Playwright assertion for the unit pen order.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- The unit control had the same trailing hidden-pen spacing issue as timestamps.
+
+## 2026-09-16 — Match phone blood-sugar number typography
+
+### Solved
+- Set the phone blood-sugar number to 14px to match dish-name text.
+- Added a Playwright computed-style assertion for the matching size.
+- Desktop blood-sugar typography remains unchanged.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- None.
+
 ## 2026-09-13 — Health records placement
 
 ### Solved

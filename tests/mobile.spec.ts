@@ -94,8 +94,33 @@ test.describe("guest phone UI", () => {
     expect(Math.abs((layout.unit?.top ?? 0) - (layout.value?.top ?? 0))).toBeLessThanOrEqual(4);
     expect(layout.number?.left).toBeLessThanOrEqual(layout.unit?.left ?? 0);
     expect(layout.unit?.right).toBeGreaterThanOrEqual((layout.value?.right ?? 0) - 1);
-    await expect(page.locator(".conclude-inline-dish-name")).toHaveCSS("font-size", "13px");
-    await expect(page.locator(".conclude-rank-badge")).toHaveCSS("font-size", "11px");
+    const timestampAlignment = await page
+      .locator(".conclude-meal-head, .conclude-catalog-head")
+      .evaluateAll((heads) =>
+        heads.map((head) => {
+          const headRight = head.getBoundingClientRect().right;
+          const time = head.querySelector(
+            ".conclude-inline-meal-time, .conclude-inline-time"
+          );
+          return time
+            ? time.getBoundingClientRect().right >= headRight - 1
+            : false;
+        })
+      );
+    expect(timestampAlignment.every(Boolean)).toBe(true);
+    const timestampPenOrders = await page
+      .locator(".conclude-inline-meal-time, .conclude-inline-time")
+      .evaluateAll((times) =>
+        times.map((time) => {
+          const pen = time.querySelector(".edit-pen");
+          return pen ? getComputedStyle(pen).order : null;
+        })
+      );
+    expect(timestampPenOrders.every((order) => order === "-1")).toBe(true);
+    await expect(page.locator(".conclude-inline-unit .edit-pen")).toHaveCSS("order", "-1");
+    await expect(page.locator(".conclude-inline-dish-name")).toHaveCSS("font-size", "14px");
+    await expect(page.locator(".conclude-inline-value")).toHaveCSS("font-size", "14px");
+    await expect(page.locator(".conclude-rank-badge")).toHaveCSS("font-size", "12px");
 
     const editToggle = page.locator(".conclude-mobile-edit-toggle");
     await expect(editToggle).toHaveText("Edit");
