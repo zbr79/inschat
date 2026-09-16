@@ -365,6 +365,12 @@ const ASK_USER_QUESTION_TOOL = {
   },
 };
 
+function requestsLiveWeb(text: string): boolean {
+  return /\b(search|look up|research|latest|current|today|news|price|weather|source|sources|citation|website|url|online|internet|documentation|docs)\b|搜索|查找|研究|最新|今天|新闻|价格|天气|来源|网址|联网|文档/i.test(
+    text
+  );
+}
+
 interface DeltaToolCall {
   index?: number;
   id?: string;
@@ -441,7 +447,8 @@ async function* streamOpenCodeOnce(
   model: string,
   tools: boolean,
   reasoningLevel: "max" | "medium" | "low" = "medium",
-  sessionId?: string
+  sessionId?: string,
+  webTools = true
 ): AsyncGenerator<string, { toolCalls: ToolCall[] }, void> {
   const requestId = Math.random().toString(36).slice(2, 8);
   const hasImageParts = messages.some(
@@ -460,7 +467,10 @@ async function* streamOpenCodeOnce(
   // avoids model-specific allowlists going stale.
   if (!hasImageParts) body.reasoning_effort = reasoningLevel;
   if (tools) {
-    body.tools = [WEB_SEARCH_TOOL, WEB_FETCH_TOOL, ASK_USER_QUESTION_TOOL];
+    body.tools = [
+      ASK_USER_QUESTION_TOOL,
+      ...(webTools ? [WEB_SEARCH_TOOL, WEB_FETCH_TOOL] : []),
+    ];
   }
   const startedAt = Date.now();
   console.log(
@@ -699,6 +709,7 @@ export async function* streamChat(
     ? messages.some((message) => (message.images?.length ?? 0) > 0)
     : (lastMessage?.images?.length ?? 0) > 0;
   const useTools = !hasImage;
+  const useWebTools = useTools && requestsLiveWeb(lastMessage?.text ?? "");
   const requestId = Math.random().toString(36).slice(2, 8);
   let chain = getChatChain(hasImage);
   const systemOverride = freeMode
@@ -741,7 +752,8 @@ export async function* streamChat(
             model,
             useTools,
             reasoning,
-            sessionId
+            sessionId,
+            useWebTools
           );
           while (true) {
             const { done, value } = await gen.next();

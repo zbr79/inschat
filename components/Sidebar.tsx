@@ -19,11 +19,7 @@ import AuthModal from "./AuthModal";
 import ConfirmModal from "./ConfirmModal";
 import { useCompressImages, useHealthMode } from "@/lib/prefs";
 import { SESSIONS_CHANGED_EVENT } from "@/lib/sessionTitle";
-
-interface MeUser {
-  _id: string;
-  username: string;
-}
+import { useAuth } from "@/lib/authContext";
 
 interface SidebarSession {
   id: string;
@@ -64,8 +60,7 @@ export default function Sidebar() {
   const currentSession = searchParams.get("session");
   const lang = useUiLang();
   const t = STR[lang];
-  const [user, setUser] = useState<MeUser | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  const { user, authChecked } = useAuth();
   const [sessions, setSessions] = useState<ChatSession[] | null>(null);
   const [guestSessions, setGuestSessions] = useState<GuestSession[]>([]);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -78,7 +73,6 @@ export default function Sidebar() {
   const [deleteDataOpen, setDeleteDataOpen] = useState(false);
   const [clearAccountDataOpen, setClearAccountDataOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
-  const [authNonce, setAuthNonce] = useState(0);
   const [compressImages, setCompressImages] = useCompressImages();
   const [healthMode, setHealthMode] = useHealthMode();
   const [menuFor, setMenuFor] = useState<{
@@ -158,23 +152,6 @@ export default function Sidebar() {
   }, [router]);
 
   useEffect(() => {
-    let alive = true;
-    fetch("/api/auth/me")
-      .then((response) => (response.status === 401 ? null : response.json()))
-      .then((body: { user?: MeUser } | null) => {
-        if (!alive) return;
-        setUser(body?.user ?? null);
-        setAuthChecked(true);
-      })
-      .catch(() => {
-        if (alive) setAuthChecked(true);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [pathname, authNonce]);
-
-  useEffect(() => {
     if (authChecked && pathname === "/usage" && !user) {
       router.replace("/");
     }
@@ -205,7 +182,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     load();
-  }, [load, currentSession]);
+  }, [load]);
 
   useEffect(() => {
     const onSessionsChanged = () => load();
@@ -283,7 +260,6 @@ export default function Sidebar() {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch {} finally {
-      setUser(null);
       window.dispatchEvent(new CustomEvent("inschat-auth"));
       router.replace("/");
     }
@@ -350,6 +326,7 @@ export default function Sidebar() {
       ) : (
         <Link
           href={`/?session=${id}`}
+          prefetch={false}
           className={`session-link${id === currentSession ? " active" : ""}`}
           title={title}
           onClick={() => setMenuOpen(false)}
@@ -470,6 +447,7 @@ export default function Sidebar() {
             {chatMode === "health" && (
               <Link
                 href="/records"
+                prefetch={false}
                 className={`sidebar-records-button health-records-button${pathname.startsWith("/records") ? " active" : ""}`}
                 onClick={() => setMenuOpen(false)}
                 aria-current={pathname.startsWith("/records") ? "page" : undefined}
@@ -643,7 +621,6 @@ export default function Sidebar() {
       open={authOpen}
       onClose={() => setAuthOpen(false)}
       onAuthed={() => {
-        setAuthNonce((value) => value + 1);
         setMenuOpen(false);
         window.dispatchEvent(new CustomEvent("inschat-auth"));
         router.replace("/");

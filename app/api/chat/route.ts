@@ -17,6 +17,7 @@ import {
 } from "@/lib/db";
 import { getGuestRun, startGuestRun, updateGuestRun } from "@/lib/guestRunStore";
 import { randomUUID } from "node:crypto";
+import { ObjectId } from "mongodb";
 
 export const runtime = "nodejs";
 // Resume polling reads this persisted copy; keep snapshots frequent enough
@@ -123,7 +124,6 @@ export async function POST(req: Request) {
     language,
     mode,
     chatMode,
-    reasoning,
     sessionId,
     pendingMessageId,
   } = parsed;
@@ -149,17 +149,21 @@ export async function POST(req: Request) {
     ? messages.some((message) => (message.images?.length ?? 0) > 0)
     : (lastMessage?.images?.length ?? 0) > 0;
   let persistedMessageId: string | undefined;
+  let persistenceReady: Promise<void> = Promise.resolve();
   if (sessionId && user) {
-    try {
-      persistedMessageId = (
-        await startPendingMessage(user._id, sessionId, {})
-      )?._id;
-    } catch (error) {
-      console.warn("[chat] Could not create pending message:", error);
-    }
+    persistedMessageId = new ObjectId().toHexString();
+    persistenceReady = startPendingMessage(user._id, sessionId, {
+      messageId: persistedMessageId,
+    })
+      .then(() => undefined)
+      .catch((error) => {
+        console.warn("[chat] Could not create pending message:", error);
+      });
   } else if (sessionId) {
     persistedMessageId = pendingMessageId ?? randomUUID();
-    await startGuestRun(sessionId, persistedMessageId);
+    persistenceReady = startGuestRun(sessionId, persistedMessageId)
+      .then(() => undefined)
+      .catch(() => undefined);
   }
   const persistedRun = Boolean(sessionId && persistedMessageId);
   const runMessageIdForHeader = persistedMessageId;
@@ -204,14 +208,16 @@ export async function POST(req: Request) {
           status,
           processSteps: processSteps.slice(),
         };
-        if (user) {
-          return updatePendingMessage(user._id, sessionId, persistedMessageId, payload).then(
+        return persistenceReady.then(() => {
+          if (user) {
+            return updatePendingMessage(user._id, sessionId, persistedMessageId, payload).then(
+              () => undefined
+            );
+          }
+          return updateGuestRun(sessionId, persistedMessageId, payload).then(
             () => undefined
           );
-        }
-        return Promise.resolve(updateGuestRun(sessionId, persistedMessageId, payload)).then(
-          () => undefined
-        );
+        });
       };
       const queueProgress = (
         force = false,
@@ -249,7 +255,7 @@ export async function POST(req: Request) {
           timeZone,
           language,
           freeMode,
-          reasoning,
+          "max",
           sessionId,
           effectiveIncludeImages
         )) {

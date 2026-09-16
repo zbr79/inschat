@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -62,6 +62,17 @@ function preserveLineBreaks(text: string): string {
     .join("\n");
 }
 
+const MarkdownContent = memo(function MarkdownContent({ text }: { text: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeHighlight]}
+    >
+      {preserveLineBreaks(text)}
+    </ReactMarkdown>
+  );
+});
+
 export default function MessageBubble({
   messages,
   guest = false,
@@ -96,6 +107,7 @@ export default function MessageBubble({
   onEditCancel?: () => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
+  const scrollFrameRef = useRef<number | null>(null);
   const editInputRef = useRef<HTMLTextAreaElement>(null);
   const [viewer, setViewer] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -103,7 +115,19 @@ export default function MessageBubble({
   const t = STR[lang];
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollFrameRef.current !== null) {
+      cancelAnimationFrame(scrollFrameRef.current);
+    }
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      endRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+    });
+    return () => {
+      if (scrollFrameRef.current !== null) {
+        cancelAnimationFrame(scrollFrameRef.current);
+        scrollFrameRef.current = null;
+      }
+    };
   }, [messages]);
 
   useEffect(() => {
@@ -267,12 +291,7 @@ export default function MessageBubble({
                 ))}
                 <div className="bubble">
                   <DocumentChips documents={message.documents} />
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                  >
-                    {preserveLineBreaks(message.text)}
-                  </ReactMarkdown>
+                  <MarkdownContent text={message.text} />
                 </div>
               </>
             ) : (
@@ -287,12 +306,7 @@ export default function MessageBubble({
                 ))}
                 <DocumentChips documents={message.documents} />
                 {message.text && (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                  >
-                    {preserveLineBreaks(message.text)}
-                  </ReactMarkdown>
+                  <MarkdownContent text={message.text} />
                 )}
                 {message.streaming && !message.text && (
                   <span className="thinking">
