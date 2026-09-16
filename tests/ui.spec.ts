@@ -111,6 +111,11 @@ test.describe("guest desktop UI", () => {
       name: "Summarize this conversation",
     });
     await expect(reportButton).toBeEnabled();
+    await expect(page.locator(".composer-top-actions .conclude-button")).toHaveCount(1);
+    await expect(page.locator(".input-row .conclude-button")).toHaveCount(0);
+    await expect(reportButton).toHaveCSS("width", "36px");
+    await expect(reportButton).toHaveCSS("height", "36px");
+    await expect(reportButton.locator("svg")).toHaveCSS("width", "17px");
     await reportButton.click();
 
     await expect(page.getByRole("heading", { name: "Conclusion" })).toBeVisible();

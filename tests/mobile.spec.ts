@@ -103,7 +103,7 @@ test.describe("guest phone UI", () => {
         unit: box(".conclude-inline-unit"),
       };
     });
-    expect(Math.abs((layout.name?.top ?? 0) - (layout.phase?.top ?? 0))).toBeLessThanOrEqual(10);
+    expect(layout.phase).toBeNull();
     expect(layout.value?.top).toBeGreaterThanOrEqual(
       Math.max(layout.name?.bottom ?? 0, layout.phase?.bottom ?? 0)
     );
@@ -134,6 +134,7 @@ test.describe("guest phone UI", () => {
         })
       );
     expect(timestampPenOrders.every((order) => order === "-1")).toBe(true);
+    await expect(page.locator(".conclude-label-dot")).toHaveCount(0);
     await expect(page.locator(".conclude-inline-unit .edit-pen")).toHaveCSS("order", "-1");
     await expect(page.locator(".conclude-inline-dish-name")).toHaveCSS("font-size", "14px");
     await expect(page.locator(".conclude-inline-value")).toHaveCSS("font-size", "14px");
@@ -167,5 +168,11 @@ test.describe("guest phone UI", () => {
 
     await editToggle.click();
     await expect(remove).toBeHidden();
+
+    await page.evaluate(() => localStorage.setItem("inschat_ui_lang", "zh"));
+    await page.reload();
+    await page.getByRole("button", { name: "总结此对话" }).click();
+    await expect(page.locator(".conclude-glucose-label")).toHaveText("血糖");
+    await expect(page.locator(".conclude-inline-phase")).toHaveCount(1);
   });
 });

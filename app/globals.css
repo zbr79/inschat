@@ -2073,6 +2073,18 @@ span.conclude-rank-badge {
   padding: 8px;
 }
 
+.composer-top-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 36px;
+  padding: 0 8px 4px 4px;
+}
+
+.composer-top-actions .conclude-button {
+  transform: none;
+}
+
 .input-row.mode-health {
   border-color: #3b82f6;
 }
@@ -2259,8 +2271,8 @@ span.conclude-rank-badge {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--bg);
@@ -2271,8 +2283,8 @@ span.conclude-rank-badge {
 }
 
 .conclude-button svg {
-  width: 14px;
-  height: 14px;
+  width: 17px;
+  height: 17px;
 }
 
 .conclude-button:hover:not(:disabled) {
