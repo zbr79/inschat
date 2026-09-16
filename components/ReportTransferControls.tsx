@@ -156,7 +156,7 @@ export default function ReportTransferControls({
         aria-label={labels.export}
       >
         <Download size={16} strokeWidth={2.25} aria-hidden="true" />
-        {labels.export}
+        <span className="report-transfer-label">{labels.export}</span>
       </button>
       <button
         type="button"
@@ -167,7 +167,9 @@ export default function ReportTransferControls({
         aria-label={busy ? labels.importing : labels.import}
       >
         <Upload size={16} strokeWidth={2.25} aria-hidden="true" />
-        {busy ? labels.importing : labels.import}
+        <span className="report-transfer-label">
+          {busy ? labels.importing : labels.import}
+        </span>
       </button>
       <input
         ref={inputRef}
