@@ -3759,6 +3759,34 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - None.
 
+## 2026-09-16 — Fix phone typography specificity
+
+### Solved
+- Fixed the mobile dish-name and rank-chip selectors so they override the
+  more-specific shared modal typography rules.
+- Added computed-style Playwright assertions for 10px dish text and 7px rank
+  text.
+
+### Unresolved
+- None.
+
+### Disproved
+- Mobile font declarations with lower CSS specificity do not override the
+  shared `.conclude-modal` declarations.
+
+## 2026-09-16 — Tighten phone dish typography
+
+### Solved
+- Set phone dish names to 10px.
+- Set phone rank/level chip text to 7px.
+- Desktop typography remains unchanged.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- None.
+
 ## 2026-09-13 — Health records placement
 
 ### Solved
@@ -3939,6 +3967,20 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Waiting for the report and session persistence requests before hiding the
   modal was necessary for data safety.
 
+## 2026-09-14 — Unified attachment picker
+
+### Solved
+- Merged image and document selection into one composer attachment button.
+- Kept image preview/compression behavior for photos.
+- Kept document extraction, progress, and error handling for supported files.
+- Added a generic Attach file label for desktop and mobile file pickers.
+
+### Unresolved
+- Native mobile picker presentation remains OS/browser controlled.
+
+### Disproved
+- Separate image and document buttons were necessary for the upload workflow.
+
 ## 2026-09-14 — Stable report editor size
 
 ### Solved
@@ -3969,6 +4011,42 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Disproved
 - Deleting or migrating Health sessions was necessary when hiding the feature.
+
+## 2026-09-14 — Simplify usage-page model routing
+
+### Solved
+- Replaced the leftover peak/off-peak routing tree with two current chains:
+  Qwen3.8 Flash for text/conclusions and GLM-5.3 Flash for images, each
+  followed by a single Free models step.
+- Collapsed every free catalog row in the usage table into one Free models
+  count.
+- Updated the usage subtitle to name the current primaries instead of the
+  old DeepSeek vision wording.
+
+### Unresolved
+- The /models picker still lists individual free models; this pass only
+  changed the usage page.
+
+### Disproved
+- Keeping per-model free names on the usage page was not needed once the
+  fallback policy is a single free chain.
+
+## 2026-09-15 — Restrict usage to signed-in users
+
+### Solved
+- Added the Usage gauge beside Search and the sidebar-collapse control in the
+  top bar, with an active state on `/usage`.
+- Removed Usage from the Settings panel.
+- Redirected guest visits to `/usage` back to chat and protected
+  `GET /api/usage` with the existing authentication guard.
+
+### Unresolved
+- Authenticated browser verification requires a real user session; guest API
+  verification returned the expected `401 Not signed in.` response.
+
+### Disproved
+- Hiding the Usage button alone was not sufficient because the page and API
+  were still directly reachable by guests.
 
 ## 2026-09-15 — Diagnose sidebar and chat loading performance
 
@@ -4011,6 +4089,8 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Throttled streaming bubble updates to 50ms, reduced elapsed updates to 250ms,
   memoized completed Markdown content, and scheduled one scroll per animation
   frame without smooth-scroll animation.
+- Defaulted General chat's balanced reasoning request to the provider's low
+  reasoning level while preserving the explicit max setting.
 - Kept the question tool available for text chats but only sent web-search and
   web-fetch schemas when the latest prompt requests live web information.
 
@@ -4056,3 +4136,249 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - Opening `/records` would have shown the account-wide report rather than the
   current chat's session report.
+
+## 2026-09-15 — Merge high-impact food explanations
+
+### Solved
+- Removed the separate high-impact warning/reason block from the food-photo
+  response format.
+- Made the Summary one compact paragraph of at most two short sentences that
+  names high-impact foods and explains the main reason or concern.
+- Added a visibility rule: only fully visible, clearly identifiable dishes are
+  included; tiny, cropped, or occluded fragments such as a partially visible
+  noodle dish are omitted.
+
+### Unresolved
+- The model may still need visual evaluation with representative cropped-food
+  examples to confirm it consistently applies the visibility rule.
+
+### Disproved
+- Keeping a separate reason line alongside the Summary was unnecessarily
+  repetitive when the explanation can be consolidated into one paragraph.
+
+## 2026-09-15 — Unify streaming response indicator
+
+### Solved
+- Removed the localized “Thinking…” label from streaming assistant bubbles.
+- Both pre-response phases now show the same three animated dots until text
+  begins to appear.
+- Removed the unused thinking-label translations.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Showing a text label alongside the dots did not add useful phase information
+  and made the response startup feel like two competing indicators.
+
+## 2026-09-15 — Improve phone session-report layout
+
+### Solved
+- Limited the report layout changes to the phone breakpoint.
+- Changed meal dishes to two compact columns on phones instead of one dish per
+  row.
+- Reduced phone-only modal padding, section spacing, text sizes, controls, and
+  rank badges so the report is easier to scan without changing desktop sizing.
+
+### Unresolved
+- The verified guest report contained readings but no meal dishes, so the
+  two-column behavior was confirmed from the mobile CSS implementation rather
+  than a live meal-filled report.
+
+### Disproved
+- Applying the compact sizing globally would have unnecessarily changed the
+  desktop report modal.
+
+## 2026-09-15 — Rebuild phone report card hierarchy
+
+### Solved
+- Rebuilt phone report cards as a full-screen responsive panel while leaving
+  the desktop modal rules unchanged.
+- Put reading labels, phases, values, units, and times into an explicit
+  mobile grid so the unit and phase stay in the top row.
+- Made delete controls visible with phone-sized touch targets instead of
+  relying on hover.
+- Preserved two-column meal dishes while allowing names to wrap for readability.
+
+### Unresolved
+- The available guest report used for live verification contained readings but
+  no meal dishes, so real food-card wrapping still needs a meal-filled sample.
+
+### Disproved
+- Reusing the desktop flex row and only shrinking its typography could not
+  produce a reliable phone hierarchy.
+
+## 2026-09-15 — Keep phone reading values on the first row
+
+### Solved
+- Prevented the blood-sugar value and unit from wrapping onto a second line in
+  the phone reading card.
+- Kept the label truncatable while reserving the top-row space for the value.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Allowing the label and value to compete for flexible wrapping produced the
+  incorrect second-line blood-sugar number on narrow phones.
+
+## 2026-09-15 — Restore phone modal and timestamp hierarchy
+
+### Solved
+- Changed the phone report back from a full-screen panel to a centered modal
+  with visible margins.
+- Restored meal and reading timestamps to the top-right of their card headers.
+- Kept reading values and units on that same top row with compact phone-only
+  sizing.
+- Verified the phone geometry at 390px: modal width 366px, centered with
+  12px side margins; reading timestamp and value both remain on row one.
+
+### Unresolved
+- The live guest report used for verification still contains readings only, so
+  meal-card timestamps need one meal-filled sample for final visual checking.
+
+### Disproved
+- A full-screen phone panel and second-row timestamps did not match the
+  intended report-card design.
+
+## 2026-09-15 — Make phone report names width-responsive
+
+### Solved
+- Removed fixed phone widths from the reading phase and unit controls.
+- Let the reading name and phase wrap based on available card width instead
+  of truncating the name.
+- Added a narrow-phone breakpoint: values and timestamps remain on the first
+  row while the full name and phase use the next row without overlap.
+- Verified at 390px and 320px, plus desktop regression where the catalog head
+  remains flex-based.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Reserving fixed pixel widths for every phone header field caused the
+  reading name to be clipped or overlap adjacent controls.
+
+## 2026-09-15 — Improve mobile report card hierarchy
+
+### Solved
+- Corrected mobile typography specificity so modal text is no longer forced
+  through the desktop 18px rules.
+- Rebuilt reading headers as readable card rows: name and phase on the left,
+  value and unit prominent in the row, timestamp anchored at the top-right.
+- Increased card spacing and touch-friendly delete targets without changing
+  desktop styles.
+- Verified readable, non-overlapping cards at 390px and 320px, and confirmed
+  the desktop catalog head remains flex-based.
+
+### Unresolved
+- The live guest report still contains readings only, so a meal-filled mobile
+  card needs a separate visual check.
+
+### Disproved
+- Shrinking a desktop flex layout with only one-line mobile typography did not
+  create a usable report-card hierarchy.
+
+## 2026-09-15 — Compact phone delete controls
+
+### Solved
+- Moved meal and reading delete buttons into their title/name groups on
+  phones instead of reserving a separate left-side grid column.
+- Reduced dish delete controls to compact touch targets within each dish row.
+- Kept the desktop reading layout flex-based and preserved its original
+  delete-control ordering.
+- Verified the phone reading card now uses three columns: inline name/delete,
+  value/unit, and timestamp.
+
+### Unresolved
+- A meal-filled guest report is still needed to visually verify the compact
+  meal-title delete control and two-column dish cells.
+
+### Disproved
+- A dedicated 32px phone column for every card delete control wasted space and
+  made the report header feel like a toolbar.
+
+## 2026-09-15 — Add Playwright UI and Lighthouse coverage
+
+### Solved
+- Added guest-only Playwright coverage for all public UI routes, composer and
+  settings controls, sidebar navigation, private usage redirect, saved report
+  modal, and Chromium phone behavior.
+- Added Lighthouse scoring for the same public routes at a 390px mobile
+  viewport, with JSON reports and configurable score thresholds.
+- Added test commands and documentation without using login or writing fake
+  sessions to MongoDB.
+- Verified 15 Playwright tests passed and Lighthouse scored every configured
+  route above its default thresholds.
+
+### Unresolved
+- Share pages require a real share token and are intentionally excluded from
+  the public-route suite.
+
+### Disproved
+- A WebKit-specific iPhone profile was not portable in this environment;
+  Chromium's Pixel 5 profile provides the available phone coverage.
+
+## 2026-09-16 — Add phone-only report edit mode
+
+### Solved
+- Removed visible delete controls from the default phone report view.
+- Added a phone-only `Edit` / `Done` toggle in the report header.
+- Delete controls reappear only while editing; desktop behavior is unchanged.
+- Added a Playwright regression covering hidden controls, edit mode, and
+  returning to the clean view.
+- Verified 16 Playwright tests passed and re-ran Lighthouse after the change.
+
+### Unresolved
+- The current guest fixture still has no meal-filled report for visual
+  verification of dish edit actions.
+
+### Disproved
+- Persistent trash icons were necessary for phone report editing.
+
+## 2026-09-16 — Reflow phone reading cards
+
+### Solved
+- Reduced phone-only chip typography by approximately 20%, including the edit
+  toggle and reading phase/unit chips.
+- Kept the blood-sugar label and phase together on the first row of inline
+  reading cards.
+- Moved the reading number and unit to a second row while preserving the time
+  in the top-right position.
+- Added a Playwright layout assertion and verified all 16 UI tests passed.
+
+### Unresolved
+- A meal-filled guest fixture is still needed for visual verification of the
+  phone dish grid and its edit controls.
+
+### Disproved
+- Keeping the reading label, value, unit, and timestamp in one phone row was
+  not reliable at narrow widths.
+
+## 2026-09-16 — Restore phone reading unit sizing
+
+### Solved
+- Restored the original phone `mg/dL` unit size.
+- Made the reading value row full-width, with the number left-aligned and unit
+  right-aligned.
+- Added Playwright assertions for the second-row alignment.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- Reducing the unit chip together with the phase chip made the reading card
+  harder to scan.
+
+## 2026-09-16 — Reduce phone dish typography
+
+### Solved
+- Reduced phone dish-name text by 10%.
+- Reduced phone rank/level chip text by 10%.
+- Kept desktop dish and rank typography unchanged.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- None.

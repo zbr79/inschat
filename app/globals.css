@@ -626,6 +626,10 @@ body {
   background: rgba(0, 0, 0, 0.08);
 }
 
+.conclude-mobile-edit-toggle {
+  display: none;
+}
+
 .conclude-section {
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -813,6 +817,10 @@ body {
 .conclude-glucose-label {
   flex: 0 0 auto;
   margin-right: -8px;
+}
+
+.conclude-reading-label {
+  display: contents;
 }
 
 /* Keep destructive controls quiet until the user focuses the report section. */
@@ -5786,32 +5794,291 @@ span.conclude-rank-badge {
 /* On phones, the date/time row gets its own full-width line so the inputs
    never collapse into unusable slivers next to the meal name / value. */
 @media (max-width: 640px) {
-  .conclude-meal-head,
-  .conclude-catalog-head,
-  .conclude-catalog-meta {
+  .conclude-modal {
+    top: 50%;
+    left: 50%;
+    width: calc(100vw - 24px);
+    height: min(720px, calc(100dvh - 32px));
+    max-height: calc(100dvh - 32px);
+    transform: translate(-50%, -50%);
+    padding: 16px 12px calc(16px + env(safe-area-inset-bottom));
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 18px;
+  }
+
+  .conclude-modal-head {
+    padding: 0 0 4px;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .conclude-modal-title {
+    font-size: 18px;
+  }
+
+  .conclude-modal-sub {
+    font-size: 13px;
+  }
+
+  .conclude-modal-close {
+    width: 36px;
+    height: 36px;
+  }
+
+  .conclude-mobile-edit-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--bg-soft);
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .conclude-section {
+    padding: 14px 12px;
+    margin-bottom: 8px;
+    border-radius: 14px;
+  }
+
+  .conclude-meal-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title time";
+    align-items: start;
+    column-gap: 4px;
+    min-height: 0;
+    margin-bottom: 10px;
+  }
+
+  .conclude-meal-title {
+    grid-area: title;
+    display: flex;
     flex-wrap: wrap;
+    align-items: flex-start;
+    overflow: visible;
+    min-width: 0;
   }
 
-  .conclude-reading-main {
-    flex-wrap: wrap;
+  .conclude-meal-title > .conclude-card-remove {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
   }
 
-  .conclude-meal-head .conclude-time-row,
-  .conclude-catalog-head .conclude-time-row,
-  .conclude-catalog-meta .conclude-time-row,
-  .conclude-reading-main .conclude-time-row {
-    flex: 1 1 100%;
+  .conclude-meal-head .conclude-inline-meal-time {
+    grid-area: time;
+    justify-self: end;
+    align-self: start;
+    margin-left: 0;
+    font-size: clamp(10px, 2.8vw, 12px);
+    white-space: nowrap;
   }
 
-  /* single dish column on phones — no divider */
+  .conclude-catalog-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "label time"
+      "value value";
+    align-items: start;
+    column-gap: 4px;
+    row-gap: 2px;
+    min-height: 0;
+    margin-bottom: 0;
+  }
+
+  .conclude-reading-label {
+    display: flex;
+    grid-area: label;
+    align-items: baseline;
+    min-width: 0;
+    gap: 4px;
+    overflow: visible;
+    white-space: nowrap;
+  }
+
+  .conclude-reading-label > .conclude-card-remove {
+    grid-area: remove;
+    display: none;
+    width: 28px;
+    height: 28px;
+    align-self: start;
+  }
+
+  .conclude-catalog-head .conclude-inline-reading-value {
+    grid-area: value;
+    justify-self: stretch;
+    align-self: start;
+    width: 100%;
+    margin-top: 2px;
+    gap: 4px;
+    min-width: 0;
+    justify-content: space-between;
+    white-space: nowrap;
+  }
+
+  .conclude-catalog-head .conclude-inline-time {
+    grid-area: time;
+    justify-self: end;
+    align-self: start;
+    margin-left: 0;
+    font-size: clamp(10px, 2.8vw, 12px);
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  .conclude-modal .conclude-inline-meal-name,
+  .conclude-modal .conclude-view-meal-name {
+    font-size: clamp(13px, 3.8vw, 16px);
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .conclude-inline-meal-time,
+  .conclude-view-meal-time {
+    font-size: 12px;
+  }
+
+  .conclude-modal .conclude-glucose-label,
+  .conclude-modal .conclude-inline-phase {
+    font-size: clamp(12px, 3.4vw, 14px);
+  }
+
+  .conclude-glucose-label {
+    flex: 0 0 auto;
+    min-width: max-content;
+    max-width: 100%;
+    margin-right: 0;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+
+  .conclude-inline-phase {
+    flex: 0 1 auto;
+    width: auto;
+    max-width: 100%;
+    font-size: clamp(10px, 2.7vw, 11px);
+    justify-self: start;
+    overflow: visible;
+    padding: 2px 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .conclude-catalog-head .conclude-inline-reading-value {
+    gap: 2px;
+    justify-self: stretch;
+  }
+
+  .conclude-modal .conclude-catalog-head .conclude-inline-value {
+    font-size: clamp(15px, 4.2vw, 18px);
+  }
+
+  .conclude-modal .conclude-catalog-head .conclude-inline-unit {
+    width: auto;
+    max-width: 100%;
+    overflow: visible;
+    padding: 1px 0;
+    font-size: clamp(11px, 3vw, 13px);
+    text-align: center;
+  }
+
+  .conclude-section-report .conclude-card-remove,
+  .conclude-dish-row .conclude-dish-remove {
+    display: none;
+    opacity: 1;
+  }
+
+  .conclude-mobile-editing .conclude-section-report .conclude-card-remove,
+  .conclude-mobile-editing .conclude-dish-row .conclude-dish-remove {
+    display: flex;
+  }
+
+  .conclude-mobile-editing .conclude-meal-title > .conclude-card-remove,
+  .conclude-mobile-editing .conclude-reading-label > .conclude-card-remove {
+    width: 28px;
+    height: 28px;
+  }
+
+  .conclude-mobile-editing .conclude-reading-label {
+    display: flex;
+    align-items: baseline;
+  }
+
+  /* Two readable dish columns on phones — no hover-only controls or divider. */
   .conclude-dishes {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 8px;
+    row-gap: 6px;
+    margin-top: 8px;
   }
 
   .conclude-dish-row:nth-child(odd) {
     border-right: none;
     padding-right: 0;
     margin-right: 0;
+  }
+
+  .conclude-dish-row {
+    min-width: 0;
+    min-height: 36px;
+    gap: 4px;
+  }
+
+  .conclude-dish-row .conclude-dish-remove {
+    width: 24px;
+    height: 24px;
+    flex: 0 0 24px;
+  }
+
+  .conclude-modal .conclude-inline-dish-name,
+  .conclude-modal .conclude-view-dish-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+    line-height: 1.3;
+    white-space: normal;
+  }
+
+  .conclude-modal .conclude-rank-badge {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 4px 5px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .conclude-catalog-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "label time"
+      "value value";
+    row-gap: 4px;
+  }
+
+  .conclude-catalog-head .conclude-inline-reading-value {
+    justify-self: stretch;
+  }
+
+  .conclude-reading-label {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (min-width: 641px) {
+  .conclude-meal-title {
+    display: contents;
   }
 }
 
