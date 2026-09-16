@@ -72,49 +72,6 @@ export function useHealthMode(): [boolean, (on: boolean) => void] {
   return [on, setHealthMode];
 }
 
-export type ReasoningEffort = "max" | "medium";
-
-const REASONING_KEY = "inschat_reasoning";
-const REASONING_EVENT = "inschat-reasoning";
-
-// Balanced reasoning is the default; users can enable max reasoning for
-// slower, deeper replies.
-export function getReasoningEffort(): ReasoningEffort {
-  if (typeof window === "undefined") return "medium";
-  try {
-    const value = window.localStorage.getItem(REASONING_KEY);
-    return value === "max" ? "max" : "medium";
-  } catch {
-    return "medium";
-  }
-}
-
-export function setReasoningEffort(level: ReasoningEffort): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(REASONING_KEY, level);
-  } catch {}
-  window.dispatchEvent(new CustomEvent(REASONING_EVENT, { detail: level }));
-}
-
-export function useReasoningEffort(): [
-  ReasoningEffort,
-  (level: ReasoningEffort) => void
-] {
-  const [level, setLevel] = useState<ReasoningEffort>(() =>
-    getReasoningEffort()
-  );
-  useEffect(() => {
-    const handler = (event: Event) => {
-      const detail = (event as CustomEvent<ReasoningEffort>).detail;
-      setLevel(detail === "max" ? "max" : "medium");
-    };
-    window.addEventListener(REASONING_EVENT, handler);
-    return () => window.removeEventListener(REASONING_EVENT, handler);
-  }, []);
-  return [level, setReasoningEffort];
-}
-
 const GLUCOSE_RANGE_KEY = "inschat_glucose_range";
 
 function isTimelineRange(value: string | null): value is TimelineRange {

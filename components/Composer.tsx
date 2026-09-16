@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUp, Mic, Paperclip, Plus, Sparkles, Square, X } from "lucide-react";
+import { ArrowUp, Mic, Paperclip, Plus, Square, X } from "lucide-react";
 import type { DocumentAttachment } from "@/lib/documents/types";
 import type { ChatImage, ChatMode } from "@/lib/types";
 import { MAX_IMAGES } from "@/lib/types";
 import { STR, useUiLang } from "@/lib/i18n";
-import { useCompressImages, useReasoningEffort } from "@/lib/prefs";
+import { useCompressImages } from "@/lib/prefs";
 import { compressImage } from "@/lib/imageCompress";
 import { formatVoiceElapsed, useVoiceInput } from "@/lib/useVoiceInput";
 import DocumentPicker from "./DocumentPicker";
@@ -25,6 +25,7 @@ interface ComposerProps {
   disabled?: boolean;
   signedIn?: boolean;
   chatMode?: ChatMode;
+  reportButton?: React.ReactNode;
 }
 
 function readImage(
@@ -55,11 +56,11 @@ export default function Composer({
   disabled = false,
   signedIn = false,
   chatMode = "general",
+  reportButton,
 }: ComposerProps) {
   const lang = useUiLang();
   const t = STR[lang];
   const [compressOn] = useCompressImages();
-  const [reasoning, setReasoning] = useReasoningEffort();
   const [text, setText] = useState("");
   const [images, setImages] = useState<ChatImage[]>([]);
   const [documents, setDocuments] = useState<DocumentAttachment[]>([]);
@@ -297,18 +298,7 @@ export default function Composer({
           onKeyDown={handleKeyDown}
           aria-label={t["composer.message"]}
         />
-        <button
-          type="button"
-          className={`composer-reasoning${reasoning === "max" ? " active" : ""}`}
-          onClick={() => setReasoning(reasoning === "max" ? "medium" : "max")}
-          aria-label={t["composer.reasoning"]}
-          aria-pressed={reasoning === "max"}
-          title={t["composer.reasoning"]}
-          disabled={disabled}
-        >
-          <Sparkles size={14} />
-          <span>{t["composer.reasoning.max"]}</span>
-        </button>
+        {reportButton}
         {voiceStatus !== "idle" && (
           <span
             className={`composer-mic-timer${voiceStatus === "transcribing" ? " dim" : ""}`}

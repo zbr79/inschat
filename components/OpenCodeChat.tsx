@@ -15,7 +15,6 @@ import {
 } from "@/lib/format";
 import { AlertTriangle } from "lucide-react";
 import { STR, useUiLang } from "@/lib/i18n";
-import { useReasoningEffort } from "@/lib/prefs";
 
 interface UiMessage {
   id: number;
@@ -45,7 +44,6 @@ function toApiMessages(messages: UiMessage[]): ChatMessage[] {
 export default function OpenCodeChat() {
   const lang = useUiLang();
   const t = STR[lang];
-  const [reasoningEffort] = useReasoningEffort();
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [sending, setSending] = useState(false);
   const [limitReset, setLimitReset] = useState<number | null>(null);
@@ -108,7 +106,7 @@ export default function OpenCodeChat() {
             timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             language: lang,
             mode: "free",
-            reasoning: reasoningEffort,
+            reasoning: "max",
             sessionId,
           }),
           signal: controller.signal,
@@ -207,7 +205,7 @@ export default function OpenCodeChat() {
         abortRef.current = null;
       }
     },
-    [messages, sending, lang, reasoningEffort]
+    [messages, sending, lang]
   );
 
   const stop = useCallback(() => {
