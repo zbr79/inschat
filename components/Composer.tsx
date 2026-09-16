@@ -251,6 +251,7 @@ export default function Composer({
           ))}
         </div>
       )}
+      {reportButton && <div className="composer-top-actions">{reportButton}</div>}
       <div className={`input-row mode-${chatMode}`}>
         <input
           ref={fileRef}
@@ -298,7 +299,6 @@ export default function Composer({
           onKeyDown={handleKeyDown}
           aria-label={t["composer.message"]}
         />
-        {reportButton}
         {voiceStatus !== "idle" && (
           <span
             className={`composer-mic-timer${voiceStatus === "transcribing" ? " dim" : ""}`}
