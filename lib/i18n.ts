@@ -353,7 +353,7 @@ export const STR: Record<UiLang, Record<string, string>> = {
     "records.today": "Today",
     "records.yesterday": "Yesterday",
     "records.glucose.title": "Blood glucose trend",
-    "records.glucose.label": "Blood sugar",
+    "records.glucose.label": "Blood Sugar",
     "records.glucose.range": "Time range",
     "records.glucose.day": "Last 1 day",
     "records.glucose.week": "Last 7 days",

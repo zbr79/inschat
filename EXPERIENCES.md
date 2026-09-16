@@ -3908,6 +3908,62 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Keeping the icon treatment phone-only matched the requested cross-device
   behavior.
 
+## 2026-09-16 — Replace blood-sugar separator dot
+
+### Solved
+- Removed the middle dot between the blood-sugar label and phase.
+- The display now uses spacing: `血糖 午后` / `Blood sugar After lunch`.
+- Added a Playwright assertion that the dot separator is absent.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- None.
+
+## 2026-09-16 — Localize blood-sugar phase display
+
+### Solved
+- Changed the English label to `Blood Sugar`.
+- Hid the phase for English blood-sugar entries.
+- Preserved the Chinese `血糖 午后` label and phase display.
+- Added English and Chinese Playwright regression checks.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- None.
+
+## 2026-09-16 — Move report button above composer
+
+### Solved
+- Moved the session-report button out of the text input row.
+- Placed it in a right-aligned row above the input, aligned with the send
+  control.
+- Added a Playwright assertion that it is absent from the input row.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- Keeping the report action inside the text-entry row made the composer feel
+  cluttered.
+
+## 2026-09-16 — Increase report button size
+
+### Solved
+- Increased the session-report button from 30px to 36px.
+- Increased its icon from 14px to 17px.
+- Increased the top action row height to preserve alignment above the composer.
+- Added computed-style Playwright assertions for the new dimensions.
+
+### Unresolved
+- None for this adjustment.
+
+### Disproved
+- None.
+
 ## 2026-09-13 — Health records placement
 
 ### Solved

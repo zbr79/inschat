@@ -947,16 +947,17 @@ closeRef.current = () => {
                   </button>
                   <span className="conclude-glucose-label">
                     {label}
-                    <span className="conclude-label-dot">·</span>
                   </span>
-                  <InlineSelect
-                    className="conclude-inline-phase"
-                    value={phase}
-                    options={READING_PHASES[lang]}
-                    onCommit={(next) => setter(entry.index, { phase: next })}
-                    ariaLabel={t["concludeModal.phase"]}
-                    showPen={false}
-                  />
+                  {(lang === "zh" || entry.kind === "insulin") && (
+                    <InlineSelect
+                      className="conclude-inline-phase"
+                      value={phase}
+                      options={READING_PHASES[lang]}
+                      onCommit={(next) => setter(entry.index, { phase: next })}
+                      ariaLabel={t["concludeModal.phase"]}
+                      showPen={false}
+                    />
+                  )}
                 </div>
                 <div className="conclude-inline-reading-value">
                   <InlineText
