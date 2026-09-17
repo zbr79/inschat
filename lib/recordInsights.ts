@@ -7,6 +7,7 @@ import {
   readingPhase,
 } from "./mealTime";
 import type { TimelineRange } from "./recordTimeline";
+import { parseReadingValue } from "./parseReadingValue";
 
 const GLUCOSE_NAME = /^(血糖|glucose|blood glucose|blood sugar)$/i;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -56,12 +57,8 @@ interface TimedReading {
   phase: string;
 }
 
-function numericValue(value: string | undefined): number | null {
-  if (!value) return null;
-  const match = value.replace(/,/g, "").trim().match(/^-?\d+(?:\.\d+)?/);
-  if (!match) return null;
-  const parsed = Number(match[0]);
-  return Number.isFinite(parsed) ? parsed : null;
+function numericValue(value: string | number | undefined): number | null {
+  return parseReadingValue(value);
 }
 
 function foodImpactRank(value: string | undefined): "high" | "medium" | null {

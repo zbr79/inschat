@@ -17,6 +17,18 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: new URL(baseURL).origin,
+          localStorage: [
+            { name: "inschat_ui_lang", value: "en" },
+            { name: "inschat_visitor_intent", value: "chat" },
+          ],
+        },
+      ],
+    },
   },
   projects: [
     {

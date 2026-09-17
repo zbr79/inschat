@@ -1,5 +1,6 @@
 import type { SavedRecord } from "./types";
 import { pairTimeItems, parseFlexibleDateTime } from "./mealTime";
+import { parseReadingValue } from "./parseReadingValue";
 
 export type TimelineRange = "day" | "week" | "quarter" | "year" | "all";
 
@@ -47,13 +48,8 @@ function pointTimestamp(time: string | undefined, fallback: number): number {
   return Number.isNaN(ts) ? fallback : ts;
 }
 
-function numericValue(value: string | undefined): number | null {
-  if (!value) return null;
-  const normalized = value.replace(/,/g, "").trim();
-  const match = normalized.match(/^-?\d+(?:\.\d+)?/);
-  if (!match) return null;
-  const parsed = Number(match[0]);
-  return Number.isFinite(parsed) ? parsed : null;
+function numericValue(value: string | number | undefined): number | null {
+  return parseReadingValue(value);
 }
 
 export function extractGlucosePoints(records: SavedRecord[]): GlucosePoint[] {
