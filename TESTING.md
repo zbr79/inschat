@@ -12,9 +12,11 @@ npm test
 ```
 
 Playwright starts a production server on port `3101` and writes its HTML
-report to `artifacts/playwright-report`. Guest records coverage lives in
-`tests/records.spec.ts` (desktop) and `tests/records.mobile.spec.ts` (Pixel 5
-plus a 320px overflow check).
+report to `artifacts/playwright-report`. Existing guest tests skip the
+first-visit chooser via storageState. Fresh-visitor coverage lives in
+`tests/visitor.spec.ts` (desktop) and `tests/visitor.mobile.spec.ts` (Pixel 5).
+Guest records coverage lives in `tests/records.spec.ts` (desktop) and
+`tests/records.mobile.spec.ts` (Pixel 5 plus a 320px overflow check).
 
 Lighthouse tests the public UI routes at a 390px mobile viewport by default
 and writes per-route JSON/HTML reports plus `artifacts/lighthouse/summary.json`.

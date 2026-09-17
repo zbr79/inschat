@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { EXTRA_STR } from "./i18nExtra";
+import { VISITOR_STR } from "./i18nVisitor";
 
 export type UiLang = "zh" | "en";
 
@@ -220,6 +221,7 @@ export const STR: Record<UiLang, Record<string, string>> = {
     "usage.usedPct": "已用",
     "lang.button": "EN",
     ...EXTRA_STR.zh,
+    ...VISITOR_STR.zh,
   },
   en: {
     "nav.chat": "Chat",
@@ -381,5 +383,6 @@ export const STR: Record<UiLang, Record<string, string>> = {
     "usage.usedPct": "used",
     "lang.button": "中文",
     ...EXTRA_STR.en,
+    ...VISITOR_STR.en,
   },
 };

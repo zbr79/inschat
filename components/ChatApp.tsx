@@ -38,6 +38,7 @@ import { putGuestImage, getGuestImage } from "@/lib/guestImages";
 import { STR, useUiLang } from "@/lib/i18n";
 import type { DocumentAttachment } from "@/lib/documents/types";
 import { useAuth } from "@/lib/authContext";
+import VisitorGuide from "./VisitorGuide";
 
 interface UiMessage {
   id: number;
@@ -105,7 +106,7 @@ function withRestoredTrail(text: string, steps: string[], pending: boolean): str
 }
 
 function appendProcessStep(steps: string[], label: string): string[] {
-  const clean = label.replace(/^\s*→\s+/, "").trim();
+  const clean = String(label ?? "").replace(/^\s*→\s+/, "").trim();
   if (!clean) return steps;
   const key = trailKey(clean);
   if (steps.some((step) => trailKey(step) === key)) return steps;
@@ -1679,14 +1680,16 @@ export default function ChatApp() {
         </main>
       ) : messages.length === 0 ? (
         <main className="welcome">
-          <h2>{t["welcome.title"]}</h2>
-          <Composer
-            onSend={send}
-            onStop={stop}
-            sending={sending}
-            signedIn={isAuthed === true}
-            chatMode={chatMode}
-          />
+          <VisitorGuide guest={isAuthed === false} empty>
+            <h2>{t["welcome.title"]}</h2>
+            <Composer
+              onSend={send}
+              onStop={stop}
+              sending={sending}
+              signedIn={isAuthed === true}
+              chatMode={chatMode}
+            />
+          </VisitorGuide>
         </main>
       ) : (
         <MessageBubble

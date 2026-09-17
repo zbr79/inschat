@@ -3,6 +3,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 export async function openGuestRecords(page: Page) {
   await page.addInitScript(() => {
     window.localStorage.setItem("inschat_ui_lang", "en");
+    window.localStorage.setItem("inschat_visitor_intent", "chat");
   });
   await page.goto("/records", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveTitle(/InsChat/i);
