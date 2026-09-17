@@ -4638,3 +4638,36 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Disproved
 - n/a
+
+## 2026-09-16 — First-visit guest paths
+
+### Solved
+- First-time guests on `/` pick Chat, Record blood sugar, or View my work.
+- Chat opens a general composer; blood sugar opens a health chat; interviewers
+  get 30 days of sample records plus a dismissible tour on `/records`.
+- Choice is stored in `inschat_visitor_intent` so the chooser does not return.
+- Existing Playwright tests skip the chooser via storageState.
+
+### Unresolved
+- Signed-in users never see the chooser (first-visit is guest-only).
+
+### Disproved
+- Showing the chooser on every public route would replace the `/records`
+  Lighthouse page with a dialog, so the gate stays on `/` only.
+
+## 2026-09-16 — Welcome selections, not a gate modal
+
+### Solved
+- First-visit choices now replace the empty-home composer. Same welcome
+  heading, three selections, no dimmed overlay or dialog.
+- Guest `/api/auth/me` returns 200 `{ user: null }` so the console is not
+  filled with a 401 on every load.
+- Glucose parsers coerce non-string reading values before `.replace`, which
+  was crashing Records render (`e.replace is not a function`) when a value
+  was numeric.
+
+### Unresolved
+- Interviewer tour is still a records-page card, not part of the home welcome.
+
+### Disproved
+- n/a
