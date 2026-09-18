@@ -443,6 +443,10 @@ body {
   margin-bottom: 14px;
 }
 
+.records-empty-state {
+  margin-top: 24px;
+}
+
 .usage-head {
   display: flex;
   justify-content: space-between;
@@ -2986,16 +2990,6 @@ span.conclude-rank-badge {
   align-items: center;
   justify-content: flex-end;
   gap: 7px;
-}
-
-.records-demo-load {
-  border-color: #a6e3c1 !important;
-  background: #ecfdf3 !important;
-  color: #087443 !important;
-}
-
-.records-demo-load:hover:not(:disabled) {
-  background: #d8f8e7 !important;
 }
 
 .records-demo-remove {
@@ -6344,10 +6338,6 @@ span.conclude-rank-badge {
     font-size: 18px;
   }
 
-  .welcome:has(.visitor-welcome) {
-    justify-content: center;
-    padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
-  }
 }
 
 
@@ -6764,96 +6754,110 @@ button.settings-row:hover {
   background: rgba(0, 0, 0, 0.45);
 }
 
-/* ---- first-visit welcome selections ---- */
-.welcome:has(.visitor-welcome) {
-  justify-content: center;
-  gap: 0;
+body.health-intro-open {
+  overflow: hidden;
 }
 
-.visitor-welcome {
-  width: 100%;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.visitor-welcome-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  position: relative;
-}
-
-.visitor-welcome-head h2 {
-  margin: 0;
-  padding-inline: 36px;
-}
-
-.visitor-welcome-head .auth-lang-toggle {
-  position: absolute;
-  top: 2px;
-  right: 0;
-  min-height: 32px;
-  min-width: 32px;
-}
-
-.visitor-options {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.visitor-option {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  width: 100%;
-  min-height: 64px;
-  text-align: left;
-  border: 1px solid var(--border);
-  border-radius: 14px;
+.health-intro-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
   background: transparent;
-  color: var(--text);
-  padding: 12px 14px;
-  cursor: pointer;
-  font-family: var(--font);
 }
 
-.visitor-option:hover,
-.visitor-option:focus-visible {
-  background: var(--bg-soft);
-  outline: none;
+.health-intro-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 81;
+  width: calc(100vw - 32px);
+  max-width: 360px;
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  transform: translate(-50%, -50%);
 }
 
-.visitor-option-icon {
-  flex: 0 0 auto;
-  width: 36px;
-  height: 36px;
+@media (min-width: 641px) {
+  .health-intro-modal {
+    left: calc(50% + 130px);
+  }
+}
+
+.health-intro-card {
+  padding: 22px 20px 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg);
+}
+
+.health-intro-title-row {
   display: flex;
   align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.health-intro-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-soft);
   color: var(--text-muted);
 }
 
-.visitor-option-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  padding-top: 2px;
+.health-intro-card h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-.visitor-option-copy strong {
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-
-.visitor-option-copy small {
+.health-intro-card p {
+  margin: 0 0 16px;
+  color: var(--text-muted);
   font-size: 13px;
-  line-height: 1.4;
-  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.health-intro-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.health-intro-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  border-radius: 10px;
+  font-family: var(--font);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.health-intro-primary {
+  border: 1px solid var(--pill);
+  background: var(--pill);
+  color: var(--pill-text);
+}
+
+.health-intro-secondary {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+}
+
+.health-intro-secondary:hover {
+  background: var(--bg-soft);
 }
 
 .review-coach {

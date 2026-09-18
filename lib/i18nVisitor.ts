@@ -14,6 +14,10 @@ export const VISITOR_STR = {
     "reviewCoach.step3": "页眉可以加载或清除示例。你现在是访客，数据只留在这台浏览器。",
     "reviewCoach.tryHealth": "去试试健康对话",
     "reviewCoach.dismiss": "知道了",
+    "healthIntro.title": "示例数据已插入",
+    "healthIntro.description": "已插入 30 天示例数据，方便快速查看。",
+    "healthIntro.view": "查看记录",
+    "healthIntro.clear": "清除示例数据",
   },
   en: {
     "visitor.title": "What brings you here?",
@@ -30,5 +34,9 @@ export const VISITOR_STR = {
     "reviewCoach.step3": "The header can load or remove sample data. You’re a guest, so nothing is saved to an account.",
     "reviewCoach.tryHealth": "Try a health chat",
     "reviewCoach.dismiss": "Got it",
+    "healthIntro.title": "Sample data inserted",
+    "healthIntro.description": "30 days of sample data inserted for quick viewing.",
+    "healthIntro.view": "View records",
+    "healthIntro.clear": "Clear data",
   },
 } as const;

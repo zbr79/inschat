@@ -38,7 +38,7 @@ import { putGuestImage, getGuestImage } from "@/lib/guestImages";
 import { STR, useUiLang } from "@/lib/i18n";
 import type { DocumentAttachment } from "@/lib/documents/types";
 import { useAuth } from "@/lib/authContext";
-import VisitorGuide from "./VisitorGuide";
+import { getHealthIntroSeen, requestHealthIntro } from "@/lib/visitorIntent";
 
 interface UiMessage {
   id: number;
@@ -1366,6 +1366,10 @@ export default function ChatApp() {
         return;
       }
       const authed = isAuthed;
+      if (chatMode === "health" && !authed && !getHealthIntroSeen()) {
+        requestHealthIntro();
+        return false;
+      }
 
       let sessionId = sessionIdRef.current;
       if (!sessionId) {
@@ -1680,16 +1684,14 @@ export default function ChatApp() {
         </main>
       ) : messages.length === 0 ? (
         <main className="welcome">
-          <VisitorGuide guest={isAuthed === false} empty>
-            <h2>{t["welcome.title"]}</h2>
-            <Composer
-              onSend={send}
-              onStop={stop}
-              sending={sending}
-              signedIn={isAuthed === true}
-              chatMode={chatMode}
-            />
-          </VisitorGuide>
+          <h2>{t["welcome.title"]}</h2>
+          <Composer
+            onSend={send}
+            onStop={stop}
+            sending={sending}
+            signedIn={isAuthed === true}
+            chatMode={chatMode}
+          />
         </main>
       ) : (
         <MessageBubble

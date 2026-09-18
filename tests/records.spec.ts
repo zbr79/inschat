@@ -1,39 +1,37 @@
 import { expect, test } from "@playwright/test";
 import {
   assertNoHorizontalOverflow,
-  loadExampleRecords,
   openGuestRecords,
   visibleControlSizes,
 } from "./recordsHelpers";
 
 test.describe("guest records page", () => {
-  test("renders the empty guest records workspace", async ({ page }) => {
+  test("renders the auto-loaded guest records workspace", async ({ page }) => {
     await openGuestRecords(page);
 
-    await expect(page.getByText("No records")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Blood glucose trend" })).toBeVisible();
     await expect(page.getByRole("combobox", { name: "Time range" })).toHaveValue("week");
-    await expect(page.getByRole("button", { name: "Load example data" })).toBeEnabled();
-    await expect(page.getByRole("button", { name: "Load example data" })).toContainText(
-      "Load example data"
-    );
-    await expect(page.getByRole("button", { name: "Remove example data" })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Remove example data" })).toContainText(
-      "Remove example data"
-    );
+    await expect(page.getByRole("button", { name: "Load example data" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Delete Sample Data" })).toBeEnabled();
+    await expect(page.getByText("Example data", { exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Export report" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Import report" })).toHaveCount(0);
     await assertNoHorizontalOverflow(page);
+
+    await page.getByRole("button", { name: "Delete Sample Data" }).click();
+    await expect(page.getByText("No records")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Delete Sample Data" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Select date" })).toHaveCount(0);
   });
 
-  test("loads example data and exposes insights, chart, and timeline", async ({
+  test("auto-loaded example data exposes insights, chart, and timeline", async ({
     page,
   }) => {
     await openGuestRecords(page);
-    await loadExampleRecords(page);
 
     await expect(page.getByText("No records")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Load example data" })).toBeDisabled();
-    await expect(page.getByRole("button", { name: "Remove example data" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Load example data" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Delete Sample Data" })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Export report" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Select date" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Show 30 more days" })).toBeVisible();

@@ -5,7 +5,6 @@ import type { ConcludeResult, SavedRecord } from "@/lib/types";
 import { cleanDishName } from "@/lib/dishName";
 import { applyReportEdits, reportEditorResult } from "@/lib/reportEvents";
 import {
-  addDemoGlucoseRecords,
   DEMO_RECORD_PREFIX,
   deleteGuestRecord,
   listGuestRecords,
@@ -406,17 +405,6 @@ export default function RecordsPanel({
     record._id.startsWith(DEMO_RECORD_PREFIX)
   ) ?? false;
 
-  const loadDemo = () => {
-    if (demoBusy || guest !== true || hasDemoData) return;
-    setDemoBusy(true);
-    try {
-      addDemoGlucoseRecords(30);
-      refreshGuestRecords();
-    } finally {
-      setDemoBusy(false);
-    }
-  };
-
   const removeDemo = () => {
     if (demoBusy || guest !== true) return;
     setDemoBusy(true);
@@ -549,21 +537,19 @@ export default function RecordsPanel({
             }}
           />
         )}
-        {showBrief && guest === true && (
+        {showBrief && guest === true && hasDemoData && (
           <RecordsDemoControls
             hasDemoData={hasDemoData}
             busy={demoBusy}
-            onLoad={loadDemo}
             onRemove={removeDemo}
             labels={{
-              load: t["records.demo.load"],
               remove: t["records.demo.remove"],
               loading: t["records.demo.loading"],
             }}
           />
         )}
       </div>
-      {showFull && (
+      {showFull && records !== null && records.length > 0 && (
         <DatePickerModal
           open={datePickerOpen}
           value={selectedDate}
@@ -586,7 +572,7 @@ export default function RecordsPanel({
       )}
 
       {records !== null && records.length === 0 && (
-        <section className="usage-card">
+        <section className="usage-card records-empty-state">
           <span className="usage-title">{t["records.empty"]}</span>
         </section>
       )}
@@ -821,7 +807,7 @@ export default function RecordsPanel({
           ))}
         </div>
       )}
-      {showFull && records !== null && (
+      {showFull && records !== null && records.length > 0 && (
         <div className="records-timeline-controls">
           {hasMoreTimelineDays && (
             <button

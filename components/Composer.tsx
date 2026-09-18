@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUp, Mic, Paperclip, Plus, Square, X } from "lucide-react";
+import { ArrowUp, Mic, Paperclip, Square, X } from "lucide-react";
 import type { DocumentAttachment } from "@/lib/documents/types";
 import type { ChatImage, ChatMode } from "@/lib/types";
 import { MAX_IMAGES } from "@/lib/types";
@@ -14,13 +14,15 @@ import ImageViewer from "./ImageViewer";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 
+type SendResult = boolean | void | Promise<boolean | void>;
+
 interface ComposerProps {
   sending: boolean;
   onSend: (
     text: string,
     images?: ChatImage[],
     documents?: DocumentAttachment[]
-  ) => void;
+  ) => SendResult;
   onStop: () => void;
   disabled?: boolean;
   signedIn?: boolean;
@@ -67,7 +69,6 @@ export default function Composer({
   const [documentBusy, setDocumentBusy] = useState(false);
   const [viewer, setViewer] = useState<ChatImage | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const textRef = useRef(text);
   textRef.current = text;
@@ -120,8 +121,11 @@ export default function Composer({
       const docs = documentsRef.current;
       const trimmed = merged.trim();
       if (trimmed || imgs.length > 0 || docs.length > 0) {
-        onSend(trimmed, imgs.length > 0 ? imgs : undefined, docs.length > 0 ? docs : undefined);
-        clearComposer();
+        void Promise.resolve(
+          onSend(trimmed, imgs.length > 0 ? imgs : undefined, docs.length > 0 ? docs : undefined)
+        ).then((accepted) => {
+          if (accepted !== false) clearComposer();
+        });
       }
     },
     [onSend]
@@ -161,7 +165,7 @@ export default function Composer({
         ? t["composer.transcribing"]
         : t["composer.record"];
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (disabled || sending) return;
     if (voiceStatus === "recording") {
       requestAutoSend();
@@ -173,12 +177,12 @@ export default function Composer({
       return;
     }
     if (!canSend) return;
-    onSend(
+    const accepted = await onSend(
       text.trim(),
       images.length > 0 ? images : undefined,
       documents.length > 0 ? documents : undefined
     );
-    clearComposer();
+    if (accepted !== false) clearComposer();
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -188,9 +192,7 @@ export default function Composer({
     }
   };
 
-  const handleFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = "";
+  const handleImageFiles = async (files: File[]) => {
     if (files.length === 0) return;
     const room = MAX_IMAGES - images.length;
     const selected = files.slice(0, room);
@@ -253,39 +255,22 @@ export default function Composer({
       )}
       {reportButton && <div className="composer-top-actions">{reportButton}</div>}
       <div className={`input-row mode-${chatMode}`}>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          multiple
-          hidden
-          onChange={handleFiles}
-        />
-        <button
-          type="button"
-          className="icon-button"
-          onClick={() => fileRef.current?.click()}
-          aria-label={t["composer.attachImage"]}
-          title={t["composer.attachImage"]}
-          disabled={images.length >= MAX_IMAGES || disabled}
-        >
-          <Plus size={18} />
-        </button>
         <DocumentPicker
           documents={documents}
           onChange={setDocuments}
           onBusyChange={setDocumentBusy}
+          onImagesSelected={handleImageFiles}
           disabled={disabled}
           renderTrigger={(open, triggerDisabled) => (
             <button
               type="button"
               className="icon-button"
               onClick={open}
-              aria-label={t["composer.attachDocument"]}
-              title={t["composer.attachDocument"]}
+              aria-label={t["composer.attachFile"]}
+              title={t["composer.attachFile"]}
               disabled={triggerDisabled}
             >
-              <Paperclip size={17} />
+              <Paperclip size={18} />
             </button>
           )}
         />

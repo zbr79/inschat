@@ -94,6 +94,41 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 ### Disproved
 - n/a
 
+## 2026-09-17 — Re-arm guest example panel after clear
+
+### Solved
+- Clearing example data now re-arms the guest onboarding flow for the next
+  page refresh.
+- A refreshed first Health chat shows the example-data panel again and
+  automatically restores the sample records for another guided pass.
+- Logged-in users remain outside this guest-only flow.
+
+### Unresolved
+- A clear followed by client-side navigation without a full refresh keeps the
+  current Health chat open; the re-armed panel appears on refresh as requested.
+
+### Disproved
+- n/a
+
+## 2026-09-16 — Guest sample data before first Health chat
+
+### Solved
+- First-time guests now receive 30 days of local example glucose records
+  automatically, once per browser.
+- Records explicitly show an Example data note and retain the remove control.
+- Before the first new Health chat, guests choose to keep the examples, view
+  them, or clear them and start with an empty record.
+- The Health intro is guest-only and is remembered after one decision.
+- Added desktop and phone coverage for preload, modal choices, and records
+  regression behavior.
+
+### Unresolved
+- Example data is browser-local; it is not transferred into a newly created
+  signed-in account.
+
+### Disproved
+- n/a
+
 ## 2026-09-07 — Refine inline edit actions
 ### Solved
 - The inline editor now places Cancel on the left and Send on the right.
@@ -4671,3 +4706,230 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Disproved
 - n/a
+
+## 2026-09-17 — Health intro appears on first send
+
+### Solved
+- Health intro is no longer shown merely by entering a guest Health chat.
+- The modal opens only when a guest attempts to send their first Health
+  message, before a session or message is created.
+- The composer preserves the attempted message while the guest chooses to
+  keep, view, or clear example data.
+- Clearing and refreshing still re-arms the intro, but the refreshed page
+  waits for another Send attempt before showing it.
+- Verified with 17 guest desktop and phone Playwright tests.
+
+### Unresolved
+- After choosing Keep example data and start, the guest must click Send again
+  to submit the preserved message.
+
+### Disproved
+- Showing the modal on Health-mode navigation was not aligned with the
+  requested send-time behavior.
+
+## 2026-09-17 — First-visit chooser is a modal
+
+### Solved
+- The guest visitor chooser now renders as a centered modal with a dimmed
+  backdrop instead of inline content on the welcome page.
+- The same three visitor paths and language toggle remain available.
+- The underlying app is scroll-locked while the chooser is open.
+
+### Unresolved
+- The chooser has no dismiss action because a visitor path is required before
+  the guest can use the empty chat.
+
+### Disproved
+- The inline welcome page was not the desired presentation after the latest
+  clarification.
+
+## 2026-09-17 — Keep only the first Health send feature
+
+### Solved
+- Removed the visitor chooser modal and its three-path welcome flow.
+- Guests now open directly to the normal composer.
+- The first-send Health data modal and automatic guest sample records remain.
+- Removed the unused visitor-tour implementation and related test setup.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A separate first-visit chooser was redundant for the requested experience.
+
+## 2026-09-17 — Blue Health intro styling
+
+### Solved
+- Added a blue health-themed treatment to the first-send modal: blue
+  backdrop tint, icon, accent border, gradient card, and primary action.
+- Verified the Health intro desktop and phone tests (7 passed).
+
+### Unresolved
+- The content/layout redesign is pending the user’s referenced example, which
+  was not included in the request.
+
+### Disproved
+- n/a
+
+## 2026-09-17 — Keep Health modal neutral
+
+### Solved
+- Removed the blue accent styling and colored backdrop from the Health modal.
+- The modal now leaves the page background unchanged and uses the existing
+  neutral app colors.
+
+### Unresolved
+- The content/layout redesign is still waiting for the referenced example.
+
+### Disproved
+- Blue styling and a darkened backdrop were not desired.
+
+## 2026-09-17 — Simplify Health modal content
+
+### Solved
+- Reduced the modal to the title “Sample data inserted” with no description.
+- Removed the Keep sample data option.
+- The actions are now Clear sample data and start using, followed by View
+  example records.
+- Applied the blue health theme to the modal card and controls only; the page
+  background remains unchanged.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A longer explanation and a Keep-data action were unnecessary.
+
+## 2026-09-17 — Narrow Health modal and reorder actions
+
+### Solved
+- Reduced the modal width to 360px.
+- Added a short explanation that 30 days of sample data were inserted for
+  faster project viewing.
+- “View example records” is now first and primary; clearing sample data is
+  second.
+- Verified desktop and phone Health modal tests (7 passed).
+
+### Unresolved
+- n/a
+
+### Disproved
+- The wider two-action layout was not the desired presentation.
+
+## 2026-09-17 — Place Health modal actions side by side
+
+### Solved
+- Placed Clear sample data on the left and View records on the right.
+- Shortened both button labels to fit the compact single-row layout.
+- View records remains the blue primary action.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A stacked action layout was not the desired presentation.
+
+## 2026-09-17 — Shorten Health modal copy
+
+### Solved
+- Changed the left action label to “Clear data”.
+- Shortened the description to “30 days of sample data inserted for quick
+  viewing.”
+
+### Unresolved
+- n/a
+
+### Disproved
+- The longer action and description copy was unnecessary.
+
+## 2026-09-17 — Neutralize Health modal styling
+
+### Solved
+- Replaced the health activity icon with a neutral alert icon beside the
+  title.
+- Made the description smaller and more clearly secondary to the title.
+- Removed the remaining blue modal colors and restored the app’s neutral
+  palette.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The blue theme and prominent activity icon did not fit the requested modal.
+
+## 2026-09-17 — Center Health modal in chat pane
+
+### Solved
+- Desktop Health modal is centered in the main chat pane to the right of the
+  260px sidebar.
+- Mobile keeps the modal centered in the full viewport.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Full-viewport centering was less appropriate for this chat-specific modal
+  when the desktop sidebar is visible.
+
+## 2026-09-17 — Allow sending after clearing sample data
+
+### Solved
+- Fixed the re-arm flag so Clear data no longer intercepts the next Send on
+  the current page.
+- The pending message now sends normally after clearing.
+- A full refresh still re-arms the Health intro for the next first-send
+  decision.
+- Added coverage for sending after Clear data and re-triggering after refresh.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Treating the immediate post-clear Send as a new first-send decision blocked
+  the user’s message.
+
+## 2026-09-17 — Guest delete data resets the fresh Health experience
+
+### Solved
+- Guest Delete data now clears sessions, records, reports, and stored guest
+  images.
+- It immediately reinserts 30 days of sample data.
+- It resets the first-send Health intro and opens a fresh Health chat.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Clearing guest data without restoring samples and first-send state did not
+  provide a complete fresh experience.
+
+## 2026-09-18 — Simplify auto-loaded guest Records controls
+
+### Solved
+- Removed the redundant Example data note from Records.
+- Removed the manual Load example data button because guest samples load
+  automatically.
+- Renamed the guest removal action to Delete Sample Data.
+- Updated desktop and phone Records coverage (27 targeted tests passed).
+
+### Unresolved
+- n/a
+
+### Disproved
+- A manual sample-data loading action was redundant once guest auto-loading
+  became the default.
+
+## 2026-09-18 — Hide empty-state controls after sample deletion
+
+### Solved
+- Delete Sample Data now disappears after the guest records become empty.
+- Added spacing between the Records header and the No records panel.
+- The Select date control is hidden when no records exist.
+- Verified the empty-state behavior in the Records tests.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Keeping disabled delete/date controls visible in an empty Records state was
+  confusing.

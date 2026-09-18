@@ -4,34 +4,26 @@ test.use({
   storageState: { cookies: [], origins: [] },
 });
 
-test.describe("first-visit guest welcome on a phone", () => {
+test.describe("guest Health intro on a phone", () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
       window.localStorage.setItem("inschat_ui_lang", "en");
     });
   });
 
-  test("shows welcome selections instead of a dialog", async ({ page }) => {
+  test("opens the normal composer without a visitor chooser", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByRole("heading", { name: "What can I help with?" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /I’m here to chat/ })).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /I’m here to record blood sugar/ })
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /I’m here to view this work/ })
-    ).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await expect(page.getByRole("textbox", { name: "Message" })).toHaveCount(0);
   });
 
-  test("review path loads sample records on a phone", async ({ page }) => {
-    await page.goto("/", { waitUntil: "domcontentloaded" });
-    await page.getByRole("button", { name: /I’m here to view this work/ }).click();
+  test("shows the Health intro on the first Health send", async ({ page }) => {
+    await page.goto("/?newMode=health", { waitUntil: "domcontentloaded" });
 
-    await expect(page).toHaveURL(/\/records$/);
-    await expect(page.getByRole("heading", { name: "Blood glucose trend" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Sample records are loaded" })).toBeVisible();
+    const modal = page.getByRole("dialog", { name: "Sample data inserted" });
+    await page.getByRole("textbox", { name: "Message" }).fill("Show my health records");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(modal).toBeVisible();
   });
 });

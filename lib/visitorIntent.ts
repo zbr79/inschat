@@ -1,93 +1,91 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { addDemoGlucoseRecords } from "@/lib/guestStore";
-import { setHealthMode } from "@/lib/prefs";
+import { addDemoGlucoseRecords, clearGuestData } from "@/lib/guestStore";
+import { clearGuestImages } from "@/lib/guestImages";
 
-export type VisitorIntent = "chat" | "glucose" | "review";
+const DEMO_INIT_KEY = "inschat_guest_demo_initialized";
+const HEALTH_INTRO_KEY = "inschat_health_intro_seen";
+const HEALTH_INTRO_REARM_KEY = "inschat_health_intro_rearm";
+const HEALTH_INTRO_EVENT = "inschat-health-intro";
+const HEALTH_INTRO_REQUEST_EVENT = "inschat-health-intro-request";
+let rearmedForCurrentPage = false;
 
-const INTENT_KEY = "inschat_visitor_intent";
-const INTENT_EVENT = "inschat-visitor-intent";
-const COACH_KEY = "inschat_review_coach_done";
-const COACH_EVENT = "inschat-review-coach";
-
-function isVisitorIntent(value: string | null): value is VisitorIntent {
-  return value === "chat" || value === "glucose" || value === "review";
-}
-
-export function getVisitorIntent(): VisitorIntent | null {
-  if (typeof window === "undefined") return null;
+export function initializeGuestDemoData(): boolean {
+  if (typeof window === "undefined") return false;
   try {
-    const value = window.localStorage.getItem(INTENT_KEY);
-    return isVisitorIntent(value) ? value : null;
+    if (window.localStorage.getItem(DEMO_INIT_KEY) === "1") return false;
+    const count = addDemoGlucoseRecords(30);
+    window.localStorage.setItem(DEMO_INIT_KEY, "1");
+    window.dispatchEvent(new CustomEvent("inschat-records-changed"));
+    return count > 0;
   } catch {
-    return null;
+    return false;
   }
 }
 
-export function setVisitorIntent(intent: VisitorIntent): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(INTENT_KEY, intent);
-  } catch {}
-  window.dispatchEvent(new CustomEvent(INTENT_EVENT, { detail: intent }));
-}
-
-export function applyVisitorChoice(intent: VisitorIntent): string {
-  setVisitorIntent(intent);
-  if (intent === "chat") return "/?newMode=general";
-  setHealthMode(true);
-  if (intent === "glucose") return "/?newMode=health";
-  addDemoGlucoseRecords(30);
-  window.dispatchEvent(new CustomEvent("inschat-records-changed"));
-  setReviewCoachDone(false);
-  return "/records";
-}
-
-export function useVisitorIntent(): {
-  ready: boolean;
-  intent: VisitorIntent | null;
-} {
-  const [ready, setReady] = useState(false);
-  const [intent, setIntent] = useState<VisitorIntent | null>(null);
-  useEffect(() => {
-    setIntent(getVisitorIntent());
-    setReady(true);
-    const onChange = (event: Event) => {
-      setIntent((event as CustomEvent<VisitorIntent>).detail);
-    };
-    window.addEventListener(INTENT_EVENT, onChange);
-    return () => window.removeEventListener(INTENT_EVENT, onChange);
-  }, []);
-  return { ready, intent };
-}
-
-export function getReviewCoachDone(): boolean {
+export function getHealthIntroSeen(): boolean {
   if (typeof window === "undefined") return true;
   try {
-    return window.localStorage.getItem(COACH_KEY) === "1";
+    if (window.localStorage.getItem(HEALTH_INTRO_REARM_KEY) === "1") {
+      if (rearmedForCurrentPage) {
+        return window.localStorage.getItem(HEALTH_INTRO_KEY) === "1";
+      }
+      window.localStorage.removeItem(HEALTH_INTRO_REARM_KEY);
+      window.localStorage.setItem(HEALTH_INTRO_KEY, "0");
+      return false;
+    }
+    return window.localStorage.getItem(HEALTH_INTRO_KEY) === "1";
   } catch {
     return true;
   }
 }
 
-export function setReviewCoachDone(done: boolean): void {
+export function setHealthIntroSeen(seen: boolean): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(COACH_KEY, done ? "1" : "0");
+    window.localStorage.setItem(HEALTH_INTRO_KEY, seen ? "1" : "0");
   } catch {}
-  window.dispatchEvent(new CustomEvent(COACH_EVENT, { detail: done }));
+  window.dispatchEvent(new CustomEvent(HEALTH_INTRO_EVENT, { detail: seen }));
 }
 
-export function useReviewCoachDone(): boolean {
-  const [done, setDone] = useState(true);
+export function requestHealthIntro(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(HEALTH_INTRO_REQUEST_EVENT));
+}
+
+export function rearmGuestExampleFlow(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(DEMO_INIT_KEY, "0");
+    window.localStorage.setItem(HEALTH_INTRO_REARM_KEY, "1");
+    rearmedForCurrentPage = true;
+  } catch {}
+}
+
+export function resetGuestDataForFreshVisit(): void {
+  if (typeof window === "undefined") return;
+  clearGuestData();
+  void clearGuestImages();
+  addDemoGlucoseRecords(30);
+  rearmedForCurrentPage = false;
+  try {
+    window.localStorage.setItem(DEMO_INIT_KEY, "1");
+    window.localStorage.removeItem(HEALTH_INTRO_REARM_KEY);
+  } catch {}
+  setHealthIntroSeen(false);
+  window.dispatchEvent(new CustomEvent("inschat-records-changed"));
+}
+
+export function useHealthIntroSeen(): boolean {
+  const [seen, setSeen] = useState(true);
   useEffect(() => {
-    setDone(getReviewCoachDone());
+    setSeen(getHealthIntroSeen());
     const onChange = (event: Event) => {
-      setDone(Boolean((event as CustomEvent<boolean>).detail));
+      setSeen(Boolean((event as CustomEvent<boolean>).detail));
     };
-    window.addEventListener(COACH_EVENT, onChange);
-    return () => window.removeEventListener(COACH_EVENT, onChange);
+    window.addEventListener(HEALTH_INTRO_EVENT, onChange);
+    return () => window.removeEventListener(HEALTH_INTRO_EVENT, onChange);
   }, []);
-  return done;
+  return seen;
 }
