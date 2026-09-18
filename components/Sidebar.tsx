@@ -3,19 +3,29 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Menu, X, SquarePen, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, Sparkles, ChevronRight, Languages, Activity, Gauge, LogOut, ImageDown } from "lucide-react";
-import type { ChatSession } from "@/lib/types";
-import { deleteGuestSession, clearGuestSessions, listGuestSessions, pinGuestSession, renameGuestSession } from "@/lib/guestStore";
+import { Menu, X, SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronRight, Languages, FileText, Gauge, LogOut, ImageDown, HeartPulse } from "lucide-react";
+import type { ChatMode, ChatSession } from "@/lib/types";
+import {
+  deleteGuestSession,
+  listGuestSessions,
+  pinGuestSession,
+  renameGuestSession,
+  type GuestSession,
+} from "@/lib/guestStore";
 import { STR, useUiLang, setUiLang } from "@/lib/i18n";
 import SearchModal from "./SearchModal";
 import AuthModal from "./AuthModal";
-import { useInsulinMode, useCompressImages } from "@/lib/prefs";
-import { listGuestRecords } from "@/lib/guestStore";
-import type { SavedRecord } from "@/lib/types";
+import ConfirmModal from "./ConfirmModal";
+import { useCompressImages, useHealthMode } from "@/lib/prefs";
+import { SESSIONS_CHANGED_EVENT } from "@/lib/sessionTitle";
+import { useAuth } from "@/lib/authContext";
+import { resetGuestDataForFreshVisit } from "@/lib/visitorIntent";
 
-interface MeUser {
-  _id: string;
-  username: string;
+interface SidebarSession {
+  id: string;
+  title: string;
+  pinned?: boolean;
+  chatMode: ChatMode;
 }
 
 const COLLAPSED_KEY = "inschat_sidebar_collapsed";
@@ -50,20 +60,21 @@ export default function Sidebar() {
   const currentSession = searchParams.get("session");
   const lang = useUiLang();
   const t = STR[lang];
-  const [user, setUser] = useState<MeUser | null>(null);
-  const [authChecked, setAuthChecked] = useState(false);
+  const { user, authChecked } = useAuth();
   const [sessions, setSessions] = useState<ChatSession[] | null>(null);
-  const [guestSessions, setGuestSessions] = useState<{ id: string; title: string; pinned?: boolean }[]>([]);
+  const [guestSessions, setGuestSessions] = useState<GuestSession[]>([]);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarScrolled, setSidebarScrolled] = useState(false);
+  const [healthCollapsed, setHealthCollapsed] = useState(false);
+  const [generalCollapsed, setGeneralCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [deleteArmed, setDeleteArmed] = useState(false);
+  const [deleteDataOpen, setDeleteDataOpen] = useState(false);
+  const [clearAccountDataOpen, setClearAccountDataOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
-  const [authNonce, setAuthNonce] = useState(0);
-  const [records, setRecords] = useState<SavedRecord[] | null>(null);
-  const [insulinMode, toggleInsulinMode] = useInsulinMode();
   const [compressImages, setCompressImages] = useCompressImages();
+  const [healthMode, setHealthMode] = useHealthMode();
   const [menuFor, setMenuFor] = useState<{
     id: string;
     top: number;
@@ -94,17 +105,40 @@ export default function Sidebar() {
     setMenuOpen(false);
   }, [pathname, currentSession]);
 
-  // Escape closes the mobile drawer (and any open row menu).
+  useEffect(() => {
+    if (!menuOpen || !window.matchMedia("(max-width: 640px)").matches) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [menuOpen]);
+
+  // Escape closes the mobile drawer (and any open row menu). Skip when a
+  // dialog is open so Search / Settings / Auth handle Escape themselves.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      if (document.querySelector('[role="dialog"], [role="alertdialog"]')) return;
       setMenuOpen(false);
       setMenuFor(null);
       setRenamingId(null);
+      setDeleteDataOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.stopImmediatePropagation();
+      setSettingsOpen(false);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [settingsOpen]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -118,21 +152,10 @@ export default function Sidebar() {
   }, [router]);
 
   useEffect(() => {
-    let alive = true;
-    fetch("/api/auth/me")
-      .then((response) => (response.status === 401 ? null : response.json()))
-      .then((body: { user?: MeUser } | null) => {
-        if (!alive) return;
-        setUser(body?.user ?? null);
-        setAuthChecked(true);
-      })
-      .catch(() => {
-        if (alive) setAuthChecked(true);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [pathname, authNonce]);
+    if (authChecked && pathname === "/usage" && !user) {
+      router.replace("/");
+    }
+  }, [authChecked, pathname, router, user]);
 
   // Deep link /?auth=1 (redirect target of the old /login page) opens the
   // auth modal automatically.
@@ -152,30 +175,20 @@ export default function Sidebar() {
         .then((response) => response.json())
         .then((body: { sessions: ChatSession[] }) => setSessions(body.sessions))
         .catch(() => {});
-      fetch("/api/records")
-        .then((response) => response.json())
-        .then((body: { records: SavedRecord[] }) => setRecords(body.records))
-        .catch(() => {});
     } else {
       setGuestSessions(listGuestSessions());
-      setRecords(
-        listGuestRecords().map((record) => ({
-          _id: record.id,
-          title: record.title,
-          summary: record.summary,
-          items: record.items,
-          meals: record.meals,
-          sourceText: record.sourceText,
-          savedAt: record.savedAt,
-          datetime: null,
-        }))
-      );
     }
   }, [authChecked, user]);
 
   useEffect(() => {
     load();
-  }, [load, currentSession]);
+  }, [load]);
+
+  useEffect(() => {
+    const onSessionsChanged = () => load();
+    window.addEventListener(SESSIONS_CHANGED_EVENT, onSessionsChanged);
+    return () => window.removeEventListener(SESSIONS_CHANGED_EVENT, onSessionsChanged);
+  }, [load]);
 
 
   const remove = async (id: string) => {
@@ -242,22 +255,49 @@ export default function Sidebar() {
     } catch {}
   };
 
+
   const logout = async () => {
     try {
       await fetch("/api/auth/logout", { method: "POST" });
     } catch {} finally {
-      setUser(null);
       window.dispatchEvent(new CustomEvent("inschat-auth"));
       router.replace("/");
     }
   };
 
+  const clearAccountData = async () => {
+    try {
+      const response = await fetch("/api/sessions?all=1", { method: "DELETE" });
+      if (!response.ok) throw new Error("clear account data failed");
+      setSessions([]);
+      window.dispatchEvent(new CustomEvent("inschat-records-changed"));
+      setClearAccountDataOpen(false);
+      setSettingsOpen(false);
+      if (currentSession) router.replace("/");
+    } catch {}
+  };
+
   const ownerList = (sessions ?? []).sort(
     (a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false)
-  );
+  ).map((session) => ({
+    id: session._id,
+    title: session.title,
+    pinned: session.pinned,
+    chatMode: session.chatMode,
+  }));
   const guestList = guestSessions.sort(
     (a, b) => Number(b.pinned ?? false) - Number(a.pinned ?? false)
-  );
+  ).map((session) => ({
+    id: session.id,
+    title: session.title,
+    pinned: session.pinned,
+    chatMode: session.chatMode,
+  }));
+
+  const startNewChat = (chatMode: ChatMode) => {
+    setMenuOpen(false);
+    router.push(`/?newMode=${chatMode}`);
+  };
 
   const renderSessionRow = (
     id: string,
@@ -286,6 +326,7 @@ export default function Sidebar() {
       ) : (
         <Link
           href={`/?session=${id}`}
+          prefetch={false}
           className={`session-link${id === currentSession ? " active" : ""}`}
           title={title}
           onClick={() => setMenuOpen(false)}
@@ -371,6 +412,63 @@ export default function Sidebar() {
     </div>
   );
 
+  const renderSessionSection = (
+    chatMode: ChatMode,
+    title: string,
+    sessionsForMode: SidebarSession[],
+    collapsedSection: boolean,
+    setCollapsedSection: (collapsed: boolean) => void
+  ) => {
+    return (
+      <section className={`session-section ${chatMode}`}>
+        <div className="session-section-head">
+          <button
+            type="button"
+            className="catalog-toggle"
+            onClick={() => setCollapsedSection(!collapsedSection)}
+            aria-expanded={!collapsedSection}
+            title={title}
+          >
+            <Folder size={15} className="session-folder-icon" aria-hidden="true" />
+            <span className="sidebar-label sidebar-catalog-label">{title}</span>
+          </button>
+          <button
+            type="button"
+            className="section-new-chat"
+            onClick={() => startNewChat(chatMode)}
+            aria-label={chatMode === "health" ? t["nav.newHealthChat"] : t["nav.newGeneralChat"]}
+            title={chatMode === "health" ? t["nav.newHealthChat"] : t["nav.newGeneralChat"]}
+          >
+            <SquarePen size={14} aria-hidden="true" />
+          </button>
+        </div>
+        {!collapsedSection && (
+          <>
+            {chatMode === "health" && (
+              <Link
+                href="/records"
+                prefetch={false}
+                className={`sidebar-records-button health-records-button${pathname.startsWith("/records") ? " active" : ""}`}
+                onClick={() => setMenuOpen(false)}
+                aria-current={pathname.startsWith("/records") ? "page" : undefined}
+              >
+                <FileText size={15} aria-hidden="true" />
+                <span className="sidebar-label sidebar-catalog-label">{t["nav.records"]}</span>
+              </Link>
+            )}
+            {sessionsForMode.length > 0 && (
+              <div className="session-list">
+                {sessionsForMode.map((session) =>
+                  renderSessionRow(session.id, session.title, Boolean(session.pinned))
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </section>
+    );
+  };
+
   return (
     <>
       <div className="mobile-bar">
@@ -408,9 +506,14 @@ export default function Sidebar() {
       <aside
         className={`sidebar${menuOpen ? " open" : ""}${collapsed ? " collapsed" : ""}`}
       >
+        <div
+          className="sidebar-scroll"
+          onScroll={(event) => setSidebarScrolled(event.currentTarget.scrollTop > 0)}
+        >
+        <div className={`sidebar-top${sidebarScrolled ? " scrolled" : ""}`}>
         <div className="sidebar-brand-row">
           <span className="brand-mark">
-            <Sparkles size={16} />
+            <img src="/icon.svg" alt="" />
           </span>
           <span className="brand-name">InsChat</span>
           <button
@@ -422,9 +525,21 @@ export default function Sidebar() {
           >
             <Search size={16} />
           </button>
+          {user && (
+            <button
+              type="button"
+              className={`sidebar-hide${pathname === "/usage" ? " active" : ""}`}
+              onClick={() => router.push("/usage")}
+              aria-label={t["nav.usage"]}
+              title={t["nav.usage"]}
+              aria-current={pathname === "/usage" ? "page" : undefined}
+            >
+              <Gauge size={16} />
+            </button>
+          )}
           <button
             type="button"
-            className="sidebar-hide"
+            className="sidebar-hide sidebar-collapse"
             onClick={toggleCollapsed}
             aria-label={t["nav.hideSidebar"]}
             title={t["nav.hideSidebar"]}
@@ -432,75 +547,30 @@ export default function Sidebar() {
             <PanelLeft size={16} />
           </button>
         </div>
-        <div className="sidebar-scroll">
-        <Link
-            href="/"
-            className={`sidebar-new${pathname === "/" && !currentSession ? " active" : ""}`}
-            onClick={() => setMenuOpen(false)}
-          >
-            <SquarePen size={16} />
-            {t["nav.newChat"]}
-          </Link>
-      {authChecked && (
-        <div className="session-nav">
-          <div className="session-label-row">
-            <span className="sidebar-label">{t["nav.chats"]}</span>
-            <button
-              type="button"
-              className="session-new-btn"
-              onClick={() => {
-                setMenuOpen(false);
-                router.push("/");
-              }}
-              aria-label={t["nav.newChat"]}
-              title={t["nav.newChat"]}
-            >
-              <SquarePen size={13} />
-            </button>
-          </div>
-          <div className="session-list">
-            {user ? (
-              <>
-                {sessions === null && <p className="session-hint">{t["nav.loading"]}</p>}
-                {sessions !== null && ownerList.length === 0 && (
-                  <p className="session-hint">{t["nav.noSessions"]}</p>
-                )}
-                {ownerList.map((session) =>
-                  renderSessionRow(session._id, session.title, Boolean(session.pinned))
-                )}
-              </>
-            ) : (
-              <>
-                {guestList.length === 0 && (
-                  <p className="session-hint">{t["nav.guestHint"]}</p>
-                )}
-                {guestList.map((session) =>
-                  renderSessionRow(session.id, session.title, Boolean(session.pinned))
-                )}
-              </>
-            )}
-          </div>
         </div>
-      )}
       {authChecked && (
         <div className="session-nav">
-          <span className="sidebar-label">{t["nav.records"]}</span>
-          <div className="session-list">
-            {records === null && <p className="session-hint">{t["nav.loading"]}</p>}
-            {records !== null && records.length === 0 && (
-              <p className="session-hint">{t["records.empty"]}</p>
-            )}
-            {records?.map((record) => (
-              <Link
-                key={record._id}
-                href="/records"
-                className="session-link"
-                onClick={() => setMenuOpen(false)}
-              >
-                <FitTitle title={record.title} />
-              </Link>
-            ))}
-          </div>
+          {user && sessions === null ? (
+            <p className="session-hint">{t["nav.loading"]}</p>
+          ) : (
+            <>
+              {healthMode &&
+                renderSessionSection(
+                  "health",
+                  t["nav.healthChats"],
+                  (user ? ownerList : guestList).filter((session) => session.chatMode === "health"),
+                  healthCollapsed,
+                  setHealthCollapsed
+                )}
+              {renderSessionSection(
+                "general",
+                t["nav.generalChats"],
+                (user ? ownerList : guestList).filter((session) => session.chatMode === "general"),
+                generalCollapsed,
+                setGeneralCollapsed
+              )}
+            </>
+          )}
         </div>
       )}
         </div>
@@ -509,15 +579,6 @@ export default function Sidebar() {
           <div className="account-row">
             <span className="avatar">{user.username.charAt(0).toUpperCase()}</span>
             <span className="account-name">{user.username}</span>
-            <button
-              type="button"
-              className="account-logout"
-              onClick={logout}
-              aria-label={t["nav.signOut"]}
-              title={t["nav.signOut"]}
-            >
-              {t["nav.signOut"]}
-            </button>
             <button
               type="button"
               className="settings-button"
@@ -530,18 +591,18 @@ export default function Sidebar() {
           </div>
         ) : (
           <div className="account-row guest">
-            <div className="guest-identity">
-              <button
-                type="button"
-                className="login-circle"
-                onClick={() => setAuthOpen(true)}
-                aria-label={t["nav.signIn"]}
-                title={t["nav.signIn"]}
-              >
-                <User size={20} />
-              </button>
+            <button
+              type="button"
+              className="guest-identity"
+              onClick={() => setAuthOpen(true)}
+              aria-label={t["nav.signIn"]}
+              title={t["nav.signIn"]}
+            >
+              <span className="login-circle" aria-hidden="true">
+                <User size={18} />
+              </span>
               <span className="guest-name">{t["nav.guest"]}</span>
-            </div>
+            </button>
             <button
               type="button"
               className="settings-button"
@@ -560,7 +621,6 @@ export default function Sidebar() {
       open={authOpen}
       onClose={() => setAuthOpen(false)}
       onAuthed={() => {
-        setAuthNonce((value) => value + 1);
         setMenuOpen(false);
         window.dispatchEvent(new CustomEvent("inschat-auth"));
         router.replace("/");
@@ -601,16 +661,16 @@ export default function Sidebar() {
           </label>
           <label className="settings-row">
             <span className="settings-row-icon">
-              <Activity size={16} />
+              <HeartPulse size={16} />
             </span>
-            <span className="settings-label">{t["settings.insulinMode"]}</span>
+            <span className="settings-label">{t["settings.healthMode"]}</span>
             <button
               type="button"
               role="switch"
-              aria-checked={insulinMode}
-              className={`switch${insulinMode ? " on" : ""}`}
-              onClick={() => toggleInsulinMode(!insulinMode)}
-              aria-label={t["settings.insulinMode"]}
+              aria-checked={healthMode}
+              className={`switch${healthMode ? " on" : ""}`}
+              onClick={() => setHealthMode(!healthMode)}
+              aria-label={t["settings.healthMode"]}
             >
               <span className="switch-knob" />
             </button>
@@ -631,52 +691,80 @@ export default function Sidebar() {
               <span className="switch-knob" />
             </button>
           </label>
-          <button
-            type="button"
-            className="settings-row settings-link"
-            onClick={() => {
-              setSettingsOpen(false);
-              setMenuOpen(false);
-              router.push("/usage");
-            }}
-          >
-            <span className="settings-row-icon">
-              <Gauge size={16} />
-            </span>
-            <span className="settings-label">{t["nav.usage"]}</span>
-            <ChevronRight size={16} />
-          </button>
+          {user && (
+            <button
+              type="button"
+              className="settings-row settings-link"
+              onClick={() => {
+                setSettingsOpen(false);
+                void logout();
+              }}
+            >
+              <span className="settings-row-icon">
+                <LogOut size={16} />
+              </span>
+              <span className="settings-label">{t["nav.signOut"]}</span>
+              <ChevronRight size={16} />
+            </button>
+          )}
+          {user && (
+            <div className="settings-row settings-danger">
+              <span className="settings-row-icon settings-danger-icon">
+                <Trash2 size={16} />
+              </span>
+              <span className="settings-label">{t["settings.clearAccountData"]}</span>
+              <button
+                type="button"
+                className="settings-danger-button"
+                onClick={() => setClearAccountDataOpen(true)}
+              >
+                {t["settings.clearAccountData"]}
+              </button>
+            </div>
+          )}
           {!user && (
             <div className="settings-row settings-danger">
               <span className="settings-row-icon settings-danger-icon">
                 <Trash2 size={16} />
               </span>
-              <span className="settings-danger-text">
-                <span className="settings-label">{t["settings.deleteHistory"]}</span>
-                <span className="settings-hint">{t["settings.deleteHistoryHint"]}</span>
-              </span>
+              <span className="settings-label">{t["settings.deleteData"]}</span>
               <button
                 type="button"
-                className={`settings-danger-button${deleteArmed ? " armed" : ""}`}
-                onClick={() => {
-                  if (!deleteArmed) {
-                    setDeleteArmed(true);
-                    window.setTimeout(() => setDeleteArmed(false), 3000);
-                    return;
-                  }
-                  clearGuestSessions();
-                  setGuestSessions([]);
-                  setDeleteArmed(false);
-                  setSettingsOpen(false);
-                  if (currentSession) router.replace("/");
-                }}
+                className="settings-danger-button"
+                onClick={() => setDeleteDataOpen(true)}
               >
-                {deleteArmed ? t["settings.deleteConfirm"] : t["settings.delete"]}
+                {t["settings.deleteData"]}
               </button>
             </div>
           )}
         </div>
       </>
+    )}
+    {deleteDataOpen && (
+      <ConfirmModal
+        title={t["settings.deleteDataTitle"]}
+        message={t["settings.deleteDataMessage"]}
+        cancelLabel={t["actions.cancel"]}
+        confirmLabel={t["settings.deleteDataConfirm"]}
+        onCancel={() => setDeleteDataOpen(false)}
+        onConfirm={() => {
+          resetGuestDataForFreshVisit();
+          setGuestSessions([]);
+          setDeleteDataOpen(false);
+          setSettingsOpen(false);
+          router.replace("/?newMode=health");
+        }}
+      />
+    )}
+    {clearAccountDataOpen && (
+      <ConfirmModal
+        title={t["settings.clearAccountDataTitle"]}
+        message={t["settings.clearAccountDataMessage"]}
+        cancelLabel={t["actions.cancel"]}
+        confirmLabel={t["settings.clearAccountDataConfirm"]}
+        onCancel={() => setClearAccountDataOpen(false)}
+        onConfirm={clearAccountData}
+      />
     )}
     </>
   );

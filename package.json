@@ -5,14 +5,23 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:lighthouse": "npm run build && node scripts/lighthouse.mjs",
+    "test:lighthouse:records": "npm run build && LIGHTHOUSE_ROUTES=/records LIGHTHOUSE_FORM_FACTORS=mobile,desktop node scripts/lighthouse.mjs",
+    "test:e2e:records": "playwright test tests/records.spec.ts tests/records.mobile.spec.ts",
+    "test": "npm run test:e2e && npm run test:lighthouse"
   },
   "dependencies": {
-    "@opencode-ai/sdk": "^1.18.25",
+    "exceljs": "^4.4.0",
     "highlight.js": "^11.12.0",
     "lucide-react": "^1.37.0",
+    "mammoth": "^1.12.3",
     "mongodb": "^7.6.0",
     "next": "^16.3.3",
+    "opencc-js": "^1.4.2",
+    "pdf-parse": "^2.4.5",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
@@ -20,9 +29,11 @@
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "lighthouse": "^13.4.1",
     "typescript": "^5.7.0"
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 export default function ImageViewer({
   src,
@@ -11,7 +12,10 @@ export default function ImageViewer({
   alt: string;
   onClose: () => void;
 }) {
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
+    setMounted(true);
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
@@ -19,9 +23,12 @@ export default function ImageViewer({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return (
-    <div className="image-viewer" onClick={onClose}>
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="image-viewer" role="dialog" aria-modal="true" aria-label={alt} onClick={onClose}>
       <img src={src} alt={alt} />
-    </div>
+    </div>,
+    document.body
   );
 }

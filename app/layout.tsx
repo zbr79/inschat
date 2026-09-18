@@ -1,11 +1,12 @@
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import Sidebar from "@/components/Sidebar";
+import GuestGuides from "@/components/GuestGuides";
+import { AuthProvider } from "@/lib/authContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "InsChat — Insulin & Glucose Tracker",
-  description: "Record insulin levels with timestamps and food photos. Get AI-powered analysis for diabetes management.",
+  title: "InsChat",
 };
 
 export const viewport: Viewport = {
@@ -18,12 +19,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <div className="shell">
+        <AuthProvider>
           <Suspense>
-            <Sidebar />
+            <GuestGuides />
           </Suspense>
-          <div className="main">{children}</div>
-        </div>
+          <div className="shell">
+            <Suspense>
+              <Sidebar />
+            </Suspense>
+            <div className="main">{children}</div>
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,3 +1,5 @@
+import type { DocumentAttachment } from "./documents/types";
+
 export interface ChatImage {
   mimeType: string;
   data: string;
@@ -7,6 +9,7 @@ export interface ChatMessage {
   role: "user" | "model";
   text: string;
   images?: ChatImage[];
+  documents?: DocumentAttachment[];
 }
 
 export interface ConcludeItem {
@@ -28,11 +31,22 @@ export interface ConcludeMeal {
   time?: string;
 }
 
+export interface ReportEvent {
+  id: string;
+  sourceMessageId?: string;
+  occurredAt: string;
+  items: ConcludeItem[];
+  meals?: ConcludeMeal[];
+  imageKeys?: string[];
+}
+
 export interface ConcludeResult {
   title: string;
   summary: string;
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
+  imageKeys?: string[];
+  events?: ReportEvent[];
 }
 
 export interface SessionConclusion {
@@ -41,6 +55,8 @@ export interface SessionConclusion {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  imageKeys?: string[];
+  events?: ReportEvent[];
 }
 
 export interface SavedRecord {
@@ -50,8 +66,15 @@ export interface SavedRecord {
   items: ConcludeItem[];
   meals?: ConcludeMeal[];
   sourceText?: string;
+  imageKeys?: string[];
+  events?: ReportEvent[];
+  /** Hydrated browser-local images; never sent to the API. */
+  localImages?: ChatImage[];
   savedAt: string;
   datetime: string | null;
+  recordedAt?: string;
+  sessionId?: string;
+  pinned?: boolean;
 }
 
 export interface ApiCall {
@@ -71,11 +94,14 @@ export interface ApiCall {
   };
 }
 
+export type ChatMode = "health" | "general";
+
 export interface ChatSession {
   _id: string;
   title: string;
   createdAt: string;
   updatedAt: string;
+  chatMode: ChatMode;
   pinned?: boolean;
 }
 
@@ -84,13 +110,24 @@ export interface StoredMessage {
   sessionId: string;
   role: "user" | "model";
   text: string;
-  images?: ChatImage[];
+  imageKeys?: string[];
+  documents?: DocumentAttachment[];
   model?: string;
+  trying?: string;
   elapsed?: number;
   createdAt: string;
+  /** Write "complete"; accept "done" (agent) when reading shared Mongo docs. */
+  status?: "pending" | "complete" | "failed" | "done";
+  startedAt?: string;
+  updatedAt?: string;
+  /** Transcript trail (Ran/Read/Edited / trying labels, no leading arrow). */
+  processSteps?: string[];
 }
 
 export const MAX_MESSAGES = 20;
 export const MAX_IMAGES = 3;
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+export const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
+export const GUEST_MAX_AUDIO_MS = 60_000;
+export const USER_MAX_AUDIO_MS = 180_000;

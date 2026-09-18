@@ -1,39 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const KEY = "inschat_insulin_mode";
-const EVENT = "inschat-insulin-mode";
-
-// Insulin (preset) mode is OFF by default: free chat unless enabled.
-export function getInsulinMode(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.localStorage.getItem(KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function setInsulinMode(on: boolean): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(KEY, on ? "1" : "0");
-  } catch {}
-  window.dispatchEvent(new CustomEvent(EVENT, { detail: on }));
-}
-
-export function useInsulinMode(): [boolean, (on: boolean) => void] {
-  const [on, setOn] = useState<boolean>(() => getInsulinMode());
-  useEffect(() => {
-    const handler = (event: Event) => {
-      setOn(Boolean((event as CustomEvent<boolean>).detail));
-    };
-    window.addEventListener(EVENT, handler);
-    return () => window.removeEventListener(EVENT, handler);
-  }, []);
-  return [on, setInsulinMode];
-}
+import type { TimelineRange } from "./recordTimeline";
 
 const COMPRESS_KEY = "inschat_compress_images";
 const COMPRESS_EVENT = "inschat-compress-images";
@@ -70,46 +38,65 @@ export function useCompressImages(): [boolean, (on: boolean) => void] {
   return [on, setCompressImages];
 }
 
-export type ReasoningEffort = "max" | "medium" | "low";
+const HEALTH_MODE_KEY = "inschat_health_mode";
+const HEALTH_MODE_EVENT = "inschat-health-mode";
 
-const REASONING_KEY = "inschat_reasoning";
-const REASONING_EVENT = "inschat-reasoning";
-
-// Reasoning effort is MAX by default (unchanged behavior); users can lower it
-// to medium/low for faster replies (vision + direct-fallback requests only —
-// the opencode agent keeps its own default).
-export function getReasoningEffort(): ReasoningEffort {
-  if (typeof window === "undefined") return "max";
+// Keep the feature visible by default so existing users keep seeing their
+// Health chats and Records until they explicitly turn it off.
+export function getHealthMode(): boolean {
+  if (typeof window === "undefined") return true;
   try {
-    const value = window.localStorage.getItem(REASONING_KEY);
-    return value === "medium" || value === "low" ? value : "max";
+    return window.localStorage.getItem(HEALTH_MODE_KEY) !== "0";
   } catch {
-    return "max";
+    return true;
   }
 }
 
-export function setReasoningEffort(level: ReasoningEffort): void {
+export function setHealthMode(on: boolean): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(REASONING_KEY, level);
+    window.localStorage.setItem(HEALTH_MODE_KEY, on ? "1" : "0");
   } catch {}
-  window.dispatchEvent(new CustomEvent(REASONING_EVENT, { detail: level }));
+  window.dispatchEvent(new CustomEvent(HEALTH_MODE_EVENT, { detail: on }));
 }
 
-export function useReasoningEffort(): [
-  ReasoningEffort,
-  (level: ReasoningEffort) => void
-] {
-  const [level, setLevel] = useState<ReasoningEffort>(() =>
-    getReasoningEffort()
-  );
+export function useHealthMode(): [boolean, (on: boolean) => void] {
+  const [on, setOn] = useState<boolean>(() => getHealthMode());
   useEffect(() => {
     const handler = (event: Event) => {
-      const detail = (event as CustomEvent<ReasoningEffort>).detail;
-      setLevel(detail === "medium" || detail === "low" ? detail : "max");
+      setOn(Boolean((event as CustomEvent<boolean>).detail));
     };
-    window.addEventListener(REASONING_EVENT, handler);
-    return () => window.removeEventListener(REASONING_EVENT, handler);
+    window.addEventListener(HEALTH_MODE_EVENT, handler);
+    return () => window.removeEventListener(HEALTH_MODE_EVENT, handler);
   }, []);
-  return [level, setReasoningEffort];
+  return [on, setHealthMode];
+}
+
+const GLUCOSE_RANGE_KEY = "inschat_glucose_range";
+
+function isTimelineRange(value: string | null): value is TimelineRange {
+  return (
+    value === "day" ||
+    value === "week" ||
+    value === "quarter" ||
+    value === "year" ||
+    value === "all"
+  );
+}
+
+export function getGlucoseRange(): TimelineRange | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const value = window.localStorage.getItem(GLUCOSE_RANGE_KEY);
+    return isTimelineRange(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setGlucoseRange(range: TimelineRange): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(GLUCOSE_RANGE_KEY, range);
+  } catch {}
 }

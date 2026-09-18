@@ -25,6 +25,7 @@
 - If a file exceeds ~300 lines, stop and consider splitting it into smaller modules.
 - Never dump unrelated logic into an existing file — create a new module with a clear name.
 - Follow existing code style in the file you're editing (imports, naming, patterns).
+- NEVER use blur effects in the app, including `filter: blur(...)` or `backdrop-filter`.
 
 ## Guardrails
 

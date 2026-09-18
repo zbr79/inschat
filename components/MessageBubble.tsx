@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Check, Copy, Pencil, RefreshCw } from "lucide-react";
+import { Check, Copy, Pencil, RefreshCw, X } from "lucide-react";
 import "highlight.js/styles/github.css";
 import ImageViewer from "./ImageViewer";
-import type { ConcludeResult } from "@/lib/types";
+import type { DocumentAttachment } from "@/lib/documents/types";
+import type { ChatImage, ConcludeResult } from "@/lib/types";
 import { formatElapsed } from "@/lib/format";
 import { STR, useUiLang } from "@/lib/i18n";
 import { modelLabel } from "@/lib/modelLabels";
@@ -16,10 +17,12 @@ interface Message {
   id: number;
   role: "user" | "model";
   text: string;
-  images?: { mimeType: string; data: string }[];
+  images?: ChatImage[];
+  documents?: DocumentAttachment[];
   streaming?: boolean;
   failed?: boolean;
   model?: string;
+  hideModelMeta?: boolean;
   trying?: string;
   elapsed?: number;
 }
@@ -28,14 +31,47 @@ function dataUrl(image: { mimeType: string; data: string }): string {
   return `data:${image.mimeType};base64,${image.data}`;
 }
 
+function documentType(document: DocumentAttachment): string {
+  const extension = document.name.split(".").pop()?.toUpperCase();
+  return extension || document.mimeType.split("/").pop()?.toUpperCase() || "FILE";
+}
+
+function DocumentChips({ documents }: { documents?: DocumentAttachment[] }) {
+  if (!documents?.length) return null;
+  return (
+    <div className="message-document-chips">
+      {documents.map((document) => (
+        <span className="message-document-chip" key={document.id}>
+          <strong>{documentType(document)}</strong>
+          <span>{document.name}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // Markdown collapses single newlines into spaces; convert them to hard
 // breaks so the model's line-by-line format renders as separate lines.
 function preserveLineBreaks(text: string): string {
-  return text
-    .split("\n")
-    .map((line) => (line.endsWith("  ") ? line : `${line}  `))
+  const lines = text.split("\n");
+  return lines
+    .map((line, index) => {
+      if (index === lines.length - 1 || line.endsWith("  ")) return line;
+      return `${line}  `;
+    })
     .join("\n");
 }
+
+const MarkdownContent = memo(function MarkdownContent({ text }: { text: string }) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeHighlight]}
+    >
+      {preserveLineBreaks(text)}
+    </ReactMarkdown>
+  );
+});
 
 export default function MessageBubble({
   messages,
@@ -48,7 +84,9 @@ export default function MessageBubble({
   flashId = null,
   editingId = null,
   editingText = "",
+  editingImages = [],
   onEditingText,
+  onEditingImages,
   onEditSave,
   onEditCancel,
 }: {
@@ -62,19 +100,51 @@ export default function MessageBubble({
   flashId?: number | null;
   editingId?: number | null;
   editingText?: string;
+  editingImages?: ChatImage[];
   onEditingText?: (text: string) => void;
+  onEditingImages?: (images: ChatImage[]) => void;
   onEditSave?: (id: number) => void;
   onEditCancel?: () => void;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
+  const scrollFrameRef = useRef<number | null>(null);
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
   const [viewer, setViewer] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const lang = useUiLang();
   const t = STR[lang];
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (scrollFrameRef.current !== null) {
+      cancelAnimationFrame(scrollFrameRef.current);
+    }
+    scrollFrameRef.current = requestAnimationFrame(() => {
+      scrollFrameRef.current = null;
+      endRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
+    });
+    return () => {
+      if (scrollFrameRef.current !== null) {
+        cancelAnimationFrame(scrollFrameRef.current);
+        scrollFrameRef.current = null;
+      }
+    };
   }, [messages]);
+
+  useEffect(() => {
+    const input = editInputRef.current;
+    if (!input || editingId === null) return;
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 220)}px`;
+  }, [editingId]);
+
+  useEffect(() => {
+    const input = editInputRef.current;
+    if (!input || editingId === null) return;
+    input.style.height = "auto";
+    input.style.height = `${Math.min(input.scrollHeight, 220)}px`;
+  }, [editingId, editingText]);
 
   const copy = async (message: Message) => {
     try {
@@ -133,6 +203,7 @@ export default function MessageBubble({
             ? imageUrls
             : null;
         const isEditing = editingId === message.id;
+        const editImages = editingImages ?? message.images ?? [];
         return (
         <div
           key={message.id}
@@ -142,13 +213,61 @@ export default function MessageBubble({
           <div className="message-body">
             {isEditing ? (
               <div className="bubble edit-bubble">
+                {editImages.length > 0 && (
+                  <div className="edit-images">
+                    {editImages.map((image, imageIndex) => {
+                      const url = dataUrl(image);
+                      return (
+                        <div key={imageIndex} className="edit-image">
+                          <img
+                            src={url}
+                            alt={t["composer.uploadedAlt"]}
+                            onClick={() => setViewer(url)}
+                          />
+                          <button
+                            type="button"
+                            className="image-remove"
+                            onClick={() =>
+                              onEditingImages?.(
+                                editImages.filter((_, index) => index !== imageIndex)
+                              )
+                            }
+                            aria-label={t["composer.removeImage"]}
+                          >
+                            <X size={14} strokeWidth={2.5} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <textarea
+                  ref={editInputRef}
                   className="edit-input"
                   value={editingText}
                   onChange={(event) => onEditingText?.(event.target.value)}
-                   aria-label={t["actions.edit"]}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      event.preventDefault();
+                      onEditCancel?.();
+                    } else if (
+                      event.key === "Enter" &&
+                      (event.metaKey || event.ctrlKey)
+                    ) {
+                      event.preventDefault();
+                      onEditSave?.(message.id);
+                    }
+                  }}
+                  aria-label={t["actions.edit"]}
                 />
                 <div className="edit-actions">
+                  <button
+                    type="button"
+                    className="edit-cancel"
+                    onClick={() => onEditCancel?.()}
+                  >
+                    {t["actions.cancel"]}
+                  </button>
                   <button
                     type="button"
                     className="edit-save"
@@ -156,13 +275,6 @@ export default function MessageBubble({
                     disabled={!editingText.trim()}
                   >
                     {t["actions.save"]}
-                  </button>
-                  <button
-                    type="button"
-                    className="edit-cancel"
-                    onClick={() => onEditCancel?.()}
-                  >
-                    {t["actions.cancel"]}
                   </button>
                 </div>
               </div>
@@ -178,12 +290,8 @@ export default function MessageBubble({
                   </div>
                 ))}
                 <div className="bubble">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                  >
-                    {preserveLineBreaks(message.text)}
-                  </ReactMarkdown>
+                  <DocumentChips documents={message.documents} />
+                  <MarkdownContent text={message.text} />
                 </div>
               </>
             ) : (
@@ -196,19 +304,12 @@ export default function MessageBubble({
                     onClick={() => setViewer(url)}
                   />
                 ))}
+                <DocumentChips documents={message.documents} />
                 {message.text && (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    rehypePlugins={[rehypeHighlight]}
-                  >
-                    {preserveLineBreaks(message.text)}
-                  </ReactMarkdown>
+                  <MarkdownContent text={message.text} />
                 )}
                 {message.streaming && !message.text && (
                   <span className="thinking">
-                    {!message.trying && message.model && (
-                      <span className="thinking-label">{t["thinking"]}</span>
-                    )}
                     <span className="thinking-dots" aria-hidden="true">
                       <i />
                       <i />
@@ -216,7 +317,6 @@ export default function MessageBubble({
                     </span>
                   </span>
                 )}
-                {message.streaming && message.text && <span className="cursor" />}
               </div>
             )}
             {message.role === "model" ? (
@@ -226,7 +326,7 @@ export default function MessageBubble({
                     {renderButtons(true, message)}
                   </div>
                 )}
-                {!message.failed && message.model && (
+                {!message.failed && message.model && !message.hideModelMeta && (
                   <div className={`model-meta${message.streaming ? " live" : ""}`}>
                     {!message.streaming && message.elapsed !== undefined && (
                       <span>{formatElapsed(message.elapsed)}s · </span>
@@ -246,7 +346,11 @@ export default function MessageBubble({
       })}
       <div ref={endRef} />
       {viewer && (
-         <ImageViewer src={viewer} alt={t["composer.uploadedAlt"]} onClose={() => setViewer(null)} />
+         <ImageViewer
+           src={viewer}
+           alt={t["composer.uploadedAlt"]}
+           onClose={() => setViewer(null)}
+         />
       )}
     </main>
   );

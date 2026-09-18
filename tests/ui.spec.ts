@@ -1,0 +1,153 @@
+import { expect, test } from "@playwright/test";
+
+const publicRoutes = [
+  "/",
+  "/records",
+  "/records/full",
+  "/calls",
+  "/models",
+  "/opencode",
+  "/opencode-calls",
+  "/login",
+  "/signup",
+];
+
+test.describe("public UI routes", () => {
+  for (const route of publicRoutes) {
+    test(`${route} renders without an application error`, async ({ page }) => {
+      await page.goto(route, { waitUntil: "domcontentloaded" });
+
+      await expect(page).toHaveTitle(/InsChat/i);
+      await expect(page.locator(".main")).toBeVisible();
+      await expect(page.locator("body")).not.toContainText("Application error");
+      await expect(page.locator("body")).not.toContainText("Unhandled Runtime Error");
+    });
+  }
+});
+
+test.describe("guest desktop UI", () => {
+  test("home exposes the composer, navigation, and settings", async ({ page }) => {
+    await page.goto("/");
+
+    await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Attach file" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Voice input" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send" })).toBeDisabled();
+    await expect(page.getByRole("link", { name: "Records" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Settings" }).click();
+    const settings = page.getByRole("dialog");
+    await expect(settings).toBeVisible();
+    await expect(settings).toContainText("Settings");
+    await settings.getByRole("button", { name: "Cancel" }).click();
+    await expect(settings).toBeHidden();
+  });
+
+  test("guest can navigate to records from the sidebar", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: "Records" }).click();
+
+    await expect(page).toHaveURL(/\/records$/);
+    await expect(page.locator(".main")).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("Application error");
+  });
+
+  test("guest delete data resets the Health experience with sample data", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Settings" }).click();
+    const settings = page.getByRole("dialog");
+    await settings.getByRole("button", { name: "Delete data" }).click();
+
+    const confirm = page.getByRole("alertdialog", { name: "Delete local data?" });
+    await confirm.getByRole("button", { name: "Delete data" }).click();
+
+    await expect(page).toHaveURL(/newMode=health/);
+    await page.getByRole("textbox", { name: "Message" }).fill("Start fresh");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByRole("dialog", { name: "Sample data inserted" })).toBeVisible();
+  });
+
+  test("guest can open a saved session report without another request", async ({ page }) => {
+    await page.addInitScript(() => {
+      const now = Date.now();
+      localStorage.setItem(
+        "inschat_guest_sessions",
+        JSON.stringify([
+          {
+            id: "e2e-report",
+            title: "UI test report",
+            updatedAt: now,
+            chatMode: "health",
+            messages: [
+              {
+                id: "e2e-message",
+                role: "user",
+                text: "UI test message",
+                status: "complete",
+                createdAt: now,
+                updatedAt: now,
+              },
+            ],
+            conclusion: {
+              title: "UI test report",
+              summary: "A saved report used only by the isolated browser test.",
+              items: [{ name: "Glucose", value: "110", unit: "mg/dL" }],
+              imageKeys: ["e2e-meal-image"],
+              meals: [
+                {
+                  name: "Dinner",
+                  time: "2026-09-15T19:00:00",
+                  dishes: [{ name: "Rice", rank: "High" }],
+                },
+              ],
+              events: [
+                {
+                  id: "e2e-meal-event",
+                  occurredAt: "2026-09-15T19:00:00",
+                  items: [],
+                  meals: [
+                    {
+                      name: "Dinner",
+                      time: "2026-09-15T19:00:00",
+                      dishes: [{ name: "Rice", rank: "High" }],
+                    },
+                  ],
+                  imageKeys: ["e2e-meal-image"],
+                },
+              ],
+            },
+          },
+        ])
+      );
+    });
+    await page.goto("/?session=e2e-report");
+
+    const reportButton = page.getByRole("button", {
+      name: "Summarize this conversation",
+    });
+    await expect(reportButton).toBeEnabled();
+    await expect(page.locator(".composer-top-actions .conclude-button")).toHaveCount(1);
+    await expect(page.locator(".input-row .conclude-button")).toHaveCount(0);
+    await expect(reportButton).toHaveCSS("width", "36px");
+    await expect(reportButton).toHaveCSS("height", "36px");
+    await expect(reportButton.locator("svg")).toHaveCSS("width", "17px");
+    await reportButton.click();
+
+    await expect(page.getByRole("heading", { name: "Conclusion" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "110" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Remove dish" })).toHaveCount(3);
+    const mealImage = page.locator(".conclude-meal-title .record-images-trigger");
+    await expect(mealImage).toBeVisible();
+    await expect(mealImage.locator("svg")).toHaveCSS("width", "17px");
+    await mealImage.hover();
+    await expect(mealImage).toHaveCSS("outline-style", "none");
+  });
+
+  test("guest usage route returns to chat instead of exposing private usage", async ({
+    page,
+  }) => {
+    await page.goto("/usage");
+    await expect(page).toHaveURL(/\/(?:\?.*)?$/);
+    await expect(page.getByRole("textbox", { name: "Message" })).toBeVisible();
+  });
+});
