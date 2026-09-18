@@ -7,8 +7,9 @@ import { applyReportEdits, sameMeal } from "@/lib/reportEvents";
 import { cleanDishName } from "@/lib/dishName";
 import { addGuestRecord, updateGuestRecord } from "@/lib/guestStore";
 import { STR, useUiLang } from "@/lib/i18n";
-import { formatDateTimeDisplay, formatDateTimeNoYear, localizeReadingPhase, mealNameForTime, READING_PHASES, readingPhase, parseFlexibleDateTime } from "@/lib/mealTime";
+import { formatDateTimeNoYear, localizeReadingPhase, mealNameForTime, READING_PHASES, readingPhase, parseFlexibleDateTime } from "@/lib/mealTime";
 import { Calendar, Clock, Pencil, Trash2, X } from "lucide-react";
+import DateTimeInputs from "./DateTimeInputs";
 import RecordImages from "./RecordImages";
 
 const RANK_CYCLE: Record<string, string[]> = {
@@ -46,53 +47,6 @@ function nextRank(current: string | undefined, lang: "zh" | "en"): string {
   const cycle = RANK_CYCLE[lang];
   const idx = cycle.indexOf((current ?? "").trim());
   return cycle[(idx + 1) % cycle.length];
-}
-
-// Native date + time pickers styled as chips.
-function DateTimeInputs({
-  value,
-  lang,
-  t,
-  onDisplay,
-}: {
-  value: string | undefined;
-  lang: "zh" | "en";
-  t: Record<string, string>;
-  onDisplay: (display: string) => void;
-}) {
-  const parsed = parseFlexibleDateTime(value ?? "");
-  const [date, setDate] = useState(parsed?.date ?? "");
-  const [time, setTime] = useState(parsed?.time ?? "");
-
-  const commit = (d: string, t: string) => {
-    const display = formatDateTimeDisplay(d, t, lang);
-    if (display) onDisplay(display);
-  };
-
-  return (
-    <div className="conclude-time-row">
-      <input
-        type="time"
-        className="conclude-time-input"
-        value={time}
-        onChange={(event) => {
-          setTime(event.target.value);
-          commit(date, event.target.value);
-        }}
-        aria-label={t["concludeModal.time"]}
-      />
-      <input
-        type="date"
-        className="conclude-time-input"
-        value={date}
-        onChange={(event) => {
-          setDate(event.target.value);
-          commit(event.target.value, time);
-        }}
-        aria-label={t["concludeModal.date"]}
-      />
-    </div>
-  );
 }
 
 interface Reading {
