@@ -52,6 +52,21 @@ test.describe("guest desktop UI", () => {
     await expect(page.locator("body")).not.toContainText("Application error");
   });
 
+  test("guest delete data resets the Health experience with sample data", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Settings" }).click();
+    const settings = page.getByRole("dialog");
+    await settings.getByRole("button", { name: "Delete data" }).click();
+
+    const confirm = page.getByRole("alertdialog", { name: "Delete local data?" });
+    await confirm.getByRole("button", { name: "Delete data" }).click();
+
+    await expect(page).toHaveURL(/newMode=health/);
+    await page.getByRole("textbox", { name: "Message" }).fill("Start fresh");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByRole("dialog", { name: "Sample data inserted" })).toBeVisible();
+  });
+
   test("guest can open a saved session report without another request", async ({ page }) => {
     await page.addInitScript(() => {
       const now = Date.now();

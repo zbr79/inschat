@@ -6,7 +6,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Menu, X, SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronRight, Languages, FileText, Gauge, LogOut, ImageDown, HeartPulse } from "lucide-react";
 import type { ChatMode, ChatSession } from "@/lib/types";
 import {
-  clearGuestData,
   deleteGuestSession,
   listGuestSessions,
   pinGuestSession,
@@ -20,6 +19,7 @@ import ConfirmModal from "./ConfirmModal";
 import { useCompressImages, useHealthMode } from "@/lib/prefs";
 import { SESSIONS_CHANGED_EVENT } from "@/lib/sessionTitle";
 import { useAuth } from "@/lib/authContext";
+import { resetGuestDataForFreshVisit } from "@/lib/visitorIntent";
 
 interface SidebarSession {
   id: string;
@@ -748,11 +748,11 @@ export default function Sidebar() {
         confirmLabel={t["settings.deleteDataConfirm"]}
         onCancel={() => setDeleteDataOpen(false)}
         onConfirm={() => {
-          clearGuestData();
+          resetGuestDataForFreshVisit();
           setGuestSessions([]);
           setDeleteDataOpen(false);
           setSettingsOpen(false);
-          if (currentSession) router.replace("/");
+          router.replace("/?newMode=health");
         }}
       />
     )}
