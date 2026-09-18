@@ -94,6 +94,48 @@ Companion file: `PLAN.md` (read-first decision log + roadmap).
 ### Disproved
 - n/a
 
+## 2026-09-18 — Reuse shared date-time selector for manual Records
+
+### Solved
+- Extracted the existing date-and-time selector into a shared component.
+- Reused it in both the conclusion flow and Add a record modal.
+- Manual meal records now save correctly from the selector’s localized display
+  value.
+- Playwright confirmed separate date/time inputs, automatic Dinner naming at
+  18:30, and no viewport overflow on desktop or mobile.
+- Lighthouse remained passing on Records: mobile 81/94/100/91 and desktop
+  82/94/100/91 for performance/accessibility/best-practices/SEO.
+
+### Unresolved
+- Lighthouse reused the already-running PM2 app because port 3001 was occupied;
+  the audits completed successfully against that app.
+
+### Disproved
+- Keeping a separate native `datetime-local` control would have left manual
+  Records inconsistent with the existing conclusion flow.
+
+## 2026-09-18 — Refine manual Records layout and meal timing
+
+### Solved
+- Moved the add button into the right-aligned Records action group on desktop
+  and mobile.
+- Changed meal entry to use a local date-and-time picker.
+- Derived the meal name from the selected time using the existing meal-time
+  mapping.
+- Verified no horizontal or vertical viewport overflow at 1350×940 and
+  390×844 with Playwright.
+- Records Lighthouse scores passed: mobile performance 82, accessibility 94,
+  best-practices 100, SEO 91; desktop performance 81, accessibility 94,
+  best-practices 100, SEO 91.
+
+### Unresolved
+- Lighthouse reused the already-running PM2 app because port 3001 was occupied;
+  its audits completed successfully against that app.
+
+### Disproved
+- Leaving the add button as a separate flex item caused it to wrap below the
+  Records controls on mobile.
+
 ## 2026-09-17 — Re-arm guest example panel after clear
 
 ### Solved
@@ -4933,3 +4975,130 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - Keeping disabled delete/date controls visible in an empty Records state was
   confusing.
+
+## 2026-09-18 — Add manual Records entry modal
+
+### Solved
+- Added a Records-page plus button that opens an Add a record modal.
+- Added Meal and Blood Sugar tabs with the requested manual fields.
+- Persisted manual records for guests and authenticated users through the
+  existing local/API record paths.
+- Verified both guest save flows with Playwright and passed the production build.
+
+### Unresolved
+- n/a
+
+### Disproved
+- n/a
+
+## 2026-09-18 — Add Blood Sugar date and time
+
+### Solved
+- Added the shared date/time selector to the Blood Sugar tab.
+- Blood Sugar records now save the selected timestamp instead of always using
+  the current time.
+- Verified the Blood Sugar date/time entry flow with Playwright.
+
+### Unresolved
+- n/a
+
+### Disproved
+- n/a
+
+## 2026-09-18 — Match manual meals to chat meal schema
+
+### Solved
+- Replaced the manual meal free-text field with repeatable dish rows.
+- Added a per-dish impact/rank selector.
+- Manual meals now persist as `meals[].dishes[]`, matching chat conclusions
+  and the existing Records timeline.
+- Verified two dishes saved with independent ranks and no mobile overflow.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A record-level impact field and one combined foods string do not represent
+  the application’s meal data model.
+
+## 2026-09-18 — Compact and dismissible manual Records modal
+
+### Solved
+- Reduced the manual modal title, labels, tabs, and action text sizes.
+- Clicking the backdrop now closes the modal while clicks inside the form remain
+  active.
+- Renamed the primary action from Save to Add.
+- Playwright confirmed the mobile title is 18px, the Add action is present, and
+  backdrop dismissal works.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The mobile Records heading rule was incorrectly overriding the manual modal
+  title size at 22px.
+
+## 2026-09-18 — Align Blood Sugar value and unit controls
+
+### Solved
+- Removed the numeric spinner arrows by using a decimal-input text control.
+- Added the existing `mg/dL` / `mmol/L` unit choices as a select control.
+- Placed Value and Unit on the same row.
+- Playwright verified same-row layout, unit persistence, and no mobile
+  overflow.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A free-text unit field and spinner-style numeric input did not match the
+  intended Blood Sugar entry control.
+
+## 2026-09-18 — Left-align derived meal name
+
+### Solved
+- Removed the separate Meal name label from the Meal tab.
+- The derived meal name now appears alone on the left.
+- Playwright confirmed the label is gone and the meal name is left-aligned.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Showing a separate label beside the derived meal name added unnecessary
+  visual weight.
+
+## 2026-09-18 — Match dish impact control to report chips
+
+### Solved
+- Removed the visible Dish name label from each dish row.
+- Set the dish input to approximately 70% of the row.
+- Styled the remaining control as the report-style colored impact chip.
+- Used the existing L/M/H chip labels in English and low/medium/high color
+  states.
+- Playwright verified a 70% row split and the Medium chip state.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A full-width labeled impact select did not match the report’s compact chip
+  treatment.
+
+## 2026-09-18 — Preserve manual record local timestamps
+
+### Solved
+- Manual Meal records now store the selected local time in the same `time`
+  format used by chat conclusions.
+- Manual Blood Sugar records now include a matching local `time` item.
+- Absolute `recordedAt` timestamps remain available for storage while timeline
+  display uses the entered local time.
+- Playwright verified Meal and Blood Sugar entries at 6:30 PM remain
+  `2026-09-18 18:30` in an America/Los_Angeles browser context.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Re-parsing a converted UTC ISO timestamp as if it were local time caused the
+  entered and displayed times to diverge.
