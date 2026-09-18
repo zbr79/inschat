@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus } from "lucide-react";
 import type { ConcludeResult, SavedRecord } from "@/lib/types";
 import { cleanDishName } from "@/lib/dishName";
 import { applyReportEdits, reportEditorResult } from "@/lib/reportEvents";
 import {
   DEMO_RECORD_PREFIX,
+  addGuestRecord,
   deleteGuestRecord,
   listGuestRecords,
   removeDemoGlucoseRecords,
@@ -31,6 +33,7 @@ import RecordInsights from "./RecordInsights";
 import RecordImages from "./RecordImages";
 import RecordsDemoControls from "./RecordsDemoControls";
 import ReportTransferControls from "./ReportTransferControls";
+import ManualRecordModal, { type ManualRecordDraft } from "./ManualRecordModal";
 import { useAuth } from "@/lib/authContext";
 import {
   extractGlucosePoints,
@@ -160,6 +163,10 @@ type TimelineMonthGroup = {
 
 function eventTimestamp(value: string | undefined, fallback: number): number {
   if (!value) return fallback;
+  if (/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:?\d{2})$/.test(value)) {
+    const absolute = new Date(value).getTime();
+    return Number.isFinite(absolute) ? absolute : fallback;
+  }
   const parsed = parseFlexibleDateTime(value);
   if (parsed) {
     const ts = Date.parse(`${parsed.date}T${parsed.time}`);
@@ -234,10 +241,13 @@ function calendarDayLabel(dateKey: string, lang: "zh" | "en"): string {
 
 function displayEventTime(value: string | undefined, lang: "zh" | "en"): string {
   if (!value) return "";
-  const parsed = parseFlexibleDateTime(value);
-  const ts = parsed
-    ? new Date(`2000-01-01T${parsed.time}`).getTime()
-    : new Date(value).getTime();
+  const isAbsolute = /^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:?\d{2})$/.test(value);
+  const parsed = isAbsolute ? null : parseFlexibleDateTime(value);
+  const ts = isAbsolute
+    ? new Date(value).getTime()
+    : parsed
+      ? new Date(`2000-01-01T${parsed.time}`).getTime()
+      : new Date(value).getTime();
   if (Number.isNaN(ts)) return value;
   return new Date(ts).toLocaleTimeString(lang === "zh" ? "zh-CN" : "en-US", {
     hour: "numeric",
@@ -266,6 +276,7 @@ export default function RecordsPanel({
   const [editingDay, setEditingDay] = useState<TimelineDayGroup | null>(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [manualRecordOpen, setManualRecordOpen] = useState(false);
   const [timelineVisibleDays, setTimelineVisibleDays] = useState(7);
   const lang = useUiLang();
   const t = STR[lang];
@@ -416,6 +427,68 @@ export default function RecordsPanel({
     }
   };
 
+  const saveManualRecord = async (draft: ManualRecordDraft) => {
+    const parsed = parseFlexibleDateTime(draft.dateTime);
+    if (!parsed) {
+      throw new Error(t["common.requestFailed"]);
+    }
+    const date = new Date(`${parsed.date}T${parsed.time}`);
+    if (Number.isNaN(date.getTime())) {
+      throw new Error(t["common.requestFailed"]);
+    }
+    const recordedAt = date.toISOString();
+    const localTime = `${parsed.date} ${parsed.time}`;
+    const timeName = lang === "zh" ? "时间" : "time";
+    const payload =
+      draft.kind === "blood-sugar"
+        ? {
+            title: t["records.manual.bloodSugar"],
+            summary: `${draft.value} ${draft.unit}`,
+            items: [
+              {
+                name: t["records.glucose.label"],
+                value: draft.value,
+                unit: draft.unit,
+              },
+              { name: timeName, value: localTime },
+            ],
+            recordedAt,
+          }
+        : {
+            title: mealNameForTime(draft.dateTime, lang),
+            summary: draft.dishes.map((dish) => dish.name).join(", "),
+            items: [],
+            meals: [
+              {
+                name: mealNameForTime(draft.dateTime, lang),
+                dishes: draft.dishes.map((dish) => ({
+                  name: dish.name,
+                  rank: dish.impact,
+                })),
+                time: localTime,
+              },
+            ],
+            recordedAt,
+          };
+
+    if (guest) {
+      addGuestRecord(payload);
+      refreshGuestRecords();
+    } else {
+      const response = await fetch("/api/records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        throw new Error(body?.error || t["common.requestFailed"]);
+      }
+      await load();
+    }
+    setManualRecordOpen(false);
+  };
+
   const glucosePoints = records
     ? filterGlucosePoints(extractGlucosePoints(records), range)
     : [];
@@ -523,31 +596,43 @@ export default function RecordsPanel({
             }}
           />
         )}
-        {showFull && records !== null && guest === false && (
-          <ReportTransferControls
-            records={records}
-            guest={guest}
-            onImported={load}
-            labels={{
-              export: t["records.export"],
-              import: t["records.import"],
-              importing: t["records.importing"],
-              imported: (count) => t["records.imported"].replace("{count}", String(count)),
-              error: t["records.transferError"],
-            }}
-          />
-        )}
-        {showBrief && guest === true && hasDemoData && (
-          <RecordsDemoControls
-            hasDemoData={hasDemoData}
-            busy={demoBusy}
-            onRemove={removeDemo}
-            labels={{
-              remove: t["records.demo.remove"],
-              loading: t["records.demo.loading"],
-            }}
-          />
-        )}
+        <div className="records-page-actions">
+          {showFull && records !== null && guest === false && (
+            <ReportTransferControls
+              records={records}
+              guest={guest}
+              onImported={load}
+              labels={{
+                export: t["records.export"],
+                import: t["records.import"],
+                importing: t["records.importing"],
+                imported: (count) => t["records.imported"].replace("{count}", String(count)),
+                error: t["records.transferError"],
+              }}
+            />
+          )}
+          {showBrief && guest === true && hasDemoData && (
+            <RecordsDemoControls
+              hasDemoData={hasDemoData}
+              busy={demoBusy}
+              onRemove={removeDemo}
+              labels={{
+                remove: t["records.demo.remove"],
+                loading: t["records.demo.loading"],
+              }}
+            />
+          )}
+          <button
+            type="button"
+            className="records-add-button"
+            onClick={() => setManualRecordOpen(true)}
+            disabled={guest === null}
+            aria-label={t["records.manual.add"]}
+            title={t["records.manual.add"]}
+          >
+            <Plus size={18} strokeWidth={2.25} aria-hidden="true" />
+          </button>
+        </div>
       </div>
       {showFull && records !== null && records.length > 0 && (
         <DatePickerModal
@@ -848,6 +933,12 @@ export default function RecordsPanel({
         <section className="usage-card records-date-empty">
           <span className="usage-title">{t["records.dateEmpty"]}</span>
         </section>
+      )}
+      {manualRecordOpen && (
+        <ManualRecordModal
+          onClose={() => setManualRecordOpen(false)}
+          onSave={saveManualRecord}
+        />
       )}
       {editingDay && (
         <FullDayEditModal
