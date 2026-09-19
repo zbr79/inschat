@@ -5102,3 +5102,326 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - Re-parsing a converted UTC ISO timestamp as if it were local time caused the
   entered and displayed times to diverge.
+
+## 2026-09-18 — Hydrate manual Blood Sugar records in edit mode
+
+### Solved
+- Manual Blood Sugar records now use the canonical `glucose` item name.
+- Edit hydration also accepts legacy `Blood Sugar` item names.
+- Playwright confirmed a newly added Blood Sugar value appears in the edit
+  dialog instead of an empty reading state.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The saved record was not empty; the editor’s glucose matcher rejected the
+  translated `Blood Sugar` item name.
+
+## 2026-09-18 — Improve manual meal impact interaction
+
+### Solved
+- Replaced the native impact dropdown with a report-style pill button.
+- Impact now cycles `Impact → L → M → H → L` on click.
+- Reused the report chip color states and compact proportions.
+- Playwright verified the cycle, saved rank, and mobile viewport fit.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A native dropdown arrow made the impact control feel like a standard form
+  field instead of the report’s interaction pattern.
+
+## 2026-09-18 — Compact default-low impact chip
+
+### Solved
+- Reduced the impact control to a 34px circular chip.
+- New dishes now default to low impact (`L`).
+- Clicking continues to cycle `L → M → H → L`.
+- Playwright verified the default, 34px chip size, cycle behavior, and mobile
+  viewport fit.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A wide pill consumed unnecessary dish-row space when a compact report-style
+  circle was sufficient.
+
+## 2026-09-18 — Keep extra meal dishes inside a scroll area
+
+### Solved
+- Meal entry now opens with three empty dish rows.
+- Additional dish rows scroll within the dishes section.
+- Fixed the section height so adding dishes does not grow the modal.
+- Playwright verified three initial rows, seven total rows, internal scrolling,
+  and a stable modal height on mobile.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Letting the dishes section use only `max-height` allowed it to grow when
+  content first exceeded the limit because its initial content was shorter.
+
+## 2026-09-18 — Use red X for dish removal
+
+### Solved
+- Replaced the dish trash icon with a compact red X icon.
+- Removed the boxed border to keep the row control lighter.
+- Preserved the existing dish deletion behavior.
+- Playwright verified the icon, red color, and row removal.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A trash-can icon with a bordered rectangular button added unnecessary visual
+  weight to each dish row.
+
+## 2026-09-18 — Balance red X spacing on phone layouts
+
+### Solved
+- Removed the hover background from the red X control.
+- Reserved a wider dedicated column for the X and reduced the dish text field
+  accordingly.
+- Checked the meal modal at 320px and 390px phone widths.
+- Playwright confirmed no horizontal overflow and stable control alignment.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A hover circle added meaning to a control that is already visually clear as a
+  red X.
+
+## 2026-09-18 — Show time-derived names for manual readings
+
+### Solved
+- Added the derived blood sugar phase below the Blood Sugar date/time fields.
+- Reused `readingPhase` so labels follow the existing reading conventions.
+- Confirmed meal names continue using `mealNameForTime` from the same
+  date/time value.
+- Playwright verified fasting, post-meal phases, and Breakfast/Lunch/Snack/
+  Dinner/Late-night meal boundaries.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Blood Sugar needs a separate naming rule; its phase can be derived from the
+  same local time input using the existing shared time parser.
+
+## 2026-09-18 — Add Brunch and inline derived names
+
+### Solved
+- Added the `10:00–11:59` Brunch / 早午餐 range.
+- Shortened English meal names to `Snack` and `Late night`.
+- Kept the Chinese afternoon and late-night names as 下午茶 and 夜宵.
+- Placed the derived meal or Blood Sugar name beside the time controls.
+- Added a narrow-phone fallback that places the derived name below the
+  controls when keeping the date input readable requires more width.
+- Updated the chat conclusion instructions and meal-time mapping canvas.
+- Playwright verified English and Chinese names, boundaries, no overflow, and
+  phone layouts at 320px and 390px.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Keeping the full English labels `Afternoon snack` and `Late-night snack`
+  made the compact record UI unnecessarily wide.
+
+## 2026-09-18 — Put the derived name before time inputs
+
+### Solved
+- Reordered both manual record tabs so the meal or Blood Sugar name appears
+  before the date/time controls.
+- Preserved the name-first order in the narrow-phone stacked layout.
+- Playwright verified Brunch, name-first positioning, and no horizontal
+  overflow at 320px and 390px.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Placing the derived name after the time controls did not match the desired
+  reading order.
+
+## 2026-09-18 — Compact unlabeled date and time controls
+
+### Solved
+- Removed the `Date and time` text from both manual record tabs.
+- Reduced the manual date/time controls from 42px to 38px on larger layouts
+  and from 40px to 36px on phone layouts.
+- Left the shared date/time editor controls unchanged.
+- Playwright verified the removed label, compact heights, and no phone overflow.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The extra date/time label added useful context once the controls were already
+  clearly recognizable and paired with the derived name.
+
+## 2026-09-18 — Reduce time controls a second time
+
+### Solved
+- Reduced the manual date/time controls again to 34px on larger layouts and
+  32px on phone layouts.
+- Kept the date and time controls the same height for visual balance.
+- Playwright verified the 32px phone controls and no horizontal overflow.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The previous 38px/36px controls were still compact enough for the requested
+  manual record layout.
+
+## 2026-09-18 — Match chat report dish deletion controls
+
+### Solved
+- Replaced the manual dish X with the chat report's Trash2 icon.
+- Moved deletion to the left side of each dish row.
+- Hid the control until the row is hovered or focused.
+- Kept the red hover treatment and existing deletion behavior.
+- Playwright verified hidden-by-default behavior, hover reveal, left alignment,
+  row deletion, and no phone overflow.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A permanently visible right-side X did not match the existing chat report
+  interaction pattern.
+
+## 2026-09-18 — Move dish removal to a top-right X badge
+
+### Solved
+- Replaced the left trash control with a red circular X badge.
+- Positioned the badge at the top-right corner of the dish name input.
+- Kept it hidden until the row is hovered or focused.
+- Preserved deletion and impact-chip alignment.
+- Playwright verified the badge position, hover reveal, deletion, and phone
+  layouts at 320px and 390px.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A left-side delete control separated the removal action from the dish input
+  it affects.
+
+## 2026-09-18 — Arrange meal dishes in two columns
+
+### Solved
+- Grouped manual meal dishes into two columns to match the chat report layout.
+- Kept the top-right X badge attached to each dish input.
+- Preserved the fixed-height scroll area for additional dishes.
+- Playwright verified two-column alignment at 320px and 390px, contained
+  scrolling, stable modal height, and no horizontal overflow.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A single vertical dish list did not match the report's compact two-column
+  presentation.
+
+## 2026-09-18 — Remember manual record tab and default four dishes
+
+### Solved
+- Meal entry now opens with four dish rows.
+- Persisted the last selected manual record tab in local storage.
+- Reopening the modal restores the previous Meal or Blood Sugar tab.
+- Playwright verified the four-row default, both tab restoration paths, and no
+  phone overflow.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Always reopening on Blood Sugar made repeat Meal entry unnecessarily
+  repetitive.
+
+## 2026-09-18 — Move Add dish beside the meal name
+
+### Solved
+- Moved Add dish into the meal name row.
+- Reduced the dish panel height from 232px to 128px to fit the four default
+  dishes more compactly.
+- Used an icon-only Add control on phone layouts to preserve time-field width.
+- Additional dishes continue scrolling inside the fixed panel.
+- Playwright verified inline adding, five-row expansion, compact heights, and
+  no phone overflow at 320px and 390px.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Keeping Add dish below the grid added unnecessary vertical height to the
+  modal.
+
+## 2026-09-18 — Move Add dish into the Dishes row
+
+### Solved
+- Moved Add dish out of the meal-name row and into the Dishes header row.
+- Replaced the labeled control with a compact circular plus button.
+- Kept the 128px dish panel and two-column grid.
+- Playwright verified the 28px button, adding a fifth dish, and phone layouts
+  at 320px and 390px.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Placing Add dish beside the meal name competed with the time controls.
+
+## 2026-09-18 — Fit four dishes without scrolling
+
+### Solved
+- Increased the dish panel height from 128px to 150px.
+- Left-aligned the plus button directly beside the Dishes label.
+- Four default dishes now fit without a scrollbar.
+- Additional dishes still activate the contained scroll area.
+- Playwright verified phone and desktop widths, plus placement, and five-dish
+  scrolling.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The 128px panel was tall enough for four dishes at every layout width.
+
+## 2026-09-18 — Ignore empty dish slots on meal submit
+
+### Solved
+- Meal submission now requires at least one named dish.
+- Blank default slots are filtered out instead of requiring deletion.
+- Empty submissions stay open and show a localized validation message.
+- A meal with one named dish saves only that dish.
+- Playwright verified no empty save, one-dish save, and retained blank slots.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Native `required` validation on every dish slot prevented the custom
+  validation from running and forced users to delete blank slots.
+
+## 2026-09-18 — Add dishes in complete rows
+
+### Solved
+- Each plus-button click now adds two blank dishes.
+- The new entries form a complete two-column row.
+- The dish panel automatically scrolls to the bottom after adding.
+- Playwright verified six rows after one click, bottom positioning, and phone
+  layouts at 320px and 390px.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Adding one dish at a time left incomplete rows in the two-column layout.
