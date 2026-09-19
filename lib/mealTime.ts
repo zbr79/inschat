@@ -152,9 +152,9 @@ export function formatDateTimeNoYear(
   return `${month}/${day} ${h12}:${pad(minute)} ${meridian}`;
 }
 
-const MEAL_TIME_NAMES: Record<string, [string, string, string, string, string]> = {
-  zh: ["早餐", "午餐", "下午茶", "晚餐", "夜宵"],
-  en: ["Breakfast", "Lunch", "Afternoon snack", "Dinner", "Late-night snack"],
+const MEAL_TIME_NAMES: Record<string, [string, string, string, string, string, string]> = {
+  zh: ["早餐", "早午餐", "午餐", "下午茶", "晚餐", "夜宵"],
+  en: ["Breakfast", "Brunch", "Lunch", "Snack", "Dinner", "Late night"],
 };
 
 export function mealNameForTime(
@@ -162,11 +162,12 @@ export function mealNameForTime(
   lang: "zh" | "en"
 ): string {
   const parsed = parseFlexibleDateTime(time ?? "");
-  const [breakfast, lunch, snack, dinner, lateNight] = MEAL_TIME_NAMES[lang];
+  const [breakfast, brunch, lunch, snack, dinner, lateNight] = MEAL_TIME_NAMES[lang];
   if (!parsed) return lang === "zh" ? "餐食" : "Meal";
   const hour = Number(parsed.time.split(":")[0]);
-  if (hour >= 5 && hour < 11) return breakfast;
-  if (hour >= 11 && hour < 15) return lunch;
+  if (hour >= 5 && hour < 10) return breakfast;
+  if (hour >= 10 && hour < 12) return brunch;
+  if (hour >= 12 && hour < 15) return lunch;
   if (hour >= 15 && hour < 17) return snack;
   if (hour >= 17 && hour < 21) return dinner;
   return lateNight;
@@ -187,10 +188,11 @@ export function refineMealName(
   const parsed = parseFlexibleDateTime(time ?? "");
   if (!parsed) return clean;
   const hour = Number(parsed.time.split(":")[0]);
-  const [b, l, t, d, n] = MEAL_TIME_NAMES[lang];
-  if (hour >= 5 && hour < 11) return b;
-  if (hour >= 11 && hour < 15) return l;
-  if (hour >= 15 && hour < 17) return t;
+  const [b, br, l, s, d, n] = MEAL_TIME_NAMES[lang];
+  if (hour >= 5 && hour < 10) return b;
+  if (hour >= 10 && hour < 12) return br;
+  if (hour >= 12 && hour < 15) return l;
+  if (hour >= 15 && hour < 17) return s;
   if (hour >= 17 && hour < 21) return d;
   return n;
 }

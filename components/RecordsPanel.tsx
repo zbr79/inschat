@@ -446,7 +446,7 @@ export default function RecordsPanel({
             summary: `${draft.value} ${draft.unit}`,
             items: [
               {
-                name: t["records.glucose.label"],
+                name: "glucose",
                 value: draft.value,
                 unit: draft.unit,
               },

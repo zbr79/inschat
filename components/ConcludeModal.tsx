@@ -428,7 +428,7 @@ closeRef.current = () => {
     };
     for (const item of result.items) {
       const name = item.name.trim();
-      if (/^(血糖|glucose)$/i.test(name)) {
+      if (/^(血糖|glucose|blood sugar)$/i.test(name)) {
         pushPending();
         pending = { kind: "glucose", value: item.value ?? "", unit: item.unit ?? "mg/dL" };
       } else if (/^胰岛素|^insulin/i.test(name)) {
