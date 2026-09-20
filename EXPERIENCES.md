@@ -5425,3 +5425,64 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Disproved
 - Adding one dish at a time left incomplete rows in the two-column layout.
+
+## 2026-09-18 — Simplify desktop record transfer labels
+
+### Solved
+- Desktop record transfer controls now say `Export` and `Import`.
+- Chinese labels now use the concise equivalents 导出 and 导入.
+- The underlying transfer behavior remains unchanged.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Including “report” in the transfer button labels was necessary to explain
+  the record export and import actions.
+
+## 2026-09-18 — Investigate guest 30-day record loading
+
+### Solved
+- Confirmed guest sample generation is synchronous and lightweight: 30 records
+  are generated and written as one approximately 25 KB local-storage payload.
+- Confirmed the local-storage write measured about 0.2 ms.
+- Confirmed the guest Records page does not fetch records from the database;
+  it reads local storage after the auth check.
+- Confirmed the initial guest timeline rendered in about 0.5 seconds across
+  repeated production measurements.
+- Confirmed expanding from 7 visible days to all 30 days rendered 30 groups and
+  180 entries in about 0.22 seconds.
+
+### Unresolved
+- The reported approximately 3-second delay was not reproduced locally. It is
+  likely related to a cold browser/server path, network latency, or the
+  deployment environment rather than 30-day data generation.
+- A measurement against the user's deployed URL is still needed to identify
+  remote-only latency.
+
+### Disproved
+- The volume of 30 guest sample records is not, by itself, a multi-second
+  local-storage or timeline-rendering bottleneck.
+
+## 2026-09-18 — Narrow authenticated record-loading delay
+
+### Solved
+- Confirmed authenticated Records loading uses `/api/auth/me` followed by
+  `/api/records`, unlike the guest local-storage path.
+- Confirmed `/api/records` calls `ensureAccountReport` before returning entries.
+- Confirmed first-time account-report initialization can perform an existing
+  report lookup, a legacy-record lookup, an upsert, and a final report lookup,
+  even when only two legacy records exist.
+- Confirmed invalid-token database probes are fast locally, so the record count
+  is not the likely cause.
+
+### Unresolved
+- A valid authenticated request against the deployed database is needed to
+  measure MongoDB network latency and confirm whether the migration branch is
+  being used.
+
+### Disproved
+- Two authenticated records being small is sufficient to guarantee a fast
+  first load; first-read migration and remote database round trips can dominate
+  the response time.
+
