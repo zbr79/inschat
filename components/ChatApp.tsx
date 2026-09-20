@@ -38,6 +38,7 @@ import { putGuestImage, getGuestImage } from "@/lib/guestImages";
 import { STR, useUiLang } from "@/lib/i18n";
 import type { DocumentAttachment } from "@/lib/documents/types";
 import { useAuth } from "@/lib/authContext";
+import { useHealthMode } from "@/lib/prefs";
 import { getHealthIntroSeen, requestHealthIntro } from "@/lib/visitorIntent";
 
 interface UiMessage {
@@ -350,8 +351,15 @@ export default function ChatApp() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionParam = searchParams.get("session");
+  const [healthMode] = useHealthMode();
   const requestedChatMode: ChatMode =
-    searchParams.get("newMode") === "health" ? "health" : "general";
+    searchParams.get("newMode") === "health"
+      ? "health"
+      : searchParams.has("newMode")
+        ? "general"
+        : healthMode
+          ? "health"
+          : "general";
   const lang = useUiLang();
   const t = STR[lang];
   const { user: authUser, authChecked } = useAuth();
