@@ -5486,3 +5486,48 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
   first load; first-read migration and remote database round trips can dominate
   the response time.
 
+## 2026-09-19 — Default new chats to Health mode
+
+### Solved
+- New chats without an explicit `newMode` now follow the Health mode setting.
+- Health mode on defaults to Health chat.
+- Health mode off defaults to General chat.
+- Explicit `newMode=health` and `newMode=general` continue to override the
+  preference.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The default chat mode needed to remain hard-coded to General when the user
+  had already enabled Health mode.
+
+## 2026-09-19 — Blue Health-mode send button
+
+### Solved
+- Health-mode send buttons now use a blue background with white icons.
+- Added a darker blue hover state and a blue keyboard focus ring.
+- General-mode send buttons retain their existing colors.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The shared neutral send-button styling was sufficient to distinguish Health
+  chat from General chat.
+
+## 2026-09-20 — Blue Health-mode attachment icon
+
+### Solved
+- The Health-mode attachment icon is blue without a filled button background.
+- Hover keeps the background transparent and darkens the blue icon.
+- The keyboard focus ring remains visible.
+- General-mode attachment buttons retain their existing styling.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A filled blue circle was needed to distinguish the Health-mode attachment
+  control.
+
