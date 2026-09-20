@@ -264,7 +264,7 @@ export default function Composer({
           renderTrigger={(open, triggerDisabled) => (
             <button
               type="button"
-              className="icon-button"
+              className="icon-button composer-attachment"
               onClick={open}
               aria-label={t["composer.attachFile"]}
               title={t["composer.attachFile"]}

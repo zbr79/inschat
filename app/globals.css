@@ -2097,6 +2097,21 @@ span.conclude-rank-badge {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
 }
 
+.input-row.mode-health .composer-attachment {
+  background: transparent;
+  color: #2563eb;
+}
+
+.input-row.mode-health .composer-attachment:hover:not(:disabled) {
+  background: transparent;
+  color: #1d4ed8;
+}
+
+.input-row.mode-health .composer-attachment:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
 .input-row textarea {
   flex: 1;
   border: none;
@@ -2221,6 +2236,20 @@ span.conclude-rank-badge {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.input-row.mode-health .send-button {
+  background: #2563eb;
+  color: #fff;
+}
+
+.input-row.mode-health .send-button:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.input-row.mode-health .send-button:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
 }
 
 .send-button:disabled {
