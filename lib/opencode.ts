@@ -365,12 +365,6 @@ const ASK_USER_QUESTION_TOOL = {
   },
 };
 
-function requestsLiveWeb(text: string): boolean {
-  return /\b(search|look up|research|latest|current|today|news|price|weather|source|sources|citation|website|url|online|internet|documentation|docs)\b|搜索|查找|研究|最新|今天|新闻|价格|天气|来源|网址|联网|文档/i.test(
-    text
-  );
-}
-
 interface DeltaToolCall {
   index?: number;
   id?: string;
@@ -709,7 +703,10 @@ export async function* streamChat(
     ? messages.some((message) => (message.images?.length ?? 0) > 0)
     : (lastMessage?.images?.length ?? 0) > 0;
   const useTools = !hasImage;
-  const useWebTools = useTools && requestsLiveWeb(lastMessage?.text ?? "");
+  // Make web tools available for every text turn and let the model decide
+  // whether research is needed. Keyword gates miss comparisons and unfamiliar
+  // names that need verification but do not contain words like "latest".
+  const useWebTools = useTools;
   const requestId = Math.random().toString(36).slice(2, 8);
   let chain = getChatChain(hasImage);
   const systemOverride = freeMode
@@ -861,9 +858,42 @@ export async function* streamChat(
     }
   }
 
-  throw new Error(
-    `Research stopped after ${MAX_TOOL_ROUNDS} tool rounds — please narrow the question and try again.`
+  // A model can keep requesting searches when a name is obscure or search
+  // results conflict. Once the research budget is reached, synthesize from
+  // the evidence already collected instead of exposing an internal loop error.
+  const finalModel = chain[0];
+  if (!finalModel) {
+    throw lastError ?? new Error("Chat request failed: no model available.");
+  }
+  console.log(
+    `[opencode:${requestId}] research budget reached — synthesizing with ${finalModel}`
   );
+  const synthesisMessages: OpenAiMessage[] = [
+    ...working,
+    {
+      role: "user",
+      content:
+        "Use the research results above to provide the final answer now. Do not call any more tools. Be clear about what is verified, uncertain, or unavailable, and cite the relevant source links.",
+    },
+  ];
+  const finalGen = streamOpenCodeOnce(
+    synthesisMessages,
+    finalModel,
+    false,
+    reasoning,
+    sessionId,
+    false
+  );
+  while (true) {
+    const { done, value } = await finalGen.next();
+    if (done) {
+      if (paidExhausted && isFreeModel(finalModel)) {
+        yield encodeFreeMarker();
+      }
+      return;
+    }
+    yield value as string;
+  }
 }
 
 // Non-streaming completion, used by Conclude and the health probe.
