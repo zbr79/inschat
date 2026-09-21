@@ -6082,6 +6082,11 @@ span.conclude-rank-badge {
   flex-shrink: 0;
 }
 
+.settings-row-icon.health-mode-icon {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
 .settings-select {
   font-family: var(--font);
   font-size: 14px;
