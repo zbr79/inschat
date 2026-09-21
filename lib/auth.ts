@@ -1,10 +1,12 @@
 import crypto from "node:crypto";
 import {
+  findUserById,
   deleteAuthToken,
   findUserByTokenHash,
   findUserByUsername,
   insertAuthToken,
   insertUser,
+  updateUserPassword,
   type UserDoc,
 } from "./accounts";
 
@@ -12,7 +14,7 @@ export const AUTH_COOKIE = "inschat_token";
 const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,32}$/;
-export const PASSWORD_MIN = 8;
+export const PASSWORD_MIN = 5;
 export const PASSWORD_MAX = 128;
 
 function hashPassword(password: string, salt: string): string {
@@ -42,6 +44,25 @@ export async function verifyLogin(
       Buffer.from(user.passwordHash, "hex")
     );
   return valid ? user : null;
+}
+
+export async function changeUserPassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<boolean> {
+  const user = await findUserById(userId);
+  if (!user) return false;
+  const candidate = hashPassword(currentPassword, user.salt);
+  const valid =
+    candidate.length === user.passwordHash.length &&
+    crypto.timingSafeEqual(
+      Buffer.from(candidate, "hex"),
+      Buffer.from(user.passwordHash, "hex")
+    );
+  if (!valid) return false;
+  const salt = crypto.randomBytes(16).toString("hex");
+  return updateUserPassword(userId, hashPassword(newPassword, salt), salt);
 }
 
 export async function issueToken(userId: string): Promise<string> {

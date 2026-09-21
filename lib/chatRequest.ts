@@ -9,6 +9,7 @@ import {
 } from "./documents/limits";
 import type { DocumentAttachment, DocumentSource } from "./documents/types";
 import {
+  MAX_ATTACHMENTS,
   MAX_IMAGES,
   MAX_MESSAGES,
   type ChatImage,
@@ -136,6 +137,11 @@ export function parseChatBody(body: unknown): ChatRequest {
             `messages[${index}].documents contain too much extracted text.`
           );
         }
+      }
+      if ((parsedImages?.length ?? 0) + (parsedDocuments?.length ?? 0) > MAX_ATTACHMENTS) {
+        throw new ChatValidationError(
+          `messages[${index}] may contain at most ${MAX_ATTACHMENTS} attachments.`
+        );
       }
       return { role, text, images: parsedImages, documents: parsedDocuments };
     });

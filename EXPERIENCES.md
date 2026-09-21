@@ -5531,3 +5531,234 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - A filled blue circle was needed to distinguish the Health-mode attachment
   control.
 
+## 2026-09-19 — Create xihui account (password policy lowered)
+
+### Solved
+- Created the real account `xihui` via `POST /api/auth/register` after the user
+  explicitly asked for username/password both `xihui`.
+- `PASSWORD_MIN` was 8 (`lib/auth.ts`), which rejected the 5-character password;
+  the user chose to lower the minimum to 5 rather than pick a longer password.
+  The register route returns `{min, max}` and `AuthForm` formats the message
+  from those values, so no other code needed changing.
+- Verified after rebuild + restart: register 201, login with correct password
+  200, login with wrong password 401.
+
+### Unresolved
+- The account system now accepts passwords as short as 5 characters app-wide —
+  a deliberate trade-off weakening the policy for all future registrations.
+- `xihui` is not the first user (uicompare, catcake exist), so it did not claim
+  any legacy data; guest localStorage data also never migrates on sign-in.
+
+## 2026-09-20 — Lock image compression for guests
+
+### Solved
+- Guest users no longer see the Image compression setting.
+- Guest image uploads always use compression, even if an old local preference
+  had disabled it.
+- Signed-in users retain the default-on compression toggle and can turn it off.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Hiding the guest setting alone was sufficient; an old disabled preference
+  could still bypass compression without enforcement in the upload path.
+
+## 2026-09-20 — Use English-only authentication screens
+
+### Solved
+- Removed the top-right language selector from login and registration screens.
+- Authentication labels, errors, and request language now default to English.
+- The main application language setting remains available elsewhere.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Authentication needed its own language switch when English is the default
+  account-entry language.
+
+## 2026-09-20 — Add account password changes
+
+### Solved
+- Removed the login-modal close icon; clicking outside or pressing Escape
+  closes the modal.
+- Removed the account-storage description from authentication screens.
+- Added Change password to the signed-in Settings panel.
+- Added current-password verification, new-password confirmation, length
+  validation, and password hashing on the server.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A password change could be implemented safely only as a client-side setting;
+  it requires an authenticated server endpoint.
+
+## 2026-09-20 — Unify Settings data labels
+
+### Solved
+- Both guest and signed-in Settings panels now use the shorter “Delete data”
+  label.
+- Confirmation titles and messages still distinguish local data from account
+  data.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The Settings panel needed separate long labels to distinguish the two data
+  actions.
+
+## 2026-09-20 — Unify composer attachment presentation
+
+### Solved
+- Combined image previews, completed document cards, upload cards, and
+  attachment errors into one layer above the message input.
+- Kept the input row height stable while attachments upload.
+- Standardized image and document removal controls to 22px black circular
+  buttons with white 14px X icons.
+- Added format-specific document icons and colors, two-line filenames/types,
+  ellipsis handling, and compact upload statuses.
+- Removed document file size, ready text, checkmarks, and the separate upload
+  progress panel.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A separate upload panel was needed to keep completed documents visible
+  while another document was processing.
+
+## 2026-09-20 — Keep attachment tray in layout flow
+
+### Solved
+- Moved the attachment tray into a flow-positioned slot above the input row.
+- Prevented image and document cards from covering the welcome prompt or
+  other composer content.
+- Kept the input row itself stable while the tray expands or collapses.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Absolute positioning above the input row was safe in the centered welcome
+  layout; it allowed attachments to cover the welcome prompt.
+
+## 2026-09-20 — Keep attachment remove buttons visible
+
+### Solved
+- Added an inner padded scroll area for the attachment tray.
+- Preserved the -8px remove-button placement without clipping the buttons.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Applying overflow scrolling directly to the tray was safe for controls
+  positioned outside attachment cards.
+
+## 2026-09-20 — Fit mixed attachments in one tray grid
+
+### Solved
+- Let image previews and document cards share the same flex layout.
+- Reduced document card flex basis to 180px so three documents and an image
+  can fit in the welcome composer row.
+- Preserved the 320px maximum card width, 64px minimum height, and filename
+  ellipsis behavior.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Keeping image and document groups in separate rows gave the most compact
+  attachment layout.
+
+## 2026-09-20 — Count images and documents together
+
+### Solved
+- Removed the redundant bullet from attachment limit errors.
+- Enforced a combined maximum of four images and documents in the composer.
+- Added the same four-attachment validation to guest and signed-in message
+  request paths.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Separate image and document limits matched the intended four-file user
+  experience.
+
+## 2026-09-20 — Show toast when attachment limit is reached
+
+### Solved
+- Kept the attachment button clickable after four attachments are present.
+- Added a localized toast explaining that the maximum attachment count was
+  reached.
+- Prevented the file picker from opening when the limit has been reached.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Disabling the attachment button was sufficient feedback when the limit was
+  reached.
+
+## 2026-09-20 — Use shared react-hot-toast notifications
+
+### Solved
+- Added the reference app’s queued toast helper and global top-center
+  `Toaster`.
+- Routed the attachment-limit error through the shared `toastError` API.
+- Removed the temporary attachment-specific toast markup and CSS.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A Composer-local toast was needed after the app-wide toast pattern was
+  available.
+
+## 2026-09-20 — Reject duplicate attachment names
+
+### Solved
+- Prevented repeated attachment names across images and documents.
+- Rejected duplicate names within the same file selection as well.
+- Reused the shared error toast to explain duplicate-name rejection.
+- Compared names case-insensitively after trimming whitespace.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Duplicate detection only needed to apply to already-uploaded documents;
+  images and same-batch selections also need the same rule.
+
+## 2026-09-20 — Reduce attachment limit to three
+
+### Solved
+- Reduced the combined image and document attachment limit from four to
+  three.
+- Kept client-side picker limits and server-side message validation driven by
+  the shared `MAX_ATTACHMENTS` constant.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A four-attachment combined limit was still the desired product limit.
+
+## 2026-09-21 — Remove browser-native UI hover names
+
+### Solved
+- Removed native HTML `title` attributes from UI controls and attachment
+  labels so browsers no longer show their default hover tooltips.
+- Kept accessible `aria-label` attributes on icon-only controls.
+- Preserved non-UI data and modal heading values that use the word `title`.
+
+### Unresolved
+- n/a
+
+### Disproved
+- CSS alone could reliably disable browser-native `title` tooltips.
+

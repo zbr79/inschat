@@ -20,7 +20,6 @@ export default function ConcludeButton({
       onClick={onClick}
       disabled={disabled}
       aria-label={t["actions.summarize"]}
-      title={t["actions.summarizeTitle"]}
     >
       <svg
         width="20"

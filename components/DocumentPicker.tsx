@@ -2,37 +2,68 @@
 
 import {
   AlertCircle,
-  CheckCircle2,
+  File,
+  FileCode2,
+  FileSpreadsheet,
   FileText,
+  FileType,
   LoaderCircle,
   Paperclip,
   X,
+  type LucideIcon,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useRef, useState, type ReactNode } from "react";
 import { STR, useUiLang } from "@/lib/i18n";
 import { MAX_DOCUMENTS } from "@/lib/documents/limits";
 import type { DocumentAttachment } from "@/lib/documents/types";
 import { uploadDocuments } from "@/lib/documentUpload";
+import { MAX_ATTACHMENTS } from "@/lib/types";
+import { toastError } from "@/lib/toast";
+import { attachmentNameKey } from "@/lib/attachmentNames";
 
 interface DocumentPickerProps {
   documents: DocumentAttachment[];
   onChange: (documents: DocumentAttachment[]) => void;
   onBusyChange: (busy: boolean) => void;
+  onImagesSelected?: (files: File[]) => void;
+  imageCount?: number;
+  imageNames?: string[];
   renderTrigger?: (open: () => void, disabled: boolean) => ReactNode;
+  renderAttachmentLayer?: (content: ReactNode, visible: boolean) => ReactNode;
+  attachmentLayerTarget?: HTMLElement | null;
   disabled?: boolean;
 }
 
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+function documentPresentation(name: string, mimeType: string): {
+  Icon: LucideIcon;
+  type: string;
+  color: string;
+} {
+  const extension = name.split(".").pop()?.toLowerCase() ?? "";
+  if (extension === "txt") return { Icon: FileCode2, type: "TXT", color: "txt" };
+  if (extension === "pdf") return { Icon: FileText, type: "PDF", color: "pdf" };
+  if (extension === "docx") return { Icon: FileType, type: "DOCX", color: "docx" };
+  if (extension === "xlsx") {
+    return { Icon: FileSpreadsheet, type: "XLSX", color: "xlsx" };
+  }
+  return {
+    Icon: File,
+    type: extension.toUpperCase() || mimeType.split("/").pop()?.toUpperCase() || "FILE",
+    color: "generic",
+  };
 }
 
 export default function DocumentPicker({
   documents,
   onChange,
   onBusyChange,
+  onImagesSelected,
+  imageCount = 0,
+  imageNames = [],
   renderTrigger,
+  renderAttachmentLayer,
+  attachmentLayerTarget,
   disabled = false,
 }: DocumentPickerProps) {
   const lang = useUiLang();
@@ -43,31 +74,82 @@ export default function DocumentPicker({
   const [uploadNames, setUploadNames] = useState<string[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
-  const triggerDisabled = disabled || busy || documents.length >= MAX_DOCUMENTS;
+  const triggerDisabled = disabled || busy;
+
+  const showLimitToast = () => {
+    toastError(
+      t["composer.maxAttachmentsReached"].replace("{count}", String(MAX_ATTACHMENTS))
+    );
+  };
+
+  const openPicker = () => {
+    if (imageCount + documents.length >= MAX_ATTACHMENTS) {
+      showLimitToast();
+      return;
+    }
+    fileRef.current?.click();
+  };
 
   const handleFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
     if (!files.length) return;
-    const room = MAX_DOCUMENTS - documents.length;
-    if (room <= 0) {
-      setErrors([t["composer.maxDocuments"].replace("{count}", String(MAX_DOCUMENTS))]);
+    const seenNames = new Set([
+      ...imageNames.map(attachmentNameKey),
+      ...documents.map((document) => attachmentNameKey(document.name)),
+    ]);
+    let hasDuplicate = false;
+    const uniqueFiles = files.filter((file) => {
+      const key = attachmentNameKey(file.name);
+      if (seenNames.has(key)) {
+        hasDuplicate = true;
+        return false;
+      }
+      seenNames.add(key);
+      return true;
+    });
+    if (hasDuplicate) toastError(t["composer.duplicateAttachment"]);
+    if (uniqueFiles.length === 0) return;
+    const imageFiles = uniqueFiles.filter(
+      (file) => file.type.startsWith("image/") || /\.(jpe?g|png|webp)$/i.test(file.name)
+    );
+    const documentFiles = uniqueFiles.filter((file) => !imageFiles.includes(file));
+    const totalRoom = Math.max(0, MAX_ATTACHMENTS - imageCount - documents.length);
+    const selectedImages = onImagesSelected ? imageFiles.slice(0, totalRoom) : [];
+    const documentRoom = Math.max(
+      0,
+      Math.min(MAX_DOCUMENTS - documents.length, totalRoom - selectedImages.length)
+    );
+    const selected = documentFiles.slice(0, documentRoom);
+    const limitMessage =
+      imageFiles.length + documentFiles.length > totalRoom
+        ? t["composer.maxAttachments"].replace("{count}", String(MAX_ATTACHMENTS))
+        : documentFiles.length > documentRoom
+          ? t["composer.maxDocuments"].replace("{count}", String(MAX_DOCUMENTS))
+          : null;
+    if (selectedImages.length > 0) onImagesSelected?.(selectedImages);
+    if (selected.length === 0) {
+      if (limitMessage && documentFiles.length > 0) setErrors([limitMessage]);
       return;
     }
-    const selected = files.slice(0, room);
     setBusy(true);
     onBusyChange(true);
     setProgress(0);
     setPhase("uploading");
     setUploadNames(selected.map((file) => file.name));
-    setErrors([]);
+    setErrors(limitMessage ? [limitMessage] : []);
     try {
       const result = await uploadDocuments(
         selected,
         (value) => setProgress(value),
         () => setPhase("processing")
       );
-      onChange([...documents, ...result.documents].slice(0, MAX_DOCUMENTS));
+      onChange(
+        [...documents, ...result.documents].slice(
+          0,
+          Math.min(MAX_DOCUMENTS, MAX_ATTACHMENTS - imageCount)
+        )
+      );
       if (result.errors.length > 0) setErrors(result.errors);
     } catch (uploadError) {
       setErrors([
@@ -81,76 +163,72 @@ export default function DocumentPicker({
     }
   };
 
-  return (
+  const attachmentLayerVisible = documents.length > 0 || busy || errors.length > 0;
+  const attachmentLayer = (
     <>
-      {documents.length > 0 && !busy && (
-        <div
-          className={`document-chip-grid${errors.length > 0 ? " has-errors" : ""}`}
-          aria-label={t["composer.documents"]}
-        >
-          {documents.map((document) => (
-            <div className="document-chip" key={document.id}>
-              <FileText size={15} aria-hidden="true" />
-              <span className="document-chip-name" title={document.name}>
-                {document.name}
-              </span>
-              <span className="document-chip-size">{formatSize(document.size)}</span>
-              <span className="document-chip-status">
-                <CheckCircle2 size={13} aria-hidden="true" />
-                {t["composer.documentsReady"]}
-              </span>
-              <button
-                type="button"
-                onClick={() => onChange(documents.filter((item) => item.id !== document.id))}
-                aria-label={`${t["composer.removeDocument"]}: ${document.name}`}
-                disabled={disabled || busy}
-              >
-                <X size={14} />
-              </button>
-            </div>
-          ))}
+      {documents.length > 0 && (
+        <div className="document-card-grid" aria-label={t["composer.documents"]}>
+          {documents.map((document) => {
+            const { Icon, type, color } = documentPresentation(
+              document.name,
+              document.mimeType
+            );
+            return (
+              <div className="document-card" key={document.id}>
+                <Icon
+                  className={`document-file-icon document-file-icon-${color}`}
+                  size={26}
+                  aria-hidden="true"
+                />
+                <span className="document-card-copy">
+                  <span className="document-card-name">
+                    {document.name}
+                  </span>
+                  <span className="document-card-type">{type}</span>
+                </span>
+                <button
+                  type="button"
+                  className="attachment-remove"
+                  onClick={() => onChange(documents.filter((item) => item.id !== document.id))}
+                  aria-label={`${t["composer.removeDocument"]}: ${document.name}`}
+                  disabled={disabled || busy}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
       {busy && (
-        <div className="document-upload-panel" aria-live="polite">
-          <div className="document-upload-header">
-            <div className="document-upload-heading">
-              <LoaderCircle size={16} className="spin" aria-hidden="true" />
-              <div>
-                <strong>
-                  {phase === "processing"
-                    ? t["composer.processingDocuments"]
-                    : t["composer.uploadingDocuments"].replace(
-                        "{count}",
-                        String(uploadNames.length)
-                      )}
-                </strong>
-                <span>
-                  {phase === "processing"
-                    ? t["composer.processingDocument"]
-                    : `${progress}%`}
+        <div className="document-upload-cards" aria-live="polite">
+          {uploadNames.map((name, index) => {
+            const { Icon, color } = documentPresentation(name, "");
+            return (
+              <div className="document-upload-card" key={`${name}-${index}`}>
+                <LoaderCircle size={22} className="spin" aria-hidden="true" />
+                <Icon
+                  className={`document-file-icon document-file-icon-${color}`}
+                  size={24}
+                  aria-hidden="true"
+                />
+                <span className="document-card-copy">
+                  <span className="document-card-name">
+                    {name}
+                  </span>
+                  <span className="document-card-type">
+                    {phase === "processing"
+                      ? t["composer.processingDocument"]
+                      : `${t["composer.uploadingFile"]} ${progress}%`}
+                  </span>
                 </span>
               </div>
-            </div>
-            <span className="document-upload-count">
-              {uploadNames.length}/{MAX_DOCUMENTS}
-            </span>
-          </div>
-          <div className="document-upload-track" aria-hidden="true">
-            <span style={{ width: `${phase === "processing" ? 100 : progress}%` }} />
-          </div>
-          <div className="document-upload-files">
-            {uploadNames.map((name, index) => (
-              <span className="document-upload-file" key={`${name}-${index}`}>
-                <FileText size={13} aria-hidden="true" />
-                <span title={name}>{name}</span>
-              </span>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
       {errors.length > 0 && (
-        <div className="document-errors" role="alert">
+        <div className="composer-attachment-errors" role="alert">
           <AlertCircle size={14} aria-hidden="true" />
           <ul>
             {errors.map((message, index) => (
@@ -159,23 +237,37 @@ export default function DocumentPicker({
           </ul>
         </div>
       )}
+    </>
+  );
+  const renderedAttachmentLayer = renderAttachmentLayer?.(
+    attachmentLayer,
+    attachmentLayerVisible
+  );
+  const attachmentLayerOutput = attachmentLayerTarget
+    ? renderedAttachmentLayer
+      ? createPortal(renderedAttachmentLayer, attachmentLayerTarget)
+      : null
+    : renderedAttachmentLayer;
+
+  return (
+    <>
+      {attachmentLayerOutput}
       <input
         ref={fileRef}
         type="file"
-        accept=".pdf,.docx,.xlsx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        accept="image/jpeg,image/png,image/webp,.pdf,.docx,.xlsx,.txt,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         multiple
         hidden
         onChange={handleFiles}
       />
       {renderTrigger ? (
-        renderTrigger(() => fileRef.current?.click(), triggerDisabled)
+        renderTrigger(openPicker, triggerDisabled)
       ) : (
         <button
           type="button"
           className="icon-button"
-          onClick={() => fileRef.current?.click()}
+          onClick={openPicker}
           aria-label={t["composer.attachDocument"]}
-          title={t["composer.attachDocument"]}
           disabled={triggerDisabled}
         >
           <Paperclip size={17} />

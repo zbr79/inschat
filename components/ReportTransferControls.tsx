@@ -152,7 +152,6 @@ export default function ReportTransferControls({
         className="report-transfer-export"
         onClick={exportReport}
         disabled={busy || records.length === 0}
-        title={labels.export}
         aria-label={labels.export}
       >
         <Download size={16} strokeWidth={2.25} aria-hidden="true" />
@@ -163,7 +162,6 @@ export default function ReportTransferControls({
         className="report-transfer-import"
         onClick={() => inputRef.current?.click()}
         disabled={busy || guest === null}
-        title={busy ? labels.importing : labels.import}
         aria-label={busy ? labels.importing : labels.import}
       >
         <Upload size={16} strokeWidth={2.25} aria-hidden="true" />

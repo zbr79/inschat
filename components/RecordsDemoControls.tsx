@@ -27,7 +27,6 @@ export default function RecordsDemoControls({
         className="records-demo-remove"
         onClick={onRemove}
         disabled={busy || !hasDemoData}
-        title={removeLabel}
         aria-label={removeLabel}
       >
         <Trash2 size={16} strokeWidth={2.25} aria-hidden="true" />

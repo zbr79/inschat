@@ -7,6 +7,7 @@ import { requireUser } from "@/lib/auth";
 import { parseDocumentAttachment } from "@/lib/chatRequest";
 import { MAX_DOCUMENTS, MAX_TOTAL_DOCUMENT_TEXT } from "@/lib/documents/limits";
 import type { DocumentAttachment } from "@/lib/documents/types";
+import { MAX_ATTACHMENTS, MAX_IMAGES } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -100,10 +101,10 @@ export async function POST(
     if (rawImageKeys !== undefined && rawImageKeys !== null) {
       if (
         !Array.isArray(rawImageKeys) ||
-        rawImageKeys.length > 3 ||
+        rawImageKeys.length > MAX_IMAGES ||
         rawImageKeys.some((key) => typeof key !== "string" || key.length > 200)
       ) {
-        throw new Error('"imageKeys" must contain at most 3 valid local keys.');
+        throw new Error(`"imageKeys" must contain at most ${MAX_IMAGES} valid local keys.`);
       }
       imageKeys = rawImageKeys as string[];
     }
@@ -115,6 +116,9 @@ export async function POST(
       if (documents.reduce((sum, document) => sum + document.text.length, 0) > MAX_TOTAL_DOCUMENT_TEXT) {
         throw new Error('"documents" contain too much extracted text.');
       }
+    }
+    if ((imageKeys?.length ?? 0) + (documents?.length ?? 0) > MAX_ATTACHMENTS) {
+      throw new Error(`Attachments must contain at most ${MAX_ATTACHMENTS} images or documents.`);
     }
     if (rawModel !== undefined && rawModel !== null) {
       if (typeof rawModel !== "string" || rawModel.length > 100) {

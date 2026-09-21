@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Menu, X, SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronRight, Languages, FileText, Gauge, LogOut, ImageDown, HeartPulse } from "lucide-react";
+import { Menu, X, SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronRight, Languages, FileText, Gauge, LogOut, ImageDown, HeartPulse, KeyRound } from "lucide-react";
 import type { ChatMode, ChatSession } from "@/lib/types";
 import {
   deleteGuestSession,
@@ -16,6 +16,7 @@ import { STR, useUiLang, setUiLang } from "@/lib/i18n";
 import SearchModal from "./SearchModal";
 import AuthModal from "./AuthModal";
 import ConfirmModal from "./ConfirmModal";
+import ChangePasswordModal from "./ChangePasswordModal";
 import { useCompressImages, useHealthMode } from "@/lib/prefs";
 import { SESSIONS_CHANGED_EVENT } from "@/lib/sessionTitle";
 import { useAuth } from "@/lib/authContext";
@@ -47,7 +48,7 @@ function FitTitle({ title }: { title: string }) {
     setText(trimmed);
   }, [title]);
   return (
-    <span ref={ref} className="session-title" title={title}>
+    <span ref={ref} className="session-title">
       {text}
     </span>
   );
@@ -72,6 +73,7 @@ export default function Sidebar() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteDataOpen, setDeleteDataOpen] = useState(false);
   const [clearAccountDataOpen, setClearAccountDataOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [compressImages, setCompressImages] = useCompressImages();
   const [healthMode, setHealthMode] = useHealthMode();
@@ -328,7 +330,6 @@ export default function Sidebar() {
           href={`/?session=${id}`}
           prefetch={false}
           className={`session-link${id === currentSession ? " active" : ""}`}
-          title={title}
           onClick={() => setMenuOpen(false)}
         >
           <FitTitle title={title} />
@@ -338,7 +339,6 @@ export default function Sidebar() {
         type="button"
         className="session-more"
         aria-label={t["nav.more"]}
-        title={t["nav.more"]}
         onClick={(event) => {
           if (menuFor?.id === id) {
             setMenuFor(null);
@@ -427,7 +427,6 @@ export default function Sidebar() {
             className="catalog-toggle"
             onClick={() => setCollapsedSection(!collapsedSection)}
             aria-expanded={!collapsedSection}
-            title={title}
           >
             <Folder size={15} className="session-folder-icon" aria-hidden="true" />
             <span className="sidebar-label sidebar-catalog-label">{title}</span>
@@ -437,7 +436,6 @@ export default function Sidebar() {
             className="section-new-chat"
             onClick={() => startNewChat(chatMode)}
             aria-label={chatMode === "health" ? t["nav.newHealthChat"] : t["nav.newGeneralChat"]}
-            title={chatMode === "health" ? t["nav.newHealthChat"] : t["nav.newGeneralChat"]}
           >
             <SquarePen size={14} aria-hidden="true" />
           </button>
@@ -477,7 +475,6 @@ export default function Sidebar() {
           className="menu-button"
           onClick={() => setMenuOpen(true)}
           aria-label={t["nav.openMenu"]}
-          title={t["nav.openMenu"]}
         >
           <Menu size={20} />
         </button>
@@ -498,7 +495,6 @@ export default function Sidebar() {
           className="sidebar-expand"
           onClick={toggleCollapsed}
           aria-label={t["nav.showSidebar"]}
-          title={t["nav.showSidebar"]}
         >
           <PanelLeft size={18} />
         </button>
@@ -521,7 +517,6 @@ export default function Sidebar() {
             className="sidebar-hide"
             onClick={() => setSearchOpen(true)}
             aria-label={t["nav.search"]}
-            title={t["nav.search"]}
           >
             <Search size={16} />
           </button>
@@ -531,7 +526,6 @@ export default function Sidebar() {
               className={`sidebar-hide${pathname === "/usage" ? " active" : ""}`}
               onClick={() => router.push("/usage")}
               aria-label={t["nav.usage"]}
-              title={t["nav.usage"]}
               aria-current={pathname === "/usage" ? "page" : undefined}
             >
               <Gauge size={16} />
@@ -542,7 +536,6 @@ export default function Sidebar() {
             className="sidebar-hide sidebar-collapse"
             onClick={toggleCollapsed}
             aria-label={t["nav.hideSidebar"]}
-            title={t["nav.hideSidebar"]}
           >
             <PanelLeft size={16} />
           </button>
@@ -584,7 +577,6 @@ export default function Sidebar() {
               className="settings-button"
               onClick={() => setSettingsOpen(true)}
               aria-label={t["nav.settings"]}
-              title={t["nav.settings"]}
             >
               <Settings size={20} />
             </button>
@@ -596,7 +588,6 @@ export default function Sidebar() {
               className="guest-identity"
               onClick={() => setAuthOpen(true)}
               aria-label={t["nav.signIn"]}
-              title={t["nav.signIn"]}
             >
               <span className="login-circle" aria-hidden="true">
                 <User size={18} />
@@ -608,7 +599,6 @@ export default function Sidebar() {
               className="settings-button"
               onClick={() => setSettingsOpen(true)}
               aria-label={t["nav.settings"]}
-              title={t["nav.settings"]}
             >
               <Settings size={20} />
             </button>
@@ -675,22 +665,40 @@ export default function Sidebar() {
               <span className="switch-knob" />
             </button>
           </label>
-          <label className="settings-row">
-            <span className="settings-row-icon">
-              <ImageDown size={16} />
-            </span>
-            <span className="settings-label">{t["settings.compressImages"]}</span>
+          {authChecked && user && (
+            <label className="settings-row">
+              <span className="settings-row-icon">
+                <ImageDown size={16} />
+              </span>
+              <span className="settings-label">{t["settings.compressImages"]}</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={compressImages}
+                className={`switch${compressImages ? " on" : ""}`}
+                onClick={() => setCompressImages(!compressImages)}
+                aria-label={t["settings.compressImages"]}
+              >
+                <span className="switch-knob" />
+              </button>
+            </label>
+          )}
+          {user && (
             <button
               type="button"
-              role="switch"
-              aria-checked={compressImages}
-              className={`switch${compressImages ? " on" : ""}`}
-              onClick={() => setCompressImages(!compressImages)}
-              aria-label={t["settings.compressImages"]}
+              className="settings-row settings-link"
+              onClick={() => {
+                setSettingsOpen(false);
+                setChangePasswordOpen(true);
+              }}
             >
-              <span className="switch-knob" />
+              <span className="settings-row-icon">
+                <KeyRound size={16} />
+              </span>
+              <span className="settings-label">{t["settings.changePassword"]}</span>
+              <ChevronRight size={16} />
             </button>
-          </label>
+          )}
           {user && (
             <button
               type="button"
@@ -765,6 +773,9 @@ export default function Sidebar() {
         onCancel={() => setClearAccountDataOpen(false)}
         onConfirm={clearAccountData}
       />
+    )}
+    {changePasswordOpen && (
+      <ChangePasswordModal onClose={() => setChangePasswordOpen(false)} />
     )}
     </>
   );
