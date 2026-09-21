@@ -650,7 +650,7 @@ export default function Sidebar() {
             </select>
           </label>
           <label className="settings-row">
-            <span className="settings-row-icon">
+            <span className={`settings-row-icon${healthMode ? " health-mode-icon" : ""}`}>
               <HeartPulse size={16} />
             </span>
             <span className="settings-label">{t["settings.healthMode"]}</span>

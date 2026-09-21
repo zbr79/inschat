@@ -5762,3 +5762,52 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - CSS alone could reliably disable browser-native `title` tooltips.
 
+## 2026-09-21 — Highlight the active Health mode icon
+
+### Solved
+- Applied a blue icon and soft blue background to the Health mode setting
+  icon when Health mode is enabled.
+- Kept the icon muted when Health mode is disabled.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The Health mode switch alone provided enough visual state feedback.
+
+## 2026-09-21 — Let the model decide when to research
+
+### Solved
+- Removed the keyword-based web-search gate from text chat requests.
+- Made web search and web fetch available on every text turn while keeping
+  image turns on the vision path without web tools.
+- Added explicit guidance to research named model and product comparisons,
+  current or unfamiliar information, and source requests.
+- Added guidance to avoid unnecessary research for stable knowledge, creative
+  work, calculations, and user-provided content analysis.
+- Clarified that external model names are comparison subjects, not requests to
+  change InsChat's backend model.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A fixed keyword list was reliable enough to decide when web research was
+  needed.
+
+## 2026-09-21 — Synthesize after the research budget
+
+### Solved
+- Replaced the user-facing six-round research failure with a final synthesis
+  pass that has no tools enabled.
+- The final pass uses the search and fetch results already collected.
+- Added prompt guidance to stop researching after enough useful evidence is
+  available and clearly separate verified, uncertain, and unavailable facts.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Returning an internal tool-loop limit error was an acceptable answer when
+  research results were already available.
+
