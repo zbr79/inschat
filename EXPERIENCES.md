@@ -5811,3 +5811,33 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Returning an internal tool-loop limit error was an acceptable answer when
   research results were already available.
 
+## 2026-09-21 — Keep mobile attachments on one compact row
+
+### Solved
+- Changed the phone attachment tray to a single horizontal row.
+- Added horizontal scrolling as a fallback for narrow screens.
+- Reduced document card dimensions, icons, and text sizes on mobile so the
+  combined attachment limit can fit without wrapping.
+- Kept attachment errors full-width without affecting the compact file row.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Allowing the mobile attachment tray to wrap vertically was compact enough.
+
+## 2026-09-21 — Hide the mobile composer scrollbar
+
+### Solved
+- Hid the native textarea scrollbar that can appear in mobile browser
+  emulation or on browsers with persistent scrollbars.
+- Preserved vertical textarea scrolling for long messages.
+- Prevented horizontal textarea overflow.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Relying on overlay scrollbar behavior was consistent across phones and
+  browser emulation.
+
