@@ -1,14 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowUp, Mic, Paperclip, Square, X } from "lucide-react";
+import { ArrowUp, Mic, Paperclip, Square } from "lucide-react";
 import type { DocumentAttachment } from "@/lib/documents/types";
 import type { ChatImage, ChatMode } from "@/lib/types";
-import { MAX_IMAGES } from "@/lib/types";
+import { MAX_ATTACHMENTS } from "@/lib/types";
 import { STR, useUiLang } from "@/lib/i18n";
 import { useCompressImages } from "@/lib/prefs";
 import { compressImage } from "@/lib/imageCompress";
 import { formatVoiceElapsed, useVoiceInput } from "@/lib/useVoiceInput";
+import { attachmentNameKey } from "@/lib/attachmentNames";
+import ComposerAttachmentLayer from "./ComposerAttachmentLayer";
 import DocumentPicker from "./DocumentPicker";
 import ImageViewer from "./ImageViewer";
 
@@ -63,12 +65,15 @@ export default function Composer({
   const lang = useUiLang();
   const t = STR[lang];
   const [compressOn] = useCompressImages();
+  const shouldCompressImages = !signedIn || compressOn;
   const [text, setText] = useState("");
   const [images, setImages] = useState<ChatImage[]>([]);
+  const [imageNames, setImageNames] = useState<string[]>([]);
   const [documents, setDocuments] = useState<DocumentAttachment[]>([]);
   const [documentBusy, setDocumentBusy] = useState(false);
   const [viewer, setViewer] = useState<ChatImage | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [attachmentLayerTarget, setAttachmentLayerTarget] = useState<HTMLDivElement | null>(null);
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const textRef = useRef(text);
   textRef.current = text;
@@ -109,6 +114,7 @@ export default function Composer({
   const clearComposer = () => {
     setText("");
     setImages([]);
+    setImageNames([]);
     setDocuments([]);
     setImageError(null);
   };
@@ -157,7 +163,7 @@ export default function Composer({
     !documentBusy;
   const voiceBusy = voiceStatus !== "idle" && !sending && !disabled;
   const shouldShowSendBusy = voiceStatus === "transcribing" && !sending && !disabled;
-  const hint = voiceHint || imageError;
+  const hint = voiceHint;
   const micLabel =
     voiceStatus === "recording"
       ? t["composer.stopRecording"]
@@ -194,13 +200,16 @@ export default function Composer({
 
   const handleImageFiles = async (files: File[]) => {
     if (files.length === 0) return;
-    const room = MAX_IMAGES - images.length;
+    const room = Math.max(0, MAX_ATTACHMENTS - images.length - documents.length);
     const selected = files.slice(0, room);
     if (files.length > room) {
-      setImageError(t["composer.maxImages"].replace("{count}", String(MAX_IMAGES)));
+      setImageError(
+        t["composer.maxAttachments"].replace("{count}", String(MAX_ATTACHMENTS))
+      );
     }
     try {
       const loaded: ChatImage[] = [];
+      const loadedNames: string[] = [];
       for (const file of selected) {
         if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
           setImageError(t["composer.unsupportedImage"]);
@@ -212,15 +221,21 @@ export default function Composer({
             read: t["composer.readError"],
           })
         );
+        loadedNames.push(file.name);
       }
-      if (compressOn) {
+      if (shouldCompressImages) {
         for (let i = 0; i < loaded.length; i++) {
           try {
             loaded[i] = await compressImage(loaded[i]);
           } catch {}
         }
       }
-      setImages((prev) => [...prev, ...loaded].slice(0, MAX_IMAGES));
+      setImages((prev) =>
+        [...prev, ...loaded].slice(0, Math.max(0, MAX_ATTACHMENTS - documents.length))
+      );
+      setImageNames((prev) =>
+        [...prev, ...loadedNames].slice(0, Math.max(0, MAX_ATTACHMENTS - documents.length))
+      );
       if (loaded.length > 0) setImageError(null);
     } catch (error) {
       setImageError(error instanceof Error ? error.message : t["composer.readError"]);
@@ -229,37 +244,36 @@ export default function Composer({
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
+    setImageNames((prev) => prev.filter((_, imageIndex) => imageIndex !== index));
   };
 
   return (
     <div className="composer">
-      {images.length > 0 && (
-        <div className="preview-grid">
-          {images.map((image, index) => (
-            <div key={index} className="preview">
-              <img
-                src={`data:${image.mimeType};base64,${image.data}`}
-                alt={t["composer.previewAlt"]}
-                onClick={() => setViewer(image)}
-              />
-              <button
-                type="button"
-                onClick={() => removeImage(index)}
-                aria-label={t["composer.removeImage"]}
-              >
-                <X size={16} />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
       {reportButton && <div className="composer-top-actions">{reportButton}</div>}
+      <div className="composer-attachment-slot" ref={setAttachmentLayerTarget} />
       <div className={`input-row mode-${chatMode}`}>
         <DocumentPicker
           documents={documents}
           onChange={setDocuments}
           onBusyChange={setDocumentBusy}
           onImagesSelected={handleImageFiles}
+          renderAttachmentLayer={(documentLayer, documentLayerVisible) => {
+            return (
+              <ComposerAttachmentLayer
+                images={images}
+                imageError={imageError}
+                documentLayer={documentLayer}
+                documentLayerVisible={documentLayerVisible}
+                onImageClick={setViewer}
+                onRemoveImage={removeImage}
+                imageAlt={t["composer.previewAlt"]}
+                removeImageLabel={t["composer.removeImage"]}
+              />
+            );
+          }}
+          imageCount={images.length}
+          imageNames={imageNames.map(attachmentNameKey)}
+          attachmentLayerTarget={attachmentLayerTarget}
           disabled={disabled}
           renderTrigger={(open, triggerDisabled) => (
             <button
@@ -267,7 +281,6 @@ export default function Composer({
               className="icon-button composer-attachment"
               onClick={open}
               aria-label={t["composer.attachFile"]}
-              title={t["composer.attachFile"]}
               disabled={triggerDisabled}
             >
               <Paperclip size={18} />
@@ -297,7 +310,6 @@ export default function Composer({
           className={`icon-button composer-mic${voiceStatus === "recording" ? " recording" : ""}${voiceStatus === "transcribing" ? " transcribing" : ""}`}
           onClick={handleMic}
           aria-label={micLabel}
-          title={micLabel}
           aria-pressed={voiceStatus === "recording"}
           aria-busy={voiceStatus === "transcribing"}
           disabled={disabled || voiceStatus === "transcribing"}
@@ -316,7 +328,6 @@ export default function Composer({
             disabled={!canSend && !voiceBusy}
             aria-busy={shouldShowSendBusy}
             aria-label={voiceStatus === "recording" ? t["composer.finishAndSend"] : t["composer.send"]}
-            title={voiceStatus === "recording" ? t["composer.finishAndSend"] : undefined}
           >
             <ArrowUp size={18} />
           </button>

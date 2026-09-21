@@ -159,7 +159,6 @@ export default function MessageBubble({
       <button
         type="button"
         className={`action-button${copiedId === message.id ? " copied" : ""}`}
-        title={copiedId === message.id ? t["actions.copied"] : t["actions.copy"]}
         aria-label={t["actions.copy"]}
         onClick={() => copy(message)}
       >
@@ -169,7 +168,6 @@ export default function MessageBubble({
         <button
           type="button"
           className="action-button"
-          title={t["actions.edit"]}
           aria-label={t["actions.edit"]}
           onClick={() => onEdit(message.id)}
         >
@@ -180,7 +178,6 @@ export default function MessageBubble({
         <button
           type="button"
           className="action-button"
-          title={t["actions.regenerate"]}
           aria-label={t["actions.regenerate"]}
           onClick={() => onRegenerate(message.id)}
         >

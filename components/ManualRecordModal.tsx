@@ -260,7 +260,6 @@ export default function ManualRecordModal({
                     className="manual-record-add-dish manual-record-add-dish-compact"
                     onClick={addDish}
                     aria-label={t["records.manual.addDish"]}
-                    title={t["records.manual.addDish"]}
                   >
                     <Plus size={15} aria-hidden="true" />
                   </button>

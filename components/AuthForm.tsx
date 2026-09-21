@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { STR, setUiLang, useUiLang } from "@/lib/i18n";
+import { STR } from "@/lib/i18n";
 
 interface AuthResponse {
   error?: string;
@@ -22,8 +22,7 @@ export default function AuthForm({
   switchHref?: string;
   onSuccess: () => void;
 }) {
-  const lang = useUiLang();
-  const t = STR[lang];
+  const t = STR.en;
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -38,7 +37,7 @@ export default function AuthForm({
       const response = await fetch(`/api/auth/${mode}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password, language: lang }),
+        body: JSON.stringify({ username, password, language: "en" }),
       });
       const body = (await response.json().catch(() => ({}))) as AuthResponse;
       if (!response.ok) {
@@ -94,16 +93,7 @@ export default function AuthForm({
     <>
       <div className="auth-card-head">
         <h2>{mode === "login" ? t["auth.signIn"] : t["auth.createAccount"]}</h2>
-        <button
-          type="button"
-          className="auth-lang-toggle"
-          onClick={() => setUiLang(lang === "zh" ? "en" : "zh")}
-          aria-label={t["settings.language"]}
-        >
-          {t["lang.button"]}
-        </button>
       </div>
-      <p className="usage-sub">{t["auth.description"]}</p>
       <form onSubmit={submit} className="auth-form">
         <input
           className="auth-input"

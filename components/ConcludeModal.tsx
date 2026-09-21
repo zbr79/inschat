@@ -801,7 +801,6 @@ closeRef.current = () => {
                       className="conclude-card-remove"
                       onClick={() => removeMealAuto(entry.index)}
                       aria-label={t["concludeModal.removeDish"]}
-                      title={t["concludeModal.removeDish"]}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -836,7 +835,6 @@ closeRef.current = () => {
                         className="conclude-dish-remove"
                         onClick={() => removeDishAuto(entry.index, dishIndex)}
                         aria-label={t["concludeModal.removeDish"]}
-                        title={t["concludeModal.removeDish"]}
                       >
                         <Trash2 size={13} />
                       </button>
@@ -853,7 +851,6 @@ closeRef.current = () => {
                         className={`conclude-rank-badge ${rankTone(dish.rank)}`}
                         onClick={() => cycleRankAuto(entry.index, dishIndex)}
                         aria-label={t["concludeModal.ranking"]}
-                        title={t["concludeModal.ranking"]}
                       >
                         {rankLabel(dish.rank, lang)}
                       </button>
@@ -895,7 +892,6 @@ closeRef.current = () => {
                     className="conclude-card-remove"
                     onClick={() => remover(entry.index)}
                     aria-label={t["concludeModal.removeDish"]}
-                    title={t["concludeModal.removeDish"]}
                   >
                     <Trash2 size={14} />
                   </button>

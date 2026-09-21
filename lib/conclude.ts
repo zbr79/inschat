@@ -27,7 +27,7 @@ Produce a JSON conclusion with:
   - "value": the value as a short string (e.g. "130", "rice, chicken, broccoli"). Only when there is a concrete value.
   - "unit": the unit if stated or clearly implied (e.g. "mg/dL", "kg", "g"). Only when applicable.
 - "meals": an array with one entry PER MEAL described in the reply. Each entry has:
-  - "name": the meal name (早餐/午餐/下午茶/晚餐/夜宵, or Breakfast/Lunch/Afternoon snack/Dinner/Late-night snack — chosen by the meal's time, NEVER 加餐/Snack).
+  - "name": the meal name (早餐/早午餐/午餐/下午茶/晚餐/夜宵, or Breakfast/Brunch/Lunch/Snack/Dinner/Late night — chosen by the meal's time, NEVER generic 加餐).
   - "time": the meal's time when stated (e.g. "2026年8月26日 下午 6:17").
   - "dishes": an array with one entry PER DISH in that meal. Each dish has:
     - "name": the dish name only (e.g. "酱牛肉", "rice") — no parenthetical category such as （沙拉） or (salad).

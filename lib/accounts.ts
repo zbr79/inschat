@@ -22,6 +22,26 @@ export async function findUserByUsername(username: string): Promise<UserDoc | nu
   return db.collection<UserDoc>("users").findOne({ username });
 }
 
+export async function findUserById(userId: string): Promise<UserDoc | null> {
+  if (!ObjectId.isValid(userId)) return null;
+  const db = await getDb();
+  return db.collection<UserDoc>("users").findOne({ _id: new ObjectId(userId) });
+}
+
+export async function updateUserPassword(
+  userId: string,
+  passwordHash: string,
+  salt: string
+): Promise<boolean> {
+  if (!ObjectId.isValid(userId)) return false;
+  const db = await getDb();
+  const result = await db.collection<UserDoc>("users").updateOne(
+    { _id: new ObjectId(userId) },
+    { $set: { passwordHash, salt } }
+  );
+  return result.matchedCount > 0;
+}
+
 export async function insertUser(input: {
   username: string;
   passwordHash: string;
