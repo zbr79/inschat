@@ -1560,6 +1560,9 @@ span.conclude-rank-badge {
 
   .mobile-bar {
     display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 20;
     align-items: center;
     gap: 8px;
     min-height: 56px;
@@ -7397,6 +7400,37 @@ body.health-intro-open {
     right: 24px;
     bottom: 24px;
     margin: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .standalone-mode .mobile-bar {
+    padding-top: 8px;
+  }
+
+  .standalone-mode .sidebar {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .standalone-mode .composer {
+    padding-bottom: 12px;
+  }
+
+  .standalone-mode .usage-page {
+    padding-bottom: 32px;
+  }
+
+  .standalone-mode .conclude-modal {
+    padding-bottom: 16px;
+  }
+
+  .standalone-mode .welcome {
+    padding-bottom: 14px;
+  }
+
+  .standalone-mode .review-coach {
+    bottom: 16px;
   }
 }
 

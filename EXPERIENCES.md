@@ -5841,3 +5841,69 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Relying on overlay scrollbar behavior was consistent across phones and
   browser emulation.
 
+## 2026-09-21 — Separate Safari and standalone bottom spacing
+
+### Solved
+- Removed browser-toolbar-sized bottom spacing from normal mobile Safari
+  layouts.
+- Restored the iPhone safe-area inset only when the app is launched in
+  standalone Home Screen mode.
+- Applied the distinction to the composer, welcome screen, sidebar, records
+  usage page, conclusion modal, and review coach.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The standalone safe-area spacing should be applied identically inside
+  Safari browser tabs.
+
+## 2026-09-21 — Make standalone detection explicit on iOS
+
+### Solved
+- Added a client-side standalone detector using both the standard
+  `display-mode` media query and iOS Safari's `navigator.standalone` flag.
+- Applied a `standalone-mode` document class so standalone-specific spacing
+  can be applied reliably on iOS.
+- Kept Safari's safe-area spacing and removed the extra safe-area inset from
+  the installed Home Screen app, matching the requested layout behavior.
+
+### Unresolved
+- A real installed iPhone check is still needed because desktop browser
+  emulation cannot faithfully reproduce iOS standalone behavior.
+
+### Disproved
+- Relying only on the CSS `display-mode: standalone` media query was
+  sufficient for every iOS environment.
+- Applying the browser safe-area inset to the standalone app produced the
+  desired layout.
+
+## 2026-09-21 — Match Rencipe's standalone top-bar inset
+
+### Solved
+- Compared the sibling Rencipe app's mobile top bar and confirmed it does
+  not add a top safe-area inset to its header.
+- Removed InsChat's extra top inset from the standalone mobile header and
+  drawer while preserving their normal internal spacing.
+
+### Unresolved
+- The installed iPhone app still needs a real-device visual check after
+  relaunch.
+
+### Disproved
+- The top-bar difference was explained only by the iOS system bug; InsChat
+  also had a standalone-specific top inset that Rencipe does not use.
+
+## 2026-09-21 — Match Rencipe's sticky mobile header
+
+### Solved
+- Made InsChat's mobile header sticky at the top with an explicit stacking
+  layer and solid background, matching Rencipe's top-bar structure.
+
+### Unresolved
+- Real iPhone standalone verification is still required.
+
+### Disproved
+- Removing only the standalone top inset was sufficient to match Rencipe's
+  top rendering.
+
