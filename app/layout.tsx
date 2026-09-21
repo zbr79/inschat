@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
 import Sidebar from "@/components/Sidebar";
 import GuestGuides from "@/components/GuestGuides";
+import ToastProvider from "@/components/ToastProvider";
 import { AuthProvider } from "@/lib/authContext";
 import "./globals.css";
 
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <AuthProvider>
+          <ToastProvider />
           <Suspense>
             <GuestGuides />
           </Suspense>

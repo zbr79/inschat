@@ -1615,7 +1615,7 @@ span.conclude-rank-badge {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
+    background: transparent;
     z-index: 50;
   }
 
@@ -2034,11 +2034,11 @@ span.conclude-rank-badge {
   cursor: pointer;
 }
 
-.preview button,
+.attachment-remove,
 .image-remove {
   position: absolute;
-  top: -7px;
-  right: -7px;
+  top: -8px;
+  right: -8px;
   width: 22px;
   height: 22px;
   display: inline-flex;
@@ -2046,21 +2046,21 @@ span.conclude-rank-badge {
   justify-content: center;
   padding: 0;
   border-radius: 50%;
-  border: 2px solid var(--bg);
-  background: var(--pill);
-  color: var(--pill-text);
+  border: 1px solid var(--bg);
+  background: #202124;
+  color: #fff;
   line-height: 0;
   cursor: pointer;
   z-index: 1;
 }
 
-.preview button:hover,
+.attachment-remove:hover,
 .image-remove:hover {
-  background: var(--text-muted);
+  background: #202124;
   transform: scale(1.05);
 }
 
-.preview button:focus-visible,
+.attachment-remove:focus-visible,
 .image-remove:focus-visible {
   outline: 2px solid var(--pill);
   outline-offset: 2px;
@@ -5009,31 +5009,6 @@ span.conclude-rank-badge {
   position: relative;
 }
 
-.auth-modal .auth-card-head {
-  padding-right: 28px;
-}
-
-.auth-modal-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.auth-modal-close:hover {
-  color: var(--text);
-  background: rgba(0, 0, 0, 0.05);
-}
-
 .auth-card h2 {
   font-size: 20px;
   font-weight: 700;
@@ -5043,23 +5018,6 @@ span.conclude-rank-badge {
 
 .auth-card-head h2 {
   margin-bottom: 0;
-}
-
-.auth-lang-toggle {
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  font-family: var(--font);
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 6px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.auth-lang-toggle:hover {
-  color: var(--text);
-  background: rgba(0, 0, 0, 0.05);
 }
 
 .auth-form {
@@ -5115,6 +5073,25 @@ span.conclude-rank-badge {
 
 .auth-toggle:hover {
   color: var(--text);
+}
+
+.change-password-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.change-password-actions .auth-toggle {
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.change-password-success {
+  margin: 0;
+  color: #16803c;
+  font-size: 13px;
 }
 
 .auth-page .auth-toggle {
@@ -6838,12 +6815,33 @@ span.conclude-rank-badge {
 
 
 
-/* ---- multi-image previews in the composer ---- */
-.preview-grid {
+/* ---- unified composer attachment layer ---- */
+.composer-attachment-slot {
+  width: 100%;
+}
+
+.composer-attachment-layer {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+  margin-bottom: 8px;
+}
+
+.composer-attachment-scroll {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
   gap: 8px;
-  margin: 0 4px 8px;
+  width: 100%;
+  box-sizing: border-box;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 10px 8px 2px;
+}
+
+.preview-grid {
+  display: contents;
 }
 
 .preview-grid .preview {
@@ -6855,195 +6853,119 @@ span.conclude-rank-badge {
   height: 56px;
 }
 
-/* ---- document previews and processing state ---- */
-.document-chip-grid {
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  bottom: calc(100% + 8px);
+/* ---- document cards and processing state ---- */
+.document-card-grid,
+.document-upload-cards {
+  display: contents;
+}
+
+.document-card,
+.document-upload-card {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  max-height: 96px;
-  overflow-y: auto;
-}
-
-.document-chip-grid.has-errors {
-  bottom: calc(100% + 76px);
-}
-
-.document-chip {
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
-  max-width: 100%;
-  padding: 6px 8px;
+  gap: 10px;
+  flex: 1 1 180px;
+  width: min(320px, 100%);
+  max-width: 320px;
+  min-height: 64px;
+  box-sizing: border-box;
+  padding: 10px 42px 10px 14px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 16px;
   background: var(--bg);
-  color: var(--text-muted);
-  font-size: 12px;
   box-shadow: 0 2px 8px rgba(29, 29, 31, 0.06);
 }
 
-.document-chip-name {
+.document-upload-card {
+  flex-basis: 180px;
+}
+
+.document-card-copy {
+  display: grid;
   min-width: 0;
-  max-width: 180px;
+  gap: 3px;
+  flex: 1;
+}
+
+.document-card-name {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.document-chip-size {
-  flex-shrink: 0;
-  color: var(--text-muted);
-}
-
-.document-chip-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  min-width: 0;
-  max-width: 72px;
+.document-card-type {
   overflow: hidden;
-  flex-shrink: 1;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: #18864b;
-}
-
-.document-chip button {
-  display: inline-flex;
-  flex-shrink: 0;
-  padding: 2px;
-  border: none;
-  background: transparent;
   color: var(--text-muted);
-  cursor: pointer;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.document-chip button:disabled {
+.document-file-icon {
+  flex: 0 0 auto;
+}
+
+.document-file-icon-txt {
+  color: #7c3aed;
+}
+
+.document-file-icon-pdf {
+  color: #dc2626;
+}
+
+.document-file-icon-docx {
+  color: #2563eb;
+}
+
+.document-file-icon-xlsx {
+  color: #16a34a;
+}
+
+.document-file-icon-generic {
+  color: var(--text-muted);
+}
+
+.document-upload-card .spin {
+  flex: 0 0 auto;
+  color: var(--pill);
+  animation: mic-ring-spin 0.9s linear infinite;
+}
+
+.attachment-remove:disabled {
   cursor: default;
   opacity: 0.5;
 }
 
-.document-upload-panel {
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  bottom: calc(100% + 8px);
-  z-index: 2;
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg);
-  box-shadow: 0 5px 18px rgba(29, 29, 31, 0.1);
-}
-
-.document-upload-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  color: var(--text);
-  font-size: 12px;
-}
-
-.document-upload-heading {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  min-width: 0;
-}
-
-.document-upload-heading > div {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.document-upload-heading strong {
-  font-weight: 600;
-}
-
-.document-upload-heading span,
-.document-upload-count {
-  color: var(--text-muted);
-  font-size: 11px;
-}
-
-.document-upload-heading .spin {
-  animation: mic-ring-spin 0.9s linear infinite;
-  color: var(--pill);
-}
-
-.document-upload-track {
-  height: 5px;
-  margin-top: 9px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: rgba(29, 29, 31, 0.1);
-}
-
-.document-upload-track span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--pill);
-  transition: width 0.2s ease;
-}
-
-.document-upload-files {
-  display: grid;
-  gap: 4px;
-  margin-top: 8px;
-  color: var(--text-muted);
-  font-size: 11px;
-}
-
-.document-upload-file {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-}
-
-.document-upload-file span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.document-errors {
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  bottom: calc(100% + 8px);
-  z-index: 2;
+.composer-attachment-errors {
   display: flex;
   align-items: flex-start;
   gap: 7px;
+  flex: 1 1 100%;
   padding: 8px 10px;
   border: 1px solid rgba(180, 35, 24, 0.22);
   border-radius: 10px;
   background: var(--bg);
   color: #b42318;
   font-size: 12px;
-  max-height: 62px;
+  max-width: 100%;
   overflow-y: auto;
   box-shadow: 0 3px 12px rgba(29, 29, 31, 0.08);
 }
 
-.document-errors ul {
+.composer-attachment-errors ul {
   display: grid;
   gap: 2px;
   margin: 0;
-  padding-left: 14px;
+  padding: 0;
+  list-style: none;
 }
 
-.document-errors li {
+.composer-attachment-errors li {
   margin: 0;
 }
 

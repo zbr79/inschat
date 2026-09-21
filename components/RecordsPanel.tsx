@@ -628,7 +628,6 @@ export default function RecordsPanel({
             onClick={() => setManualRecordOpen(true)}
             disabled={guest === null}
             aria-label={t["records.manual.add"]}
-            title={t["records.manual.add"]}
           >
             <Plus size={18} strokeWidth={2.25} aria-hidden="true" />
           </button>

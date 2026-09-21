@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
 import AuthForm from "./AuthForm";
 
 export default function AuthModal({
@@ -33,14 +32,6 @@ export default function AuthModal({
       <div className="auth-backdrop" onClick={onClose} aria-hidden="true" />
       <div className="auth-modal" role="dialog" aria-modal="true">
         <div className="auth-card">
-          <button
-            type="button"
-            className="auth-modal-close"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <X size={16} />
-          </button>
           <AuthForm
             mode={mode}
             onModeChange={setMode}
