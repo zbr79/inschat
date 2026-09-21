@@ -2122,8 +2122,16 @@ span.conclude-rank-badge {
   line-height: 1.4;
   padding: 8px 10px;
   max-height: 160px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
   outline: none;
   color: var(--text);
+}
+
+.input-row textarea::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .input-row textarea::placeholder {
@@ -6972,6 +6980,47 @@ span.conclude-rank-badge {
 
 .composer-attachment-errors li {
   margin: 0;
+}
+
+@media (max-width: 640px) {
+  .composer-attachment-scroll {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .document-card,
+  .document-upload-card {
+    flex: 0 0 clamp(96px, 30vw, 150px);
+    width: clamp(96px, 30vw, 150px);
+    min-height: 56px;
+    padding: 8px 28px 8px 8px;
+    gap: 6px;
+    border-radius: 12px;
+  }
+
+  .document-file-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .document-upload-card .spin {
+    width: 18px;
+    height: 18px;
+  }
+
+  .document-card-name {
+    font-size: 11px;
+  }
+
+  .document-card-type {
+    font-size: 10px;
+  }
+
+  .composer-attachment-errors {
+    flex: 0 0 100%;
+  }
 }
 
 /* ---- usage-limit banner (red warning above the composer) ---- */
