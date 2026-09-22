@@ -260,6 +260,17 @@ body {
   font-weight: 650;
 }
 
+.session-section.health .section-new-chat {
+  color: #3b82f6;
+  background: transparent;
+}
+
+.session-section.health .section-new-chat:hover,
+.session-section.health .section-new-chat:focus-visible {
+  color: #2563eb;
+  background: rgba(59, 130, 246, 0.14);
+}
+
 .session-section.general .session-section-head > .catalog-toggle {
   color: var(--text-muted);
 }
@@ -1545,18 +1556,6 @@ span.conclude-rank-badge {
   display: none;
 }
 
-.mobile-brand {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text);
-  text-decoration: none;
-}
-
-.mobile-refresh-button {
-  display: none;
-}
-
 .sidebar-backdrop {
   display: none;
 }
@@ -1574,22 +1573,48 @@ span.conclude-rank-badge {
     align-items: center;
     gap: 8px;
     min-height: 56px;
-    padding: calc(8px + env(safe-area-inset-top)) 14px 8px;
-    border-bottom: 1px solid var(--border);
+    padding: 8px 14px;
+    border-bottom: none;
     background: var(--bg);
     flex-shrink: 0;
   }
 
   .menu-button {
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: none;
-    border-radius: 10px;
-    background: none;
-    padding: 4px 6px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(32, 33, 36, 0.18);
+    padding: 0;
+  }
+
+  .menu-icon-pwa {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 5px;
+    width: 22px;
+    height: 18px;
+  }
+
+  .menu-icon-pwa-line {
+    display: block;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  .menu-icon-pwa-line-long {
+    width: 22px;
+  }
+
+  .menu-icon-pwa-line-short {
+    width: 14px;
   }
 
   .menu-button:active {
@@ -2172,7 +2197,12 @@ span.conclude-rank-badge {
 }
 
 .composer-mic {
-  color: var(--text-muted);
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.composer-mic:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.14);
 }
 
 .composer-mic.recording {
@@ -6804,12 +6834,31 @@ span.conclude-rank-badge {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
+  justify-content: flex-start;
+  gap: 0;
   padding: 0 16px 12vh;
 }
 
+.welcome-center {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.welcome-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  box-shadow: 0 4px 10px rgba(96, 165, 250, 0.18);
+}
+
 .welcome h2 {
+  margin: 0;
   font-size: 22px;
   font-weight: 400;
   letter-spacing: -0.01em;
@@ -6820,15 +6869,25 @@ span.conclude-rank-badge {
 .welcome .composer {
   width: 100%;
   max-width: 640px;
-  margin-top: -2px;
+  margin-top: 20px;
 }
 
 /* ---- phone: welcome input sits at the bottom like a started chat ---- */
 @media (max-width: 640px) {
   .welcome {
     justify-content: flex-end;
-    gap: 12px;
+    gap: 0;
     padding: 0 12px calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .welcome-center {
+    padding-bottom: 4vh;
+  }
+
+  .welcome-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
   }
 
   .welcome h2 {
@@ -7415,79 +7474,6 @@ body.health-intro-open {
 }
 
 @media (max-width: 640px) {
-  .standalone-mode .mobile-bar {
-    padding-top: 8px;
-    border-bottom: none;
-  }
-
-  .standalone-mode .menu-button {
-    width: 48px;
-    height: 48px;
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 3px 10px rgba(32, 33, 36, 0.18);
-    padding: 0;
-  }
-
-  .standalone-mode .menu-button > svg {
-    display: none;
-  }
-
-  .standalone-mode .menu-icon-pwa {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: center;
-    gap: 5px;
-    width: 22px;
-    height: 18px;
-  }
-
-  .standalone-mode .menu-icon-pwa-line {
-    display: block;
-    height: 2px;
-    border-radius: 999px;
-    background: currentColor;
-  }
-
-  .standalone-mode .menu-icon-pwa-line-long {
-    width: 22px;
-  }
-
-  .standalone-mode .menu-icon-pwa-line-short {
-    width: 14px;
-  }
-
-  .standalone-mode .mobile-brand {
-    display: none;
-  }
-
-  .standalone-mode .mobile-refresh-button {
-    width: 48px;
-    height: 48px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: auto;
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    background: #fff;
-    color: var(--text);
-    box-shadow: 0 3px 10px rgba(32, 33, 36, 0.18);
-    padding: 0;
-    cursor: pointer;
-  }
-
-  .standalone-mode .mobile-refresh-button:active {
-    transform: scale(0.95);
-  }
-
-  .standalone-mode .mobile-refresh-button:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-
   .standalone-mode .sidebar {
     padding-top: 12px;
     padding-bottom: 12px;

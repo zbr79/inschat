@@ -6011,3 +6011,81 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - Removing the control entirely was necessary while its action was disabled.
 
+## 2026-09-21 — Center the empty chat welcome state
+
+### Solved
+- Recolored the existing app/PWA icon to a restrained health-mode blue and
+  regenerated the 180px, 192px, and 512px Home Screen assets.
+- Added the app icon to the empty chat state.
+- Centered the icon and greeting above the composer.
+- Updated the greeting to “Hi, What can I help with” in English.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Keeping the greeting directly above the input without an app icon was the
+  clearest empty-chat layout.
+
+## 2026-09-21 — Tune health-blue controls and mobile navigation
+
+### Solved
+- Lightened the app icon to a softer sky blue and regenerated Home Screen
+  icon assets.
+- Added the question mark to the English empty-chat greeting.
+- Applied a blue treatment to the voice-chat button.
+- Matched normal mobile Safari's top bar to the standalone PWA version.
+- Applied matching blue styling to the Health folder and its new-chat button.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The darker blue icon and neutral voice/folder controls best matched
+  Health mode.
+
+## 2026-09-21 — Unify mobile and standalone top bars
+
+### Solved
+- Applied the PWA top-bar treatment to normal mobile Safari as requested.
+- Normal mobile now also hides the wordmark, uses the 48px circular menu
+  button, and shows the disabled balanced refresh control.
+- Verified the mobile menu, refresh, greeting, voice button, and Health
+  folder controls in a guest mobile browser probe.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Keeping separate mobile and standalone top-bar treatments was still
+  necessary after the latest design decision.
+
+## 2026-09-21 — Simplify the mobile menu and welcome icon
+
+### Solved
+- Removed the unused right-side refresh control.
+- Removed the duplicate default menu glyph so the circular menu button shows
+  only the designed long-line/short-line icon.
+- Reduced the centered welcome icon to 50% of its previous size.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The unused refresh control and duplicate menu glyph improved the mobile
+  top bar.
+
+## 2026-09-21 — Keep Health new-chat control transparent
+
+### Solved
+- Removed the default blue background from the Health folder's new-chat
+  button.
+- Kept the new-chat icon blue and reserved the blue background for
+  hover/focus states.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The Health new-chat button needed a filled background before interaction.
+
