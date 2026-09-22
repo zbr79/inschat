@@ -6242,3 +6242,33 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - The sign-out action needed to share the neutral styling of account settings.
 
+## 2026-09-21 — Match Account Settings danger styling
+
+### Solved
+- Passed Health mode into Account Settings so its avatar follows the sidebar
+  blue theme.
+- Applied the Health avatar treatment in both light and dark themes.
+- Made the Delete data label red alongside its icon and action button.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The Account Settings avatar and Delete data label were already inheriting
+  the intended visual treatment.
+
+## 2026-09-21 — Center the desktop empty-chat composer
+
+### Solved
+- Centered the unopened-chat greeting and composer group vertically on PC
+  widths.
+- Hid the welcome icon on PC while preserving the mobile welcome layout and
+  icon.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Reusing the mobile bottom-aligned empty-chat composer layout on PC was the
+  clearest presentation.
+

@@ -8,6 +8,7 @@ interface AccountSettingsModalProps {
   t: Record<string, string>;
   username: string;
   displayName: string;
+  healthMode: boolean;
   onChangePassword: () => void;
   onSignOut: () => void;
   onClearAccountData: () => void;
@@ -18,6 +19,7 @@ export default function AccountSettingsModal({
   t,
   username,
   displayName,
+  healthMode,
   onChangePassword,
   onSignOut,
   onClearAccountData,
@@ -128,7 +130,9 @@ export default function AccountSettingsModal({
           </button>
         </div>
         <div className="account-settings-profile">
-          <span className="account-settings-avatar">
+          <span
+            className={`account-settings-avatar${healthMode ? " health-mode-avatar" : ""}`}
+          >
             {displayName.charAt(0).toUpperCase()}
           </span>
           <div className="account-settings-copy">
