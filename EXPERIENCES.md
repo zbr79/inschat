@@ -5907,3 +5907,70 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Removing only the standalone top inset was sufficient to match Rencipe's
   top rendering.
 
+## 2026-09-21 — Simplify the mobile top bar
+
+### Solved
+- Removed the visible InsChat wordmark from the mobile top area.
+- Kept the top area and its accessible menu icon button for opening the
+  sidebar on demand.
+- Removed the unused mobile wordmark styling.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Showing the app name beside the sidebar trigger was necessary on mobile.
+
+## 2026-09-21 — Refine the mobile menu trigger
+
+### Solved
+- Removed the divider line beneath the mobile top area.
+- Changed the sidebar menu trigger to a circular button with a subtle
+  border and background.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A full-width divider was needed to visually separate the mobile top area.
+
+## 2026-09-21 — Scope menu styling to standalone mode
+
+### Solved
+- Restored the original divider and rounded menu-button styling for normal
+  mobile Safari.
+- Limited the divider removal and circular menu button to standalone/PWA
+  mode.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Applying the PWA-specific top-bar styling to every mobile browser mode.
+
+## 2026-09-21 — Keep the mobile brand outside standalone mode
+
+### Solved
+- Restored the InsChat name for normal mobile Safari.
+- Hide the name only in standalone/PWA mode while retaining the menu button.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The mobile brand should be removed from every mobile launch mode.
+
+## 2026-09-21 — Enlarge the standalone menu button
+
+### Solved
+- Increased the standalone menu button from 40px to 48px.
+- Changed its standalone background to white with a soft colored shadow.
+- Replaced the standalone glyph with one long line and one shorter line.
+- Kept the normal mobile Safari icon and sizing unchanged.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The PWA menu trigger needed to reuse the default equal-line menu icon.
+

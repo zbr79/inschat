@@ -1541,6 +1541,10 @@ span.conclude-rank-badge {
   cursor: pointer;
 }
 
+.menu-icon-pwa {
+  display: none;
+}
+
 .mobile-brand {
   font-size: 16px;
   font-weight: 700;
@@ -1578,7 +1582,10 @@ span.conclude-rank-badge {
     display: flex;
     align-items: center;
     justify-content: center;
+    border: none;
     border-radius: 10px;
+    background: none;
+    padding: 4px 6px;
   }
 
   .menu-button:active {
@@ -7406,6 +7413,50 @@ body.health-intro-open {
 @media (max-width: 640px) {
   .standalone-mode .mobile-bar {
     padding-top: 8px;
+    border-bottom: none;
+  }
+
+  .standalone-mode .menu-button {
+    width: 48px;
+    height: 48px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 3px 10px rgba(32, 33, 36, 0.18);
+    padding: 0;
+  }
+
+  .standalone-mode .menu-button > svg {
+    display: none;
+  }
+
+  .standalone-mode .menu-icon-pwa {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 5px;
+    width: 22px;
+    height: 18px;
+  }
+
+  .standalone-mode .menu-icon-pwa-line {
+    display: block;
+    height: 2px;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  .standalone-mode .menu-icon-pwa-line-long {
+    width: 22px;
+  }
+
+  .standalone-mode .menu-icon-pwa-line-short {
+    width: 14px;
+  }
+
+  .standalone-mode .mobile-brand {
+    display: none;
   }
 
   .standalone-mode .sidebar {
