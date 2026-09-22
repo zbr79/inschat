@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Menu, X, SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronRight, Languages, FileText, Gauge, LogOut, ImageDown, HeartPulse, KeyRound } from "lucide-react";
+import { Menu, X, SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronRight, Languages, FileText, Gauge, LogOut, ImageDown, HeartPulse, KeyRound, RefreshCw } from "lucide-react";
 import type { ChatMode, ChatSession } from "@/lib/types";
 import {
   deleteGuestSession,
@@ -485,6 +485,15 @@ export default function Sidebar() {
         <Link href="/" className="mobile-brand">
           InsChat
         </Link>
+        <button
+          type="button"
+          className="mobile-refresh-button"
+          onClick={() => window.location.reload()}
+          disabled
+          aria-label={t["nav.refresh"]}
+        >
+          <RefreshCw size={17} aria-hidden="true" />
+        </button>
       </div>
       {menuOpen && (
         <div
