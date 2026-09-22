@@ -1542,6 +1542,11 @@ span.conclude-rank-badge {
   display: none;
 }
 
+.mobile-page-title,
+.mobile-page-action {
+  display: none;
+}
+
 .menu-button {
   background: none;
   border: none;
@@ -1619,6 +1624,41 @@ span.conclude-rank-badge {
 
   .menu-button:active {
     background: var(--bg-soft);
+  }
+
+  .mobile-page-title {
+    display: block;
+    min-width: 0;
+    margin-left: 2px;
+    overflow: hidden;
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-page-action {
+    width: 44px;
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: #fff;
+    color: var(--text);
+    box-shadow: 0 3px 10px rgba(32, 33, 36, 0.14);
+    cursor: pointer;
+  }
+
+  .mobile-page-action:hover,
+  .mobile-page-action:focus-visible {
+    background: var(--bg-soft);
+    outline: none;
   }
 
   .sidebar {
@@ -3982,15 +4022,14 @@ span.conclude-rank-badge {
 
   .records-page-head {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas: "title range transfer";
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "range transfer";
     align-items: center;
     gap: 8px;
   }
 
   .records-page-title {
-    grid-area: title;
-    min-width: 0;
+    display: none;
   }
 
   .records-page-title h2 {
@@ -4000,9 +4039,9 @@ span.conclude-rank-badge {
 
   .records-range-control {
     grid-area: range;
-    justify-self: stretch;
-    width: auto;
-    max-width: 100%;
+    justify-self: start;
+    width: 50vw;
+    max-width: 50vw;
     min-width: 0;
   }
 
@@ -4061,6 +4100,10 @@ span.conclude-rank-badge {
 
   .records-page-actions > .report-transfer-controls {
     margin-left: 0;
+  }
+
+  .records-page-actions > .records-add-button {
+    display: none;
   }
 
   .record-insights-grid {

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { X, SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronRight, Languages, FileText, Gauge, LogOut, ImageDown, HeartPulse, KeyRound } from "lucide-react";
+import { X, SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronRight, Languages, FileText, Gauge, LogOut, ImageDown, HeartPulse, KeyRound, Plus } from "lucide-react";
 import type { ChatMode, ChatSession } from "@/lib/types";
 import {
   deleteGuestSession,
@@ -481,6 +481,21 @@ export default function Sidebar() {
             <span className="menu-icon-pwa-line menu-icon-pwa-line-short" />
           </span>
         </button>
+        {pathname.startsWith("/records") && (
+          <>
+            <span className="mobile-page-title">{t["nav.records"]}</span>
+            <button
+              type="button"
+              className="mobile-page-action"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent("inschat-open-manual-record"));
+              }}
+              aria-label={t["records.manual.add"]}
+            >
+              <Plus size={20} strokeWidth={2.25} aria-hidden="true" />
+            </button>
+          </>
+        )}
       </div>
       {menuOpen && (
         <div

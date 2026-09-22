@@ -281,6 +281,15 @@ export default function RecordsPanel({
   const lang = useUiLang();
   const t = STR[lang];
   useEffect(() => {
+    const onOpenManualRecord = () => {
+      if (guest !== null) setManualRecordOpen(true);
+    };
+    window.addEventListener("inschat-open-manual-record", onOpenManualRecord);
+    return () =>
+      window.removeEventListener("inschat-open-manual-record", onOpenManualRecord);
+  }, [guest]);
+
+  useEffect(() => {
     const storedRange = getGlucoseRange();
     if (storedRange) setRange(storedRange);
   }, []);
