@@ -5993,6 +5993,14 @@ span.conclude-rank-badge {
   color: var(--health-accent);
 }
 
+.account-name.health-mode-account-name {
+  color: var(--health-accent-strong);
+}
+
+.account-identity:hover .account-name.health-mode-account-name {
+  color: var(--health-accent);
+}
+
 .account-identity-copy {
   display: flex;
   flex: 1;
@@ -6013,6 +6021,16 @@ span.conclude-rank-badge {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.avatar.health-mode-avatar {
+  background: var(--health-accent);
+  color: #fff;
+}
+
+html.dark-mode .avatar.health-mode-avatar {
+  background: var(--health-accent-strong);
+  color: var(--pill-text);
 }
 
 .account-name {
@@ -7384,6 +7402,20 @@ button.settings-row:hover {
 
 .settings-link {
   cursor: pointer;
+}
+
+.settings-link.settings-signout {
+  color: #ef4444;
+}
+
+.settings-link.settings-signout .settings-row-icon {
+  background: color-mix(in srgb, #ef4444 12%, transparent);
+  color: #ef4444;
+}
+
+.settings-link.settings-signout:hover {
+  background: color-mix(in srgb, #ef4444 8%, transparent);
+  color: #dc2626;
 }
 
 

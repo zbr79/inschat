@@ -597,9 +597,13 @@ export default function Sidebar() {
               onClick={() => setAccountSettingsOpen(true)}
               aria-label={t["settings.accountTitle"]}
             >
-              <span className="avatar">{user.displayName.charAt(0).toUpperCase()}</span>
+              <span className={`avatar${healthMode ? " health-mode-avatar" : ""}`}>
+                {user.displayName.charAt(0).toUpperCase()}
+              </span>
               <span className="account-identity-copy">
-                <span className="account-name">{user.displayName}</span>
+                <span className={`account-name${healthMode ? " health-mode-account-name" : ""}`}>
+                  {user.displayName}
+                </span>
               </span>
             </button>
             <button
