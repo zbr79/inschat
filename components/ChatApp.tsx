@@ -1692,7 +1692,10 @@ export default function ChatApp() {
         </main>
       ) : messages.length === 0 ? (
         <main className="welcome">
-          <h2>{t["welcome.title"]}</h2>
+          <div className="welcome-center">
+            <img className="welcome-icon" src="/icon.svg" alt="" />
+            <h2>{t["welcome.title"]}</h2>
+          </div>
           <Composer
             onSend={send}
             onStop={stop}
