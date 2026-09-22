@@ -6111,3 +6111,22 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Creating a session only after the first message cannot support showing the
   current empty chat in the sidebar.
 
+## 2026-09-21 — Move the mobile Records identity into the top bar
+
+### Solved
+- Added a mobile-only “Records” title beside the existing sidebar menu button.
+- Added the manual-record `+` action to the mobile top bar.
+- Kept range, import/export, demo controls, charts, and timelines in the
+  Records content area.
+- Hid the duplicated Records title and add button from the mobile content
+  header while leaving desktop unchanged.
+- Increased the mobile Records title and top-bar add button slightly.
+- Capped the mobile range dropdown at 50% of the viewport width.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Keeping the Records page identity below the global mobile navigation was
+  the clearest mobile hierarchy.
+
