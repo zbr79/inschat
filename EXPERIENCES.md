@@ -5974,3 +5974,40 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - The PWA menu trigger needed to reuse the default equal-line menu icon.
 
+## 2026-09-21 — Add a standalone refresh control
+
+### Solved
+- Added a small refresh button to the standalone PWA's top-right corner.
+- Kept it hidden in normal mobile Safari.
+- Added localized accessible labels and reload behavior.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The empty standalone top-right area needed to remain unused.
+
+## 2026-09-21 — Balance the standalone top controls
+
+### Solved
+- Matched the refresh button to the menu button's 48px size.
+- Matched its white fill, border, shadow, and icon color.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A smaller, muted refresh button provided a balanced top bar.
+
+## 2026-09-21 — Temporarily disable standalone refresh
+
+### Solved
+- Kept the refresh control visible for balance but disabled its action.
+- Added disabled-state styling to make its temporary status clear.
+
+### Unresolved
+- The refresh action can be re-enabled when its behavior is needed.
+
+### Disproved
+- Removing the control entirely was necessary while its action was disabled.
+
