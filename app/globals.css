@@ -7085,12 +7085,41 @@ html.dark-mode .account-settings-avatar.health-mode-avatar {
   box-shadow: 0 4px 10px rgba(96, 165, 250, 0.18);
 }
 
+.welcome-icon-general {
+  box-shadow: 0 4px 10px rgba(32, 33, 36, 0.12);
+}
+
 .welcome h2 {
   margin: 0;
   font-size: 22px;
   font-weight: 400;
   letter-spacing: -0.01em;
   text-align: center;
+}
+
+.welcome-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: var(--bg-soft);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.welcome-mode-badge.health {
+  border-color: var(--health-accent-focus);
+  color: var(--health-accent-strong);
+  background: var(--health-accent-soft);
+}
+
+.welcome-mode-badge.general {
+  color: var(--text-muted);
+  background: var(--bg-soft);
 }
 
 
@@ -7108,10 +7137,6 @@ html.dark-mode .account-settings-avatar.health-mode-avatar {
 
   .welcome-center {
     flex: 0 0 auto;
-  }
-
-  .welcome-icon {
-    display: none;
   }
 }
 

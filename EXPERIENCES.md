@@ -6287,3 +6287,43 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Waiting for the full `onSend` promise to resolve was reliable across mobile
   browsers for clearing attachment previews.
 
+## 2026-09-21 — Add empty-chat mode identity
+
+### Solved
+- General mode now uses a neutral grayscale icon in the empty chat state.
+- Health mode keeps the blue icon treatment.
+- Added localized Health mode and General mode badges below the greeting.
+- Restored the desktop icon so the mode distinction is visible on PC.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Hiding the desktop icon entirely provided enough context about the active
+  chat mode.
+
+## 2026-09-21 — Make General mode icon solid black
+
+### Solved
+- Changed the General-mode empty-chat icon from dark gray to solid black.
+- Left the Health-mode blue icon unchanged.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A grayscale dark-gray treatment matched the requested General-mode icon.
+
+## 2026-09-21 — Preserve General icon artwork
+
+### Solved
+- Replaced the full-image black filter with a dedicated General-mode SVG.
+- Preserved the original sparkle artwork using a black background and white
+  mark.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Applying a black brightness filter preserved the icon artwork.
+
