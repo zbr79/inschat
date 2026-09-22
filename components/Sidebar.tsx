@@ -677,6 +677,7 @@ export default function Sidebar() {
         t={t}
         username={user.username}
         displayName={user.displayName}
+        healthMode={healthMode}
         onChangePassword={() => {
           setAccountSettingsOpen(false);
           setChangePasswordOpen(true);
