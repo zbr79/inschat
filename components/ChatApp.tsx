@@ -1824,8 +1824,17 @@ export default function ChatApp() {
       ) : messages.length === 0 ? (
         <main className="welcome">
           <div className="welcome-center">
-            <img className="welcome-icon" src="/icon.svg" alt="" />
+            <img
+              className={`welcome-icon welcome-icon-${chatMode}`}
+              src={chatMode === "health" ? "/icon.svg" : "/icon-general.svg"}
+              alt=""
+            />
             <h2>{t["welcome.title"]}</h2>
+            <span className={`welcome-mode-badge ${chatMode}`}>
+              {chatMode === "health"
+                ? t["welcome.mode.health"]
+                : t["welcome.mode.general"]}
+            </span>
           </div>
           <Composer
             onSend={send}
