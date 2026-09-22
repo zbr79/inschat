@@ -477,6 +477,10 @@ export default function Sidebar() {
           aria-label={t["nav.openMenu"]}
         >
           <Menu size={20} />
+          <span className="menu-icon-pwa" aria-hidden="true">
+            <span className="menu-icon-pwa-line menu-icon-pwa-line-long" />
+            <span className="menu-icon-pwa-line menu-icon-pwa-line-short" />
+          </span>
         </button>
         <Link href="/" className="mobile-brand">
           InsChat
