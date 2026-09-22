@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 export interface AuthUser {
   _id: string;
   username: string;
+  displayName: string;
 }
 
 interface AuthContextValue {

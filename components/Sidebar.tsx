@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { X, SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, ChevronRight, Languages, FileText, Gauge, LogOut, ImageDown, HeartPulse, KeyRound, Plus } from "lucide-react";
+import { SquarePen, Folder, Search, PanelLeft, Pin, PinOff, Settings, User, MoreHorizontal, Pencil, Trash2, FileText, Gauge, Plus } from "lucide-react";
 import type { ChatMode, ChatSession } from "@/lib/types";
 import {
   deleteGuestSession,
@@ -17,7 +17,9 @@ import SearchModal from "./SearchModal";
 import AuthModal from "./AuthModal";
 import ConfirmModal from "./ConfirmModal";
 import ChangePasswordModal from "./ChangePasswordModal";
-import { useCompressImages, useHealthMode } from "@/lib/prefs";
+import AccountSettingsModal from "./AccountSettingsModal";
+import SystemSettingsModal from "./SystemSettingsModal";
+import { useCompressImages, useHealthMode, useThemeMode } from "@/lib/prefs";
 import { SESSIONS_CHANGED_EVENT } from "@/lib/sessionTitle";
 import { useAuth } from "@/lib/authContext";
 import { resetGuestDataForFreshVisit } from "@/lib/visitorIntent";
@@ -71,12 +73,14 @@ export default function Sidebar() {
   const [healthCollapsed, setHealthCollapsed] = useState(false);
   const [generalCollapsed, setGeneralCollapsed] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
   const [deleteDataOpen, setDeleteDataOpen] = useState(false);
   const [clearAccountDataOpen, setClearAccountDataOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [compressImages, setCompressImages] = useCompressImages();
   const [healthMode, setHealthMode] = useHealthMode();
+  const [themeMode, setThemeMode] = useThemeMode();
   const [menuFor, setMenuFor] = useState<{
     id: string;
     top: number;
@@ -132,15 +136,16 @@ export default function Sidebar() {
   }, []);
 
   useEffect(() => {
-    if (!settingsOpen) return;
+    if (!settingsOpen && !accountSettingsOpen) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       event.stopImmediatePropagation();
       setSettingsOpen(false);
+      setAccountSettingsOpen(false);
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [settingsOpen]);
+  }, [settingsOpen, accountSettingsOpen]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -275,6 +280,7 @@ export default function Sidebar() {
       window.dispatchEvent(new CustomEvent("inschat-records-changed"));
       setClearAccountDataOpen(false);
       setSettingsOpen(false);
+      setAccountSettingsOpen(false);
       if (currentSession) router.replace("/");
     } catch {}
   };
@@ -585,12 +591,24 @@ export default function Sidebar() {
       <div className="sidebar-foot">
         {user ? (
           <div className="account-row">
-            <span className="avatar">{user.username.charAt(0).toUpperCase()}</span>
-            <span className="account-name">{user.username}</span>
+            <button
+              type="button"
+              className="account-identity"
+              onClick={() => setAccountSettingsOpen(true)}
+              aria-label={t["settings.accountTitle"]}
+            >
+              <span className="avatar">{user.displayName.charAt(0).toUpperCase()}</span>
+              <span className="account-identity-copy">
+                <span className="account-name">{user.displayName}</span>
+              </span>
+            </button>
             <button
               type="button"
               className="settings-button"
-              onClick={() => setSettingsOpen(true)}
+              onClick={() => {
+                setAccountSettingsOpen(false);
+                setSettingsOpen(true);
+              }}
               aria-label={t["nav.settings"]}
             >
               <Settings size={20} />
@@ -612,7 +630,10 @@ export default function Sidebar() {
             <button
               type="button"
               className="settings-button"
-              onClick={() => setSettingsOpen(true)}
+              onClick={() => {
+                setAccountSettingsOpen(false);
+                setSettingsOpen(true);
+              }}
               aria-label={t["nav.settings"]}
             >
               <Settings size={20} />
@@ -632,136 +653,37 @@ export default function Sidebar() {
       }}
     />
     {settingsOpen && (
-      <>
-        <div
-          className="settings-backdrop"
-          onClick={() => setSettingsOpen(false)}
-          aria-hidden="true"
-        />
-        <div className="settings-modal" role="dialog" aria-modal="true">
-          <div className="settings-head">
-            <span className="settings-title">{t["settings.title"]}</span>
-            <button
-              type="button"
-              className="settings-close"
-              onClick={() => setSettingsOpen(false)}
-              aria-label={t["actions.cancel"]}
-            >
-              <X size={16} />
-            </button>
-          </div>
-          <label className="settings-row">
-            <span className="settings-row-icon">
-              <Languages size={16} />
-            </span>
-            <span className="settings-label">{t["settings.language"]}</span>
-            <select
-              className="settings-select"
-              value={lang}
-              onChange={(event) => setUiLang(event.target.value as "zh" | "en")}
-            >
-              <option value="zh">中文</option>
-              <option value="en">English</option>
-            </select>
-          </label>
-          <label className="settings-row">
-            <span className={`settings-row-icon${healthMode ? " health-mode-icon" : ""}`}>
-              <HeartPulse size={16} />
-            </span>
-            <span className="settings-label">{t["settings.healthMode"]}</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={healthMode}
-              className={`switch${healthMode ? " on" : ""}`}
-              onClick={() => setHealthMode(!healthMode)}
-              aria-label={t["settings.healthMode"]}
-            >
-              <span className="switch-knob" />
-            </button>
-          </label>
-          {authChecked && user && (
-            <label className="settings-row">
-              <span className="settings-row-icon">
-                <ImageDown size={16} />
-              </span>
-              <span className="settings-label">{t["settings.compressImages"]}</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={compressImages}
-                className={`switch${compressImages ? " on" : ""}`}
-                onClick={() => setCompressImages(!compressImages)}
-                aria-label={t["settings.compressImages"]}
-              >
-                <span className="switch-knob" />
-              </button>
-            </label>
-          )}
-          {user && (
-            <button
-              type="button"
-              className="settings-row settings-link"
-              onClick={() => {
-                setSettingsOpen(false);
-                setChangePasswordOpen(true);
-              }}
-            >
-              <span className="settings-row-icon">
-                <KeyRound size={16} />
-              </span>
-              <span className="settings-label">{t["settings.changePassword"]}</span>
-              <ChevronRight size={16} />
-            </button>
-          )}
-          {user && (
-            <button
-              type="button"
-              className="settings-row settings-link"
-              onClick={() => {
-                setSettingsOpen(false);
-                void logout();
-              }}
-            >
-              <span className="settings-row-icon">
-                <LogOut size={16} />
-              </span>
-              <span className="settings-label">{t["nav.signOut"]}</span>
-              <ChevronRight size={16} />
-            </button>
-          )}
-          {user && (
-            <div className="settings-row settings-danger">
-              <span className="settings-row-icon settings-danger-icon">
-                <Trash2 size={16} />
-              </span>
-              <span className="settings-label">{t["settings.clearAccountData"]}</span>
-              <button
-                type="button"
-                className="settings-danger-button"
-                onClick={() => setClearAccountDataOpen(true)}
-              >
-                {t["settings.clearAccountData"]}
-              </button>
-            </div>
-          )}
-          {!user && (
-            <div className="settings-row settings-danger">
-              <span className="settings-row-icon settings-danger-icon">
-                <Trash2 size={16} />
-              </span>
-              <span className="settings-label">{t["settings.deleteData"]}</span>
-              <button
-                type="button"
-                className="settings-danger-button"
-                onClick={() => setDeleteDataOpen(true)}
-              >
-                {t["settings.deleteData"]}
-              </button>
-            </div>
-          )}
-        </div>
-      </>
+      <SystemSettingsModal
+        t={t}
+        lang={lang}
+        onLangChange={setUiLang}
+        themeMode={themeMode}
+        onThemeChange={setThemeMode}
+        healthMode={healthMode}
+        onHealthModeChange={setHealthMode}
+        compressImages={compressImages}
+        onCompressImagesChange={setCompressImages}
+        signedIn={Boolean(user)}
+        onDeleteGuestData={() => setDeleteDataOpen(true)}
+        onClose={() => setSettingsOpen(false)}
+      />
+    )}
+    {accountSettingsOpen && user && (
+      <AccountSettingsModal
+        t={t}
+        username={user.username}
+        displayName={user.displayName}
+        onChangePassword={() => {
+          setAccountSettingsOpen(false);
+          setChangePasswordOpen(true);
+        }}
+        onSignOut={() => {
+          setAccountSettingsOpen(false);
+          void logout();
+        }}
+        onClearAccountData={() => setClearAccountDataOpen(true)}
+        onClose={() => setAccountSettingsOpen(false)}
+      />
     )}
     {deleteDataOpen && (
       <ConfirmModal

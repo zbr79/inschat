@@ -16,8 +16,38 @@
   --bubble-model: #f5f5f7;
   --bubble-model-text: #1d1d1f;
   --border: #d2d2d7;
+  --health-accent: #3b82f6;
+  --health-accent-strong: #2563eb;
+  --health-accent-soft: rgba(59, 130, 246, 0.12);
+  --health-accent-focus: #93c5fd;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
+}
+
+html.dark-mode {
+  --bg: #111214;
+  --bg-soft: #1b1d21;
+  --text: #f3f5f8;
+  --text-muted: #a5aab4;
+  --pill: #f3f5f8;
+  --pill-text: #111214;
+  --bubble-user: #27364d;
+  --bubble-user-text: #f3f7ff;
+  --bubble-model: #1b1d21;
+  --bubble-model-text: #f3f5f8;
+  --border: #383c45;
+  --health-accent: #7db7ff;
+  --health-accent-strong: #9bc7ff;
+  --health-accent-soft: rgba(125, 183, 255, 0.16);
+  --health-accent-focus: #b8d7ff;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html.dark-mode {
+  color-scheme: dark;
 }
 
 html,
@@ -256,19 +286,19 @@ body {
 
 .session-section.health .session-folder-icon,
 .session-section.health .session-section-head .sidebar-catalog-label {
-  color: #3b82f6;
+  color: var(--health-accent);
   font-weight: 650;
 }
 
 .session-section.health .section-new-chat {
-  color: #3b82f6;
+  color: var(--health-accent);
   background: transparent;
 }
 
 .session-section.health .section-new-chat:hover,
 .session-section.health .section-new-chat:focus-visible {
-  color: #2563eb;
-  background: rgba(59, 130, 246, 0.14);
+  color: var(--health-accent-strong);
+  background: var(--health-accent-soft);
 }
 
 .session-section.general .session-section-head > .catalog-toggle {
@@ -303,7 +333,7 @@ body {
   background:
     linear-gradient(var(--bg), var(--bg)) padding-box,
     linear-gradient(135deg, #a5e8ff, #5ec8f8, #4d7cff, #8b5cf6) border-box;
-  color: #3b82f6;
+  color: var(--health-accent);
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
@@ -314,7 +344,7 @@ body {
   background:
     linear-gradient(var(--bg), var(--bg)) padding-box,
     linear-gradient(135deg, #a5e8ff, #5ec8f8, #4d7cff, #8b5cf6) border-box;
-  color: #2563eb;
+  color: var(--health-accent-strong);
 }
 
 .sidebar-records-button .sidebar-label {
@@ -387,8 +417,8 @@ body {
 }
 
 .session-section.health .session-link.active {
-  background: rgba(59, 130, 246, 0.08);
-  box-shadow: inset 2px 0 0 #3b82f6;
+  background: var(--health-accent-soft);
+  box-shadow: inset 2px 0 0 var(--health-accent);
 }
 
 .session-delete {
@@ -2169,25 +2199,25 @@ span.conclude-rank-badge {
 }
 
 .input-row.mode-health {
-  border-color: #3b82f6;
+  border-color: var(--health-accent);
 }
 
 .input-row.mode-health:focus-within {
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.16);
+  box-shadow: 0 0 0 3px var(--health-accent-soft);
 }
 
 .input-row.mode-health .composer-attachment {
   background: transparent;
-  color: #2563eb;
+  color: var(--health-accent-strong);
 }
 
 .input-row.mode-health .composer-attachment:hover:not(:disabled) {
   background: transparent;
-  color: #1d4ed8;
+  color: var(--health-accent-strong);
 }
 
 .input-row.mode-health .composer-attachment:focus-visible {
-  outline: 2px solid #93c5fd;
+  outline: 2px solid var(--health-accent-focus);
   outline-offset: 2px;
 }
 
@@ -2237,12 +2267,12 @@ span.conclude-rank-badge {
 }
 
 .composer-mic {
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.08);
+  color: var(--health-accent);
+  background: var(--health-accent-soft);
 }
 
 .composer-mic:hover:not(:disabled) {
-  background: rgba(59, 130, 246, 0.14);
+  background: var(--health-accent-soft);
 }
 
 .composer-mic.recording {
@@ -2260,7 +2290,7 @@ span.conclude-rank-badge {
 .composer-mic.transcribing:disabled {
   position: relative;
   opacity: 1;
-  color: #2563eb;
+  color: var(--health-accent-strong);
   background: transparent;
   cursor: progress;
 }
@@ -2285,8 +2315,8 @@ span.conclude-rank-badge {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  border: 2px solid rgba(37, 99, 235, 0.2);
-  border-top-color: #2563eb;
+  border: 2px solid var(--health-accent-soft);
+  border-top-color: var(--health-accent-strong);
   animation: mic-ring-spin 0.9s linear infinite;
 }
 
@@ -2331,16 +2361,16 @@ span.conclude-rank-badge {
 }
 
 .input-row.mode-health .send-button {
-  background: #2563eb;
+  background: var(--health-accent-strong);
   color: #fff;
 }
 
 .input-row.mode-health .send-button:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: var(--health-accent);
 }
 
 .input-row.mode-health .send-button:focus-visible {
-  outline: 2px solid #93c5fd;
+  outline: 2px solid var(--health-accent-focus);
   outline-offset: 2px;
 }
 
@@ -2756,7 +2786,7 @@ span.conclude-rank-badge {
 
 .glucose-line {
   fill: none;
-  stroke: #2563eb;
+  stroke: var(--health-accent-strong);
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.5;
@@ -4900,8 +4930,8 @@ span.conclude-rank-badge {
 .record-edit-field textarea:focus,
 .record-edit-item input:focus,
 .record-edit-meal input:focus {
-  outline: 2px solid rgba(37, 99, 235, 0.25);
-  border-color: #2563eb;
+  outline: 2px solid var(--health-accent-soft);
+  border-color: var(--health-accent-strong);
 }
 
 .record-edit-actions {
@@ -4928,8 +4958,8 @@ span.conclude-rank-badge {
 }
 
 .record-edit-save {
-  border: 1px solid #2563eb;
-  background: #2563eb;
+  border: 1px solid var(--health-accent-strong);
+  background: var(--health-accent-strong);
   color: #fff;
 }
 
@@ -5944,6 +5974,33 @@ span.conclude-rank-badge {
   border-radius: 12px;
 }
 
+.account-identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-identity:hover .account-name {
+  color: var(--health-accent);
+}
+
+.account-identity-copy {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 .avatar {
   width: 31px;
   height: 31px;
@@ -5959,12 +6016,21 @@ span.conclude-rank-badge {
 }
 
 .account-name {
-  flex: 1;
   min-width: 0;
   font-size: 14px;
   font-weight: 500;
   overflow: hidden;
   text-overflow: clip;
+  white-space: nowrap;
+}
+
+.account-handle {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -6132,6 +6198,93 @@ span.conclude-rank-badge {
   font-weight: 600;
 }
 
+.settings-account-name {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.account-settings-profile {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.account-settings-avatar {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--pill);
+  color: var(--pill-text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.account-settings-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.account-settings-display-row {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.account-settings-display-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-settings-display-button:hover {
+  color: var(--health-accent);
+}
+
+.account-settings-display-input {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 7px;
+  border: 1px solid var(--health-accent);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  outline: none;
+}
+
+.account-settings-handle {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.settings-inline-error {
+  margin: 6px 0 0;
+  color: #dc2626;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .settings-close {
   width: 26px;
   height: 26px;
@@ -6178,8 +6331,8 @@ span.conclude-rank-badge {
 }
 
 .settings-row-icon.health-mode-icon {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+  background: var(--health-accent-soft);
+  color: var(--health-accent);
 }
 
 .settings-select {
@@ -7195,7 +7348,7 @@ span.conclude-rank-badge {
 /* conclude ready: same gradient border as the active health toggle, static
    (no breathing animation — it would flash forever once restored) */
 .conclude-button.ready {
-  color: #3b82f6;
+  color: var(--health-accent);
   border: 2px solid transparent;
   background:
     linear-gradient(var(--bg), var(--bg)) padding-box,
@@ -7541,5 +7694,48 @@ body.health-intro-open {
   .standalone-mode .review-coach {
     bottom: 16px;
   }
+}
+
+html.dark-mode .menu-button,
+html.dark-mode .mobile-page-action {
+  background: var(--bg-soft);
+  color: var(--text);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+}
+
+html.dark-mode .sidebar {
+  background: var(--bg);
+}
+
+html.dark-mode .date-picker-modal,
+html.dark-mode .manual-record-modal,
+html.dark-mode .conclude-modal,
+html.dark-mode .conclude-time-modal,
+html.dark-mode .full-day-edit-modal,
+html.dark-mode .record-edit-modal,
+html.dark-mode .search-modal,
+html.dark-mode .health-intro-card {
+  border-color: var(--border);
+  background: var(--bg);
+}
+
+html.dark-mode .auth-card {
+  background: var(--bg-soft);
+}
+
+html.dark-mode .input-row.mode-health .send-button,
+html.dark-mode .record-edit-save {
+  color: #102039;
+}
+
+html.dark-mode input,
+html.dark-mode select,
+html.dark-mode textarea {
+  color-scheme: dark;
+}
+
+html.dark-mode .usage-fill.warn,
+html.dark-mode .warn-card {
+  background-color: #4a211f;
 }
 

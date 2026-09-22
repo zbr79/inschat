@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import Sidebar from "@/components/Sidebar";
 import GuestGuides from "@/components/GuestGuides";
 import StandaloneMode from "@/components/StandaloneMode";
+import ThemeMode from "@/components/ThemeMode";
 import ToastProvider from "@/components/ToastProvider";
 import { AuthProvider } from "@/lib/authContext";
 import "./globals.css";
@@ -31,14 +33,31 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: "#1d1d1f",
-  colorScheme: "light",
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body>
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(() => {
+              try {
+                const mode = localStorage.getItem("inschat_theme");
+                const dark = mode === "dark" ||
+                  (mode !== "light" &&
+                    window.matchMedia("(prefers-color-scheme: dark)").matches);
+                document.documentElement.classList.toggle("dark-mode", dark);
+                document.documentElement.style.colorScheme = dark ? "dark" : "light";
+              } catch {}
+            })();`,
+          }}
+        />
         <StandaloneMode />
+        <ThemeMode />
         <AuthProvider>
           <ToastProvider />
           <Suspense>
