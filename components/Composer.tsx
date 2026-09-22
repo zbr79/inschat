@@ -89,6 +89,14 @@ export default function Composer({
     input.style.height = `${Math.min(input.scrollHeight, 160)}px`;
   }, [text]);
 
+  useEffect(() => {
+    if (!sending) return;
+    setImages([]);
+    setImageNames([]);
+    setDocuments([]);
+    setImageError(null);
+  }, [sending]);
+
   const insertAtCaret = (snippet: string): string => {
     const cleaned = snippet.trim();
     if (!cleaned) return textRef.current;
