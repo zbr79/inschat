@@ -6130,3 +6130,87 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Keeping the Records page identity below the global mobile navigation was
   the clearest mobile hierarchy.
 
+## 2026-09-21 — Add light and dark theme preferences
+
+### Solved
+- Added System, Light, and Dark theme choices to Settings.
+- Persisted the theme preference and applied it before the page paints.
+- Added dark theme color tokens for surfaces, text, borders, bubbles, and
+  controls.
+- Kept Health mode blue as a semantic accent and lightened it for dark
+  surfaces.
+- Added a system-theme change listener so System mode follows the device.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Reusing the light-mode Health blue unchanged on dark surfaces was the best
+  contrast treatment.
+
+## 2026-09-21 — Separate account and system settings
+
+### Solved
+- The signed-in account identity now opens Account settings.
+- The gear now opens System settings.
+- Account settings contain Change password, Sign out, and account data
+  deletion.
+- System settings contain language, theme, Health mode, and signed-in image
+  compression controls.
+- Guest data deletion remains available in System settings.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Keeping account actions and system preferences in one gear modal was the
+  clearest settings hierarchy.
+
+## 2026-09-21 — Close the password modal after success
+
+### Solved
+- The Change password modal now closes immediately after the server confirms
+  the password update.
+- Validation and API error messages still keep the modal open for correction.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Leaving a success message open inside the password form was the clearest
+  completion flow.
+
+## 2026-09-21 — Add persisted account display names
+
+### Solved
+- Added an optional persisted `displayName` field with username fallback for
+  existing accounts.
+- Added authenticated profile updates with trimming and a 64-character limit.
+- Added inline display-name editing with blur and Enter-to-save behavior.
+- Added localized validation/error text and a shared success toast.
+- Updated auth responses and `/api/auth/me` to expose the display name and
+  `@username` handle.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Requiring a separate save button and a permanent display-name form row was
+  the clearest account-settings interaction.
+
+## 2026-09-21 — Refine account identity display
+
+### Solved
+- Removed the `@username` handle from the bottom-left sidebar identity.
+- Kept the login handle visible inside Account Settings.
+- Confirmed `/api/auth/profile` is registered for `PATCH`; unauthenticated
+  requests correctly return `401`.
+- Updated the InsChat Nginx auth allowlist to pass `PATCH` requests through
+  to Next.js.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The profile backend was missing; the route is present and protected.
+

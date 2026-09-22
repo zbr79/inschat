@@ -4,6 +4,7 @@ import { getDb } from "./db";
 export interface UserDoc {
   _id?: ObjectId;
   username: string;
+  displayName?: string;
   passwordHash: string;
   salt: string;
   createdAt: Date;
@@ -42,13 +43,26 @@ export async function updateUserPassword(
   return result.matchedCount > 0;
 }
 
+export async function updateUserDisplayName(
+  userId: string,
+  displayName: string
+): Promise<boolean> {
+  if (!ObjectId.isValid(userId)) return false;
+  const db = await getDb();
+  const result = await db.collection<UserDoc>("users").updateOne(
+    { _id: new ObjectId(userId) },
+    { $set: { displayName } }
+  );
+  return result.matchedCount > 0;
+}
+
 export async function insertUser(input: {
   username: string;
   passwordHash: string;
   salt: string;
 }): Promise<UserDoc> {
   const db = await getDb();
-  const doc: UserDoc = { ...input, createdAt: new Date() };
+  const doc: UserDoc = { ...input, displayName: "", createdAt: new Date() };
   const result = await db.collection<UserDoc>("users").insertOne(doc);
   const user: UserDoc = { ...doc, _id: result.insertedId };
   // The first user claims all pre-account data (sessions/messages/records),

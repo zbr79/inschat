@@ -21,14 +21,12 @@ export default function ChangePasswordModal({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (busy) return;
     setBusy(true);
     setError(null);
-    setSuccess(false);
     try {
       const response = await fetch("/api/auth/change-password", {
         method: "POST",
@@ -60,7 +58,7 @@ export default function ChangePasswordModal({
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setSuccess(true);
+      onClose();
     } catch (submitError) {
       setError(
         submitError instanceof Error
@@ -118,11 +116,6 @@ export default function ChangePasswordModal({
               required
             />
             {error && <p className="conclusion-error">{error}</p>}
-            {success && (
-              <p className="change-password-success" role="status">
-                {t["settings.passwordUpdated"]}
-              </p>
-            )}
             <div className="change-password-actions">
               <button type="button" className="auth-toggle" onClick={onClose}>
                 {t["actions.cancel"]}

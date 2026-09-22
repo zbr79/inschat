@@ -6,6 +6,7 @@ import {
   findUserByUsername,
   insertAuthToken,
   insertUser,
+  updateUserDisplayName,
   updateUserPassword,
   type UserDoc,
 } from "./accounts";
@@ -65,6 +66,13 @@ export async function changeUserPassword(
   return updateUserPassword(userId, hashPassword(newPassword, salt), salt);
 }
 
+export async function changeUserDisplayName(
+  userId: string,
+  displayName: string
+): Promise<boolean> {
+  return updateUserDisplayName(userId, displayName);
+}
+
 export async function issueToken(userId: string): Promise<string> {
   const token = crypto.randomBytes(32).toString("hex");
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -98,6 +106,7 @@ function tokenFromRequest(req: Request): string | null {
 export interface AuthUser {
   _id: string;
   username: string;
+  displayName: string;
 }
 
 export async function getUserFromRequest(req: Request): Promise<AuthUser | null> {
@@ -106,7 +115,11 @@ export async function getUserFromRequest(req: Request): Promise<AuthUser | null>
   const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
   const user = await findUserByTokenHash(tokenHash);
   if (!user || !user._id) return null;
-  return { _id: user._id.toString(), username: user.username };
+  return {
+    _id: user._id.toString(),
+    username: user.username,
+    displayName: user.displayName?.trim() || user.username,
+  };
 }
 
 export async function requireUser(req: Request): Promise<AuthUser | Response> {
