@@ -6272,3 +6272,18 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Reusing the mobile bottom-aligned empty-chat composer layout on PC was the
   clearest presentation.
 
+## 2026-09-21 — Clear attachments when sending begins
+
+### Solved
+- Composer image and document previews now clear when the parent enters the
+  sending state, before the response stream completes.
+- This makes Chrome on iOS match Safari while retaining attachments when a
+  submission is blocked by the Health intro.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Waiting for the full `onSend` promise to resolve was reliable across mobile
+  browsers for clearing attachment previews.
+
