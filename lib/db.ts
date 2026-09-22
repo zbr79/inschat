@@ -583,6 +583,7 @@ interface SessionDoc {
   updatedAt: Date;
   chatMode?: ChatMode;
   pinned?: boolean;
+  temporary?: boolean;
   conclusion?: SessionConclusion | null;
   recordId?: string | null;
 }
@@ -658,6 +659,7 @@ function toChatSession(doc: SessionDoc): ChatSession {
     updatedAt: doc.updatedAt.toISOString(),
     chatMode: doc.chatMode === "health" ? "health" : "general",
     pinned: doc.pinned,
+    temporary: doc.temporary,
   };
 }
 
@@ -683,7 +685,8 @@ function toStoredMessage(doc: MessageDoc): StoredMessage {
 export async function insertSession(
   userId: string,
   title: string,
-  chatMode: ChatMode
+  chatMode: ChatMode,
+  temporary = false
 ): Promise<ChatSession> {
   const db = await getDb();
   const now = new Date();
@@ -693,6 +696,7 @@ export async function insertSession(
     createdAt: now,
     updatedAt: now,
     chatMode,
+    temporary,
   };
   const result = await db.collection<SessionDoc>("sessions").insertOne(doc);
   return toChatSession({ ...doc, _id: result.insertedId });
@@ -1059,7 +1063,7 @@ export async function setSessionTitle(
     .collection<SessionDoc>("sessions")
     .updateOne(
       { _id: new ObjectId(id), userId: new ObjectId(userId) },
-      { $set: { title, updatedAt: new Date() } }
+      { $set: { title, temporary: false, updatedAt: new Date() } }
     );
   return result.matchedCount > 0;
 }
@@ -1089,6 +1093,30 @@ export async function deleteSession(userId: string, id: string): Promise<boolean
   const result = await db
     .collection<SessionDoc>("sessions")
     .deleteOne({ _id: new ObjectId(id), userId: new ObjectId(userId) });
+  return result.deletedCount > 0;
+}
+
+export async function deleteTemporarySession(
+  userId: string,
+  id: string
+): Promise<boolean> {
+  if (!ObjectId.isValid(id)) return false;
+  const db = await getDb();
+  const sessionId = new ObjectId(id);
+  const session = await db.collection<SessionDoc>("sessions").findOne(
+    { _id: sessionId, userId: new ObjectId(userId), temporary: true },
+    { projection: { _id: 1 } }
+  );
+  if (!session) return false;
+  const messageCount = await db.collection<MessageDoc>("messages").countDocuments({
+    sessionId,
+  });
+  if (messageCount > 0) return false;
+  const result = await db.collection<SessionDoc>("sessions").deleteOne({
+    _id: sessionId,
+    userId: new ObjectId(userId),
+    temporary: true,
+  });
   return result.deletedCount > 0;
 }
 

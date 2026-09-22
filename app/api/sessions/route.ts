@@ -25,6 +25,7 @@ export async function POST(req: Request) {
 
   let title: string;
   let chatMode: ChatMode = "general";
+  let temporary = false;
   try {
     const body: unknown = await req.json();
     const rawTitle =
@@ -54,12 +55,25 @@ export async function POST(req: Request) {
       }
       chatMode = rawChatMode;
     }
+    const rawTemporary =
+      body && typeof body === "object"
+        ? (body as { temporary?: unknown }).temporary
+        : undefined;
+    if (rawTemporary !== undefined) {
+      if (typeof rawTemporary !== "boolean") {
+        return Response.json(
+          { error: '"temporary" must be a boolean.' },
+          { status: 400 }
+        );
+      }
+      temporary = rawTemporary;
+    }
   } catch {
     return Response.json({ error: "Invalid request body." }, { status: 400 });
   }
 
   try {
-    const session = await insertSession(auth._id, title, chatMode);
+    const session = await insertSession(auth._id, title, chatMode, temporary);
     return Response.json({ session }, { status: 201 });
   } catch (error) {
     const message =

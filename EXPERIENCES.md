@@ -6089,3 +6089,25 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - The Health new-chat button needed a filled background before interaction.
 
+## 2026-09-21 — Show temporary chats before the first message
+
+### Solved
+- Create a temporary “New chat” session when the chat page opens or a new
+  chat is selected, for both guest and signed-in users.
+- Promote the temporary session immediately when the first message is sent,
+  preserving the existing general-chat title rule and Health title derivation.
+- Remove an unsent temporary session when the user navigates away or switches
+  to another chat.
+- Added a persisted temporary-session flag to guest and account session data.
+- Added page-hide cleanup so a full browser navigation also removes an
+  unsent temporary session.
+- Made account-side temporary cleanup refuse to delete sessions that already
+  contain a message.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Creating a session only after the first message cannot support showing the
+  current empty chat in the sidebar.
+
