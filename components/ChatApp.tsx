@@ -17,7 +17,11 @@ import type {
 } from "@/lib/types";
 import { ModelMarkerParser } from "@/lib/markers";
 import { createReportEvent, mergeReportEvents } from "@/lib/reportEvents";
-import { maybeRenameHealthSession } from "@/lib/sessionTitle";
+import {
+  maybeRenameHealthSession,
+  notifySessionsChanged,
+  persistSessionTitle,
+} from "@/lib/sessionTitle";
 import {
   cleanDishNamesInReply,
   sanitizeConcludeMeals,
@@ -28,6 +32,7 @@ import {
   addGuestRecord,
   appendGuestMessage,
   createGuestSession,
+  deleteGuestSession,
   getGuestSession,
   startGuestPendingMessage,
   setGuestConclusion,
@@ -528,8 +533,45 @@ export default function ChatApp() {
   const handledMsgRef = useRef<string | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const sessionTitleRef = useRef<string | null>(null);
+  const temporarySessionRef = useRef<{
+    id: string;
+    authed: boolean;
+    committed: boolean;
+  } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [freeNotice, setFreeNotice] = useState(false);
+
+  const discardTemporarySession = useCallback(() => {
+    const temporary = temporarySessionRef.current;
+    if (!temporary || temporary.committed) return;
+    temporarySessionRef.current = null;
+    if (temporary.authed) {
+      void fetch(`/api/sessions/${temporary.id}`, {
+        method: "DELETE",
+        headers: { "X-Temporary-Session": "1" },
+        keepalive: true,
+      }).catch(() => {});
+    } else {
+      const session = getGuestSession(temporary.id);
+      if (session?.temporary && session.messages.length === 0) {
+        deleteGuestSession(temporary.id);
+        notifySessionsChanged();
+      }
+    }
+  }, []);
+
+  useEffect(
+    () => () => {
+      discardTemporarySession();
+    },
+    [discardTemporarySession]
+  );
+
+  useEffect(() => {
+    const onPageHide = () => discardTemporarySession();
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, [discardTemporarySession]);
 
   // Free-model notice: centered gray text, auto-dismisses after a few seconds.
   useEffect(() => {
@@ -711,6 +753,9 @@ export default function ChatApp() {
   useEffect(() => {
     if (isAuthed === null) return;
     const id = sessionParam;
+    if (id && sessionIdRef.current && sessionIdRef.current !== id) {
+      discardTemporarySession();
+    }
     if (id && sessionIdRef.current === id) {
       // Same session we're already viewing (router.replace from send()) —
       // keep live state, don't reset/refetch.
@@ -722,11 +767,69 @@ export default function ChatApp() {
     setConcludeSaved(false);
     recordIdRef.current = null;
     if (!id) {
+      discardTemporarySession();
       sessionIdRef.current = null;
       sessionTitleRef.current = null;
       setChatMode(requestedChatMode);
-      setLoading(false);
-      return;
+      setLoading(true);
+      let active = true;
+      const createTemporary = async () => {
+        const title = t["nav.newChat"];
+        if (!isAuthed) {
+          const session = createGuestSession(title, requestedChatMode, true);
+          if (!active) {
+            deleteGuestSession(session.id);
+            return;
+          }
+          temporarySessionRef.current = {
+            id: session.id,
+            authed: false,
+            committed: false,
+          };
+          sessionIdRef.current = session.id;
+          sessionTitleRef.current = title;
+          notifySessionsChanged();
+          router.replace(`/?session=${session.id}`);
+          return;
+        }
+        try {
+          const response = await fetch("/api/sessions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              title,
+              chatMode: requestedChatMode,
+              temporary: true,
+            }),
+          });
+          const body = (await response.json()) as {
+            session?: { _id?: string; chatMode?: ChatMode };
+          };
+          if (!response.ok || !body.session?._id) {
+            throw new Error("Could not create temporary session.");
+          }
+          if (!active) {
+            await fetch(`/api/sessions/${body.session._id}`, { method: "DELETE" });
+            return;
+          }
+          temporarySessionRef.current = {
+            id: body.session._id,
+            authed: true,
+            committed: false,
+          };
+          sessionIdRef.current = body.session._id;
+          sessionTitleRef.current = title;
+          setChatMode(body.session.chatMode === "health" ? "health" : "general");
+          notifySessionsChanged();
+          router.replace(`/?session=${body.session._id}`);
+        } catch {
+          if (active) setLoading(false);
+        }
+      };
+      void createTemporary();
+      return () => {
+        active = false;
+      };
     }
     if (isAuthed) {
       sessionIdRef.current = id;
@@ -738,7 +841,7 @@ export default function ChatApp() {
         })
         .then(
           (body: {
-            session?: { title?: string; chatMode?: ChatMode };
+            session?: { title?: string; chatMode?: ChatMode; temporary?: boolean };
             messages: {
               role: string;
               text: string;
@@ -757,6 +860,9 @@ export default function ChatApp() {
           }) => {
             if (sessionIdRef.current !== id) return;
             sessionTitleRef.current = body.session?.title ?? null;
+            temporarySessionRef.current = body.session?.temporary
+              ? { id, authed: true, committed: false }
+              : null;
             setChatMode(body.session?.chatMode === "health" ? "health" : "general");
             return Promise.all(body.messages.map(async (message) => {
                 const status = normalizeUiStatus(
@@ -848,6 +954,9 @@ export default function ChatApp() {
       if (local) {
         sessionIdRef.current = id;
         sessionTitleRef.current = local.title;
+        temporarySessionRef.current = local.temporary
+          ? { id, authed: false, committed: false }
+          : null;
         setChatMode(local.chatMode);
         Promise.all(
           local.messages.map(async (message, index) => {
@@ -1006,6 +1115,8 @@ export default function ChatApp() {
     startResume,
     startGuestResume,
     stopResume,
+    discardTemporarySession,
+    t,
   ]);
 
   // Usage-limit banner removed (2026-09-02): exhaustion now falls back to
@@ -1402,7 +1513,27 @@ export default function ChatApp() {
         if (sessionId) {
           sessionIdRef.current = sessionId;
           sessionTitleRef.current = createdTitle;
+          notifySessionsChanged();
           router.replace(`/?session=${sessionId}`);
+        }
+      }
+
+      const temporary = temporarySessionRef.current;
+      if (sessionId && temporary?.id === sessionId && !temporary.committed) {
+        temporary.committed = true;
+        const promotedTitle =
+          chatMode === "health"
+            ? t["nav.newChat"]
+            : titleFrom(trimmed, t["nav.newChat"]);
+        try {
+          const saved = await persistSessionTitle({
+            sessionId,
+            title: promotedTitle,
+            authed,
+          });
+          if (saved) sessionTitleRef.current = promotedTitle;
+        } catch {
+          // A title update must not prevent the first message from sending.
         }
       }
 

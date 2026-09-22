@@ -103,6 +103,7 @@ export interface ChatSession {
   updatedAt: string;
   chatMode: ChatMode;
   pinned?: boolean;
+  temporary?: boolean;
 }
 
 export interface StoredMessage {

@@ -1,5 +1,6 @@
 import {
   deleteSession,
+  deleteTemporarySession,
   getSessionWithMessages,
   setSessionConclusion,
   setSessionPinned,
@@ -203,8 +204,12 @@ export async function DELETE(
   if (auth instanceof Response) return auth;
   const { id } = await params;
   try {
-    const deleted = await deleteSession(auth._id, id);
+    const temporaryOnly = req.headers.get("x-temporary-session") === "1";
+    const deleted = temporaryOnly
+      ? await deleteTemporarySession(auth._id, id)
+      : await deleteSession(auth._id, id);
     if (!deleted) {
+      if (temporaryOnly) return Response.json({ ok: true, deleted: false });
       return Response.json({ error: "Session not found." }, { status: 404 });
     }
     return Response.json({ ok: true });

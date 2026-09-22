@@ -34,6 +34,7 @@ export interface GuestSession {
   messages: GuestMessage[];
   chatMode: ChatMode;
   pinned?: boolean;
+  temporary?: boolean;
   conclusion?: SessionConclusion | null;
   recordId?: string | null;
 }
@@ -126,13 +127,18 @@ export function getGuestSession(id: string): GuestSession | null {
   return readGuestSessions().find((s) => s.id === id) ?? null;
 }
 
-export function createGuestSession(title: string, chatMode: ChatMode): GuestSession {
+export function createGuestSession(
+  title: string,
+  chatMode: ChatMode,
+  temporary = false
+): GuestSession {
   const session: GuestSession = {
     id: newId(),
     title,
     updatedAt: Date.now(),
     messages: [],
     chatMode,
+    temporary,
   };
   writeSessions([session, ...readGuestSessions()]);
   return session;
@@ -209,6 +215,7 @@ export function renameGuestSession(sessionId: string, title: string): void {
   const target = sessions.find((session) => session.id === sessionId);
   if (!target) return;
   target.title = title;
+  target.temporary = false;
   target.updatedAt = Date.now();
   writeSessions(sessions);
 }
