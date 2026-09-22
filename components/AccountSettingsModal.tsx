@@ -173,7 +173,7 @@ export default function AccountSettingsModal({
         </button>
         <button
           type="button"
-          className="settings-row settings-link"
+          className="settings-row settings-link settings-signout"
           onClick={onSignOut}
         >
           <span className="settings-row-icon">

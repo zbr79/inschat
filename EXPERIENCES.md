@@ -6214,3 +6214,31 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - The profile backend was missing; the route is present and protected.
 
+## 2026-09-21 — Apply Health styling to account identity
+
+### Solved
+- The signed-in sidebar display name now uses the Health blue accent while
+  Health mode is enabled.
+- The sidebar avatar now uses a Health blue background with a contrasting
+  initial instead of the neutral black-and-white treatment.
+- Dark mode uses a darker avatar text color when needed for contrast.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The account identity needed to remain neutral while Health mode was active.
+
+## 2026-09-21 — Style account sign-out as a danger action
+
+### Solved
+- Styled the Account Settings sign-out row with red text, icon, and hover
+  treatment.
+- Kept Change password and other account actions neutral.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The sign-out action needed to share the neutral styling of account settings.
+
