@@ -100,3 +100,51 @@ export function setGlucoseRange(range: TimelineRange): void {
     window.localStorage.setItem(GLUCOSE_RANGE_KEY, range);
   } catch {}
 }
+
+export type ThemeMode = "system" | "light" | "dark";
+
+const THEME_KEY = "inschat_theme";
+const THEME_EVENT = "inschat-theme";
+
+export function getThemeMode(): ThemeMode {
+  if (typeof window === "undefined") return "system";
+  try {
+    const value = window.localStorage.getItem(THEME_KEY);
+    if (value === "light" || value === "dark") return value;
+  } catch {}
+  return "system";
+}
+
+export function applyThemeMode(mode: ThemeMode): void {
+  if (typeof document === "undefined") return;
+  const systemDark =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const dark = mode === "dark" || (mode === "system" && systemDark);
+  document.documentElement.classList.toggle("dark-mode", dark);
+  document.documentElement.style.colorScheme = dark ? "dark" : "light";
+}
+
+export function setThemeMode(mode: ThemeMode): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (mode === "system") window.localStorage.removeItem(THEME_KEY);
+    else window.localStorage.setItem(THEME_KEY, mode);
+  } catch {}
+  applyThemeMode(mode);
+  window.dispatchEvent(new CustomEvent(THEME_EVENT, { detail: mode }));
+}
+
+export function useThemeMode(): [ThemeMode, (mode: ThemeMode) => void] {
+  const [mode, setMode] = useState<ThemeMode>(() => getThemeMode());
+  useEffect(() => {
+    const onTheme = (event: Event) => {
+      const next = (event as CustomEvent<ThemeMode>).detail;
+      setMode(next);
+      applyThemeMode(next);
+    };
+    window.addEventListener(THEME_EVENT, onTheme);
+    return () => window.removeEventListener(THEME_EVENT, onTheme);
+  }, []);
+  return [mode, setThemeMode];
+}
