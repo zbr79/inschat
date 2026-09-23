@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { STR } from "@/lib/i18n";
+import { toastError } from "@/lib/toast";
 
 interface AuthResponse {
   error?: string;
@@ -72,7 +73,15 @@ export default function AuthForm({
   };
 
   const switchLabel = mode === "login" ? t["auth.noAccount"] : t["auth.haveAccount"];
-  const switchContent = switchHref ? (
+  const switchContent = mode === "login" ? (
+    <button
+      type="button"
+      className="auth-toggle"
+      onClick={() => toastError(t["auth.signupDisabled"])}
+    >
+      {switchLabel}
+    </button>
+  ) : switchHref ? (
     <Link className="auth-toggle" href={switchHref}>
       {switchLabel}
     </Link>
@@ -81,7 +90,7 @@ export default function AuthForm({
       type="button"
       className="auth-toggle"
       onClick={() => {
-        onModeChange?.(mode === "login" ? "register" : "login");
+        onModeChange?.("login");
         setError(null);
       }}
     >

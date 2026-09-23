@@ -29,7 +29,7 @@ export function toastError(message: string) {
 }
 
 export function toastInfo(message: string) {
-  showToast(() => toast(message));
+  showToast(() => toast(message, { className: "toast toast-info" }));
 }
 
 export function toastWarning(message: string) {

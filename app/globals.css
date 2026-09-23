@@ -7825,3 +7825,32 @@ html.dark-mode .warn-card {
   background-color: #4a211f;
 }
 
+/* Baizhan toast.css visual treatment with content-sized cards. */
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: fit-content;
+  min-width: 0;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #f7f7f7;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+
+.toast-success {
+  background: #dff7e6;
+}
+
+.toast-error {
+  background: #f9d6d5;
+}
+
+.toast-info {
+  background: #e3f2ff;
+}
