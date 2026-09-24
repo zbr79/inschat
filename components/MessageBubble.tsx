@@ -12,6 +12,7 @@ import type { ChatImage, ConcludeResult } from "@/lib/types";
 import { formatElapsed } from "@/lib/format";
 import { STR, useUiLang } from "@/lib/i18n";
 import { modelLabel } from "@/lib/modelLabels";
+import { useFollowLatestScroll } from "./useFollowLatestScroll";
 
 interface Message {
   id: number;
@@ -106,29 +107,12 @@ export default function MessageBubble({
   onEditSave?: (id: number) => void;
   onEditCancel?: () => void;
 }) {
-  const endRef = useRef<HTMLDivElement>(null);
-  const scrollFrameRef = useRef<number | null>(null);
+  const endRef = useFollowLatestScroll(messages);
   const editInputRef = useRef<HTMLTextAreaElement>(null);
   const [viewer, setViewer] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const lang = useUiLang();
   const t = STR[lang];
-
-  useEffect(() => {
-    if (scrollFrameRef.current !== null) {
-      cancelAnimationFrame(scrollFrameRef.current);
-    }
-    scrollFrameRef.current = requestAnimationFrame(() => {
-      scrollFrameRef.current = null;
-      endRef.current?.scrollIntoView({ behavior: "auto", block: "end" });
-    });
-    return () => {
-      if (scrollFrameRef.current !== null) {
-        cancelAnimationFrame(scrollFrameRef.current);
-        scrollFrameRef.current = null;
-      }
-    };
-  }, [messages]);
 
   useEffect(() => {
     const input = editInputRef.current;
