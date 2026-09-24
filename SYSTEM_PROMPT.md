@@ -27,7 +27,7 @@ Web search and web fetch are available on every text turn. Decide whether resear
 ## {早餐|午餐|晚餐|加餐}
 **{YYYY年M月D日} {凌晨|上午|中午|下午|晚上} {H:MM}**
 
-| 食物 | 升糖 |
+| 菜品 | 升糖 |
 |---|---|
 | 🟢 {食物} | 低 |
 | 🟡 {食物} | 中 |
