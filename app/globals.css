@@ -1573,7 +1573,8 @@ span.conclude-rank-badge {
 }
 
 .mobile-page-title,
-.mobile-page-action {
+.mobile-page-action,
+.mobile-report-slot {
   display: none;
 }
 
@@ -1692,6 +1693,33 @@ span.conclude-rank-badge {
   .mobile-page-action:hover,
   .mobile-page-action:focus-visible {
     background: var(--bg-soft);
+    outline: none;
+  }
+
+  .mobile-report-slot:has(> .conclude-button) {
+    width: 48px;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    flex: 0 0 48px;
+    pointer-events: auto;
+  }
+
+  .mobile-report-slot .conclude-button {
+    width: 48px;
+    height: 48px;
+    transform: none;
+  }
+
+  .mobile-report-slot .conclude-button svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .mobile-report-slot .conclude-button:hover:not(:disabled),
+  .mobile-report-slot .conclude-button:focus-visible {
     outline: none;
   }
 
@@ -2203,6 +2231,7 @@ span.conclude-rank-badge {
   align-items: flex-end;
   gap: 8px;
   position: relative;
+  -webkit-tap-highlight-color: transparent;
   background: var(--bg);
   border: 1px solid rgba(29, 29, 31, 0.14);
   border-radius: 24px;
@@ -2221,12 +2250,24 @@ span.conclude-rank-badge {
   transform: none;
 }
 
+@media (max-width: 640px) {
+  .composer-top-actions {
+    display: none;
+  }
+}
+
 .input-row.mode-health {
   border-color: var(--health-accent);
 }
 
 .input-row.mode-health:focus-within {
   box-shadow: 0 0 0 3px var(--health-accent-soft);
+}
+
+@media (max-width: 640px) {
+  .input-row.mode-health:focus-within {
+    box-shadow: none;
+  }
 }
 
 .input-row.mode-health .composer-attachment {
@@ -2247,6 +2288,7 @@ span.conclude-rank-badge {
 .input-row textarea {
   flex: 1;
   border: none;
+  -webkit-tap-highlight-color: transparent;
   background: transparent;
   resize: none;
   font-family: var(--font);
@@ -2470,9 +2512,35 @@ span.conclude-rank-badge {
   border-color: var(--text-muted);
 }
 
+.conclude-button.ready,
+.conclude-button.ready:hover:not(:disabled),
+.conclude-button.ready:active,
+.conclude-button.ready:focus-visible {
+  color: var(--health-accent);
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--bg), var(--bg)) padding-box,
+    linear-gradient(135deg, #a5e8ff, #5ec8f8, #4d7cff, #8b5cf6) border-box;
+  outline: none;
+}
+
+.conclude-button.ready {
+  animation: report-attention-pulse 2.6s ease-out 2;
+}
+
 .conclude-button:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+@keyframes report-attention-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--health-accent-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 7px transparent;
+  }
 }
 
 .conclude-button.concluding svg {
@@ -7439,16 +7507,6 @@ html.dark-mode .account-settings-avatar.health-mode-avatar {
 .composer textarea:disabled {
   cursor: not-allowed;
   opacity: 0.7;
-}
-
-/* conclude ready: same gradient border as the active health toggle, static
-   (no breathing animation — it would flash forever once restored) */
-.conclude-button.ready {
-  color: var(--health-accent);
-  border: 2px solid transparent;
-  background:
-    linear-gradient(var(--bg), var(--bg)) padding-box,
-    linear-gradient(135deg, #a5e8ff, #5ec8f8, #4d7cff, #8b5cf6) border-box;
 }
 
 @keyframes healthGlow {

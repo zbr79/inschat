@@ -502,6 +502,7 @@ export default function Sidebar() {
             </button>
           </>
         )}
+        <div id="mobile-report-slot" className="mobile-report-slot" />
       </div>
       {menuOpen && (
         <div
