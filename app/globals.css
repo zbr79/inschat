@@ -1602,16 +1602,18 @@ span.conclude-rank-badge {
 
   .mobile-bar {
     display: flex;
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 20;
     align-items: center;
     gap: 8px;
-    min-height: 56px;
-    padding: 8px 14px;
+    min-height: calc(56px + env(safe-area-inset-top));
+    padding: calc(8px + env(safe-area-inset-top)) 14px 8px;
     border-bottom: none;
-    background: var(--bg);
-    flex-shrink: 0;
+    background: transparent;
+    pointer-events: none;
   }
 
   .menu-button {
@@ -1625,6 +1627,7 @@ span.conclude-rank-badge {
     background: #fff;
     box-shadow: 0 3px 10px rgba(32, 33, 36, 0.18);
     padding: 0;
+    pointer-events: auto;
   }
 
   .menu-icon-pwa {
@@ -1683,6 +1686,7 @@ span.conclude-rank-badge {
     color: var(--text);
     box-shadow: 0 3px 10px rgba(32, 33, 36, 0.14);
     cursor: pointer;
+    pointer-events: auto;
   }
 
   .mobile-page-action:hover,
@@ -1778,6 +1782,7 @@ span.conclude-rank-badge {
   }
 
   .main {
+    min-height: 0;
     overflow-y: auto;
   }
 }
@@ -1789,6 +1794,12 @@ span.conclude-rank-badge {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .messages {
+    padding-top: calc(76px + env(safe-area-inset-top));
+  }
 }
 
 .empty {
@@ -1850,6 +1861,17 @@ span.conclude-rank-badge {
 .message.user .bubble.image-only {
   background: transparent;
   padding: 0;
+}
+
+.message.user .bubble.image-stack img {
+  margin-left: auto;
+}
+
+.message.user .bubble.image-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  width: fit-content;
 }
 
 .message.model .bubble {
@@ -4044,7 +4066,8 @@ span.conclude-rank-badge {
 
 @media (max-width: 640px) {
   .usage-page {
-    padding: 20px 14px calc(32px + env(safe-area-inset-bottom));
+    padding: calc(76px + env(safe-area-inset-top)) 14px
+      calc(32px + env(safe-area-inset-bottom));
   }
 
   .usage-page h2 {

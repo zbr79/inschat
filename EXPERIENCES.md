@@ -6448,3 +6448,41 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - The jump was not caused by Nginx or the model stream; it came from the
   client-side effect scrolling on every `messages` update.
 
+## 2026-09-23 — Transparent mobile/PWA overlay bar
+
+### Solved
+- Changed the mobile bar from a layout-consuming sticky item to a fixed,
+  transparent overlay.
+- Preserved iPhone safe-area spacing and kept the menu/action controls
+  clickable with their own visible surfaces.
+- Added initial content spacing so the first message/page heading is not
+  hidden, while scrolled content can pass behind the bar.
+- Verified the live guest phone viewport: response text extends behind the
+  transparent top area and the menu button remains visible.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Changing only the bar background would not have reclaimed the 56px layout
+  space; fixed positioning was required.
+
+## 2026-09-24 — Right-align stacked user images
+
+### Solved
+- Added a class to user bubbles containing multiple images.
+- Right-aligned each image inside the shared bubble so shorter images line up
+  with the right edge of the widest image.
+- Made the multi-image bubble shrink to its content width so the stack itself
+  does not leave an extra right-side gap.
+- `npm run build` passed.
+
+### Unresolved
+- The initial PM2 check used the Node 24 PATH and incorrectly reported PM2 as
+  unavailable. PM2 is installed under the Node 22 path and the app was
+  restarted and verified online there.
+
+### Disproved
+- The issue was not caused by the message container alignment; block images
+  were left-aligned inside the shared multi-image bubble.
+
