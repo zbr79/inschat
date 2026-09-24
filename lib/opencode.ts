@@ -20,11 +20,16 @@ import {
   parseQuestionToolInput,
   type QuestionAnswer,
 } from "./question";
+import {
+  streamResponses,
+  completeResponses,
+  type ChatToolLike,
+} from "./opencodeResponses";
 
 export const OPENCODE_BASE_URL = "https://opencode.ai/zen/go/v1";
 export const OPENCODE_FREE_BASE_URL = "https://opencode.ai/zen/v1";
-export const OPENCODE_MODEL = "qwen3.8-flash";
-export const OPENCODE_VISION_MODEL = "glm-5.3-flash";
+export const OPENCODE_MODEL = "gpt-6-luna";
+export const OPENCODE_VISION_MODEL = "gpt-6-luna";
 
 // The opencode CLI stores the current subscription key here; it changes when
 // the user rotates/reconnects the key in the TUI. Prefer it over .env so the
@@ -456,16 +461,14 @@ async function* streamOpenCodeOnce(
     stream: true,
     temperature: 0.7,
   };
+  const requestTools = tools
+    ? [ASK_USER_QUESTION_TOOL, ...(webTools ? [WEB_SEARCH_TOOL, WEB_FETCH_TOOL] : [])]
+    : [];
   // The gateway rejects reasoning_effort with image content. Image turns
   // should be visual analysis only; this applies to every vision model and
   // avoids model-specific allowlists going stale.
   if (!hasImageParts) body.reasoning_effort = reasoningLevel;
-  if (tools) {
-    body.tools = [
-      ASK_USER_QUESTION_TOOL,
-      ...(webTools ? [WEB_SEARCH_TOOL, WEB_FETCH_TOOL] : []),
-    ];
-  }
+  if (requestTools.length > 0) body.tools = requestTools;
   const startedAt = Date.now();
   console.log(
     `[opencode:${requestId}] start — model ${model}, ${messages.length} messages${tools ? ", tools on" : ""}`
@@ -474,6 +477,19 @@ async function* streamOpenCodeOnce(
   if (process.env.OPENCODE_TEST_LIMIT === "1") {
     throw new Error(
       "Monthly usage limit reached. Resets in 20 days. (test-limit simulation)"
+    );
+  }
+
+  if (model === OPENCODE_MODEL) {
+    return yield* streamResponses(
+      getOpenCodeKey(),
+      OPENCODE_BASE_URL,
+      messages,
+      model,
+      requestTools as ChatToolLike[],
+      reasoningLevel,
+      sessionId,
+      hasImageParts
     );
   }
 
@@ -909,6 +925,18 @@ export async function completeOpenCode(
     reasoning?: "none" | "minimal" | "low" | "medium" | "high" | "max";
   }
 ): Promise<string> {
+  if (model === OPENCODE_MODEL) {
+    return completeResponses(
+      getOpenCodeKey(),
+      OPENCODE_BASE_URL,
+      toOpenAiMessages(messages, timeZone, language, options?.systemPrompt),
+      model,
+      options?.maxTokens,
+      Boolean(options?.json),
+      options?.reasoning ?? "high"
+    );
+  }
+
   const body: Record<string, unknown> = {
     model,
     messages: toOpenAiMessages(messages, timeZone, language, options?.systemPrompt),

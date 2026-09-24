@@ -3,21 +3,25 @@
 import { STR, useUiLang } from "@/lib/i18n";
 import { modelLabel } from "@/lib/modelLabels";
 
-const TEXT_MODEL = "qwen3.8-flash";
-const IMAGE_MODEL = "glm-5.3-flash";
+const PRIMARY_MODEL = "gpt-6-luna";
+const FALLBACK_MODEL = "glm-5.3-flash";
 
 export default function ModelRoutingTree() {
   const lang = useUiLang();
   const t = STR[lang];
 
-  const Chain = ({ primary }: { primary: string }) => (
+  const Chain = () => (
     <span className="routing-chain">
       <span className="routing-model">
-        <code>{modelLabel(primary)}</code>
+        <code>{modelLabel(PRIMARY_MODEL)}</code>
       </span>
       <span className="routing-arrow">→</span>
       <span className="routing-model">
-        <code>{t["routing.freeModels"]}</code>
+        <code>{modelLabel(FALLBACK_MODEL)}</code>
+      </span>
+      <span className="routing-arrow">→</span>
+      <span className="routing-model">
+        <code>{t["routing.unavailable"]}</code>
       </span>
     </span>
   );
@@ -30,11 +34,11 @@ export default function ModelRoutingTree() {
       <ul className="routing-tree">
         <li>
           <span className="routing-node">{t["routing.textChat"]}</span>
-          <Chain primary={TEXT_MODEL} />
+          <Chain />
         </li>
         <li>
           <span className="routing-node">{t["routing.images"]}</span>
-          <Chain primary={IMAGE_MODEL} />
+          <Chain />
         </li>
       </ul>
     </section>

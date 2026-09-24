@@ -19,10 +19,9 @@ Minimalist AI chatbot — text chat + image upload, streaming responses. Powered
 
 Next.js 16 (App Router, React 19) + plain `fetch` against the opencode-go OpenAI-compatible API (no SDK). Model routing:
 
-- Text chat: `qwen3.8-flash`, falling back only to free models when balance or availability is exhausted
-- Images and image-plus-text chat: `glm-5.3-flash`, using the same free fallback chain if the paid model is unavailable
-- Conclude: `qwen3.8-flash`, falling back only to free models
-- Qwen3.8 Flash is enforced for text/conclusions and GLM-5.3 Flash for images; manual model pins and `CONCLUDE_MODEL` are ignored
+- All chat and image requests: `gpt-6-luna`, falling back only to `glm-5.3-flash`
+- Conclude: `gpt-6-luna`, falling back only to `glm-5.3-flash`
+- GPT-6 Luna is enforced as the primary for every request; if GLM-5.3 Flash also fails, the service is unavailable. Manual model pins and `CONCLUDE_MODEL` are ignored
 
 ## Get an API key
 
@@ -61,7 +60,7 @@ Put nginx (or any reverse proxy) in front and proxy `/` to `127.0.0.1:3002`. If 
 3. Tokens stream back; the server relays them chunk-by-chunk to the browser.
 4. Images travel as base64 data-URLs in OpenAI `image_url` content blocks.
 
-Quota: the Go plan is dollar-based ($12 per 5h, $30 per week, $60 per month). The app retries overloaded (503) calls up to 3 times with backoff and falls back from Qwen3.8 Flash or GLM-5.3 Flash to free models when the paid balance or model availability is exhausted.
+Quota: the Go plan is dollar-based ($12 per 5h, $30 per week, $60 per month). The app retries overloaded (503) calls up to 3 times with backoff, then falls back from GPT-6 Luna to GLM-5.3 Flash. If both models are unavailable, the service returns an error.
 
 ## Project structure
 
