@@ -6736,3 +6736,100 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Disproved
 - No change was needed to the summary or structured conclusion format.
+
+## 2026-09-23 — Enlarge message action buttons
+
+### Solved
+- Increased copy, regenerate, and edit button hit areas from 24px to 32px on
+  desktop and 40px on touch devices.
+- Increased action-button spacing while keeping the existing icon sizes.
+- `npm run build` passed; PM2 restarted `inschat`, and port 3001 returned HTTP
+  200 after startup.
+
+### Unresolved
+- Browser visual inspection remains unavailable in the local browser harness.
+
+### Disproved
+- Enlarging the Lucide icons themselves was unnecessary; larger button hit
+  areas improve clickability without making the controls visually heavy.
+
+## 2026-09-23 — Make action icons visibly larger
+
+### Solved
+- Reduced the action-bar gap back to 2px so the controls do not spread apart.
+- Increased the rendered icon size to 17px on desktop and 19px on touch
+  devices, while retaining the larger clickable button areas.
+- `npm run build` passed; PM2 restarted `inschat`, and port 3001 returned HTTP
+  200 after startup.
+
+### Unresolved
+- Browser visual inspection remains unavailable in the local browser harness.
+
+### Disproved
+- Enlarging only transparent button hit areas was insufficient because it made
+  the controls feel farther apart without looking larger.
+
+## 2026-09-23 — Reduce message action icon size
+
+### Solved
+- Reduced visible action icons to 16px on desktop and 18px on touch devices.
+- Kept the 2px action-bar gap and larger invisible click targets.
+- `npm run build` passed; PM2 restarted `inschat`, and port 3001 returned
+  HTTP 200 after startup.
+
+### Unresolved
+- Browser visual inspection remains unavailable in the local browser harness.
+
+### Disproved
+- The previous 17px/19px icon sizes were too large for the surrounding UI.
+
+## 2026-09-23 — Fit message action controls
+
+### Solved
+- Reduced visible action icons to 15px on desktop and 16px on touch devices.
+- Reduced button hit areas to 28px on desktop and 32px on touch devices.
+- Tightened the action-bar gap to 1px so the controls fit together cleanly.
+- `npm run build` passed; PM2 restarted `inschat`, and port 3001 returned
+  HTTP 200 after startup.
+
+### Unresolved
+- Browser visual inspection remains unavailable in the local browser harness.
+
+### Disproved
+- The 16px/18px icon and 32px/40px button sizing was still too large for the
+  surrounding message UI.
+
+## 2026-09-23 — Keep the chat pinned below the completed reply footer
+
+### Solved
+- Added a `ResizeObserver` to the message list so layout changes, including
+  the post-stream copy/refresh footer, trigger a bottom scroll.
+- Preserved the existing behavior that stops auto-following when the user
+  intentionally scrolls above the bottom.
+- `npm run build` passed; PM2 restarted `inschat`, and port 3001 returned
+  HTTP 200 after startup.
+
+### Unresolved
+- Browser visual inspection remains unavailable in the local browser harness.
+
+### Disproved
+- Watching only the messages dependency was insufficient because the footer
+  can change the content height after streaming completes.
+
+## 2026-09-23 — Stabilize model metadata placement
+
+### Solved
+- Reserved consistent footer height while a model reply streams and after it
+  completes.
+- Anchored the model name and status indicator to the right edge.
+- Kept action buttons on the left when they become available, preventing the
+  model label from shifting horizontally.
+- `npm run build` passed; PM2 restarted `inschat`, and port 3001 returned
+  HTTP 200 after startup.
+
+### Unresolved
+- Browser visual inspection remains unavailable in the local browser harness.
+
+### Disproved
+- `justify-content: space-between` alone was stable; with the action bar
+  conditionally appearing, it caused the model metadata to jump positions.
