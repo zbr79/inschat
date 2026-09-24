@@ -276,7 +276,7 @@ export default function MessageBubble({
                 </div>
               </>
             ) : (
-              <div className="bubble">
+              <div className={`bubble${imageUrls.length > 1 ? " image-stack" : ""}`}>
                 {imageUrls.map((url, imageIndex) => (
                   <img
                     key={imageIndex}
