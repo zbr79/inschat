@@ -5341,7 +5341,7 @@ span.conclude-rank-badge {
 .action-bar {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 1px;
   opacity: 0;
   transition: opacity 0.12s ease;
 }
@@ -5362,8 +5362,8 @@ span.conclude-rank-badge {
 }
 
 .action-button {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5372,6 +5372,25 @@ span.conclude-rank-badge {
   color: var(--text-muted);
   cursor: pointer;
   padding: 0;
+}
+
+@media (hover: none) {
+  .action-button {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.action-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+@media (hover: none) {
+  .action-button svg {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 .action-button:hover {
@@ -5581,8 +5600,8 @@ span.conclude-rank-badge {
 .reply-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  min-height: 14px;
+  justify-content: flex-start;
+  min-height: 28px;
   width: 100%;
   gap: 8px;
 }
@@ -5597,7 +5616,14 @@ span.conclude-rank-badge {
 
 .reply-footer .model-meta {
   align-self: center;
+  margin-left: auto;
   margin-top: 0;
+}
+
+@media (hover: none) {
+  .reply-footer {
+    min-height: 32px;
+  }
 }
 
 .question-card {

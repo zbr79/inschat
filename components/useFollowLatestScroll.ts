@@ -12,6 +12,7 @@ export function useFollowLatestScroll(dependency: unknown) {
     const end = endRef.current;
     const container = end?.closest<HTMLElement>(".main");
     if (!container) return;
+    const messageList = end?.parentElement;
 
     const handleScroll = () => {
       const distanceFromBottom =
@@ -19,8 +20,22 @@ export function useFollowLatestScroll(dependency: unknown) {
       shouldFollowRef.current = distanceFromBottom <= BOTTOM_THRESHOLD_PX;
     };
 
+    const resizeObserver =
+      messageList && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => {
+            if (!shouldFollowRef.current) return;
+            container.scrollTo({ top: container.scrollHeight, behavior: "auto" });
+          })
+        : null;
+    if (resizeObserver && messageList) {
+      resizeObserver.observe(messageList);
+    }
+
     container.addEventListener("scroll", handleScroll, { passive: true });
-    return () => container.removeEventListener("scroll", handleScroll);
+    return () => {
+      resizeObserver?.disconnect();
+      container.removeEventListener("scroll", handleScroll);
+    };
   }, []);
 
   useEffect(() => {
