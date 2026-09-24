@@ -13,11 +13,12 @@ export interface ModelInfo {
 // /chat/completions endpoint of https://opencode.ai/zen/go/v1.
 // Vision flags come from vendor documentation research:
 // only models with documented image input are marked vision: true.
-// Qwen3.8 Flash is the enforced text/conclusion primary; GLM-5.3 Flash is
-// the enforced image and image-plus-text primary.
+// GPT-6 Luna is the enforced primary for every request; GLM-5.3 Flash is
+// the only fallback. If both are unavailable, the service reports failure.
 export const CHAT_MODELS: ModelInfo[] = [
   { name: "deepseek-v4-pro", label: "DeepSeek V4 Pro", tier: "pro", vision: false, retired: true },
   { name: "deepseek-v4-flash", label: "DeepSeek V4 Flash", tier: "flash", vision: false },
+  { name: "gpt-6-luna", label: "GPT-6 Luna", tier: "pro", vision: true },
   { name: "qwen3.8-flash", label: "Qwen3.8 Flash", tier: "flash", vision: true },
   { name: "deepseek-v4-flash-free", label: "DeepSeek V4 Flash (Free)", tier: "flash", vision: false },
   { name: "mimo-v2.5-free", label: "MiMo-V2.5 (Free)", tier: "flash", vision: false },
@@ -58,43 +59,24 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const MODEL_FILE = path.join(DATA_DIR, "model.json");
 
 export const AUTO_MODEL = "auto";
-export const PRIMARY_MODEL = "qwen3.8-flash";
-export const IMAGE_PRIMARY_MODEL = "glm-5.3-flash";
+export const PRIMARY_MODEL = "gpt-6-luna";
+export const IMAGE_PRIMARY_MODEL = PRIMARY_MODEL;
 
-// Text and conclusion requests use Qwen3.8 Flash first; image requests use
-// GLM-5.3 Flash first. If paid balance or model availability is exhausted,
-// both paths fall back to the free chain. Free models may reject image input.
+// Every request uses GPT-6 Luna first, then GLM-5.3 Flash. There is no free
+// fallback because OpenCode's free gateway is unavailable to this service.
 const TEXT_CHAIN_FULL: string[] = [
   PRIMARY_MODEL,
-  "deepseek-v4-flash-free",
-  "mimo-v2.5-free",
-  "nemotron-3-ultra-free",
-  "nemotron-3.5-lightning-free",
-  "ling-3.0-flash-fin-free",
-  "laguna-s-2.1-free",
-  "big-pickle",
+  "glm-5.3-flash",
 ];
 export const IMAGE_CHAIN: string[] = [
   IMAGE_PRIMARY_MODEL,
-  "deepseek-v4-flash-free",
-  "mimo-v2.5-free",
-  "nemotron-3-ultra-free",
-  "nemotron-3.5-lightning-free",
-  "ling-3.0-flash-fin-free",
-  "laguna-s-2.1-free",
-  "big-pickle",
+  "glm-5.3-flash",
 ];
 
-// Conclusion extraction follows the Qwen-first/free-only policy.
+// Conclusions follow the same GPT-6 Luna → GLM-5.3 Flash policy.
 const CONCLUDE_CHAIN_FULL: string[] = [
   PRIMARY_MODEL,
-  "deepseek-v4-flash-free",
-  "mimo-v2.5-free",
-  "nemotron-3-ultra-free",
-  "nemotron-3.5-lightning-free",
-  "ling-3.0-flash-fin-free",
-  "laguna-s-2.1-free",
-  "big-pickle",
+  "glm-5.3-flash",
 ];
 
 function filterChain(chain: string[]): string[] {

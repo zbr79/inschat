@@ -6327,3 +6327,104 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - Applying a black brightness filter preserved the icon artwork.
 
+## 2026-09-23 — Production rebuild and PM2 restore
+
+### Solved
+- `npm run build` completed successfully with Node 22.
+- Restored the InsChat production server under PM2 on port 3001.
+- Verified the process is online with zero restarts and its protected health route responds.
+
+### Unresolved
+- Boot recovery depends on the enabled user-level PM2 service; it has not been tested by rebooting.
+
+### Disproved
+- The earlier “missing production build” messages were historical PM2 log entries from before this successful rebuild; the new server started from the current `.next` output.
+
+## 2026-09-23 — Serve the General empty-chat icon
+
+### Solved
+- Moved the General-mode SVG from `app/` to `public/` so `/icon-general.svg`
+  is served as a static asset.
+- Verified the route now returns HTTP 200.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The General chat mode or icon selection logic was the cause of the missing
+  black icon.
+
+## 2026-09-23 — Unboxed assistant response layout
+
+### Solved
+- Removed the assistant message bubble surface while keeping user messages
+  visually bubbled.
+- Preserved separate surfaces for structured content such as code blocks,
+  tables, and rich documents.
+- Verified as a guest at the public route on desktop (1440x900) and phone
+  (390x844): the user prompt remains right-aligned in a bubble and the
+  assistant response renders as open text.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The response layout was not dependent on the local browser reaching port
+  3001; the public Nginx-routed deployment served the updated layout.
+
+## 2026-09-23 — OpenCode free-model availability probe
+
+### Solved
+- Tested every configured free model against the OpenCode Zen endpoint using
+  the same `InsChat/1.0` request identity as the app.
+- Confirmed `mimo-v2.5-free`, `nemotron-3-ultra-free`,
+  `nemotron-3.5-lightning-free`, `ling-3.0-flash-fin-free`, and `big-pickle`
+  return HTTP 403: “OpenCode's free tier can only be used from within
+  OpenCode.”
+- Confirmed `deepseek-v4-flash-free` and `laguna-s-2.1-free` return HTTP 400
+  because the models are unavailable.
+
+### Unresolved
+- InsChat currently has no working free-model fallback through this gateway.
+- The paid OpenCode Go primary model remains the only tested working route.
+
+### Disproved
+- The problem is not limited to one free model or one transient request:
+  five models are explicitly client-gated and two are separately unavailable.
+
+## 2026-09-23 — Restrict service routing to paid model pair
+
+### Solved
+- Changed all text, image, and conclusion routing to use `gpt-6-luna`
+  first, then `glm-5.3-flash`.
+- Removed the unavailable OpenCode free-model fallback chain from active
+  routing.
+- Updated model labels, routing UI, usage copy, README, and enforced-model
+  state to match the new policy.
+- Confirmed both requested model IDs exist in the OpenCode Go catalog.
+
+### Unresolved
+- GPT-6 Luna image capability is not described in the catalog metadata; the
+  selected policy tries it first for images and falls back to GLM-5.3 Flash.
+
+### Disproved
+- Free-model fallback is not a reliable service recovery path for InsChat.
+
+## 2026-09-23 — Route GPT-6 Luna through the Responses API
+
+### Solved
+- Added a dedicated Responses API transport for GPT-6 Luna, including
+  streaming text, images, tool-call conversion, and non-streaming conclusions.
+- Kept GLM-5.3 Flash on the existing chat-completions transport.
+- Verified a guest request on the public app now completes as
+  `GPT-6 Luna` instead of falling back to GLM.
+
+### Unresolved
+- GPT-6 tool-call behavior beyond the simple live text request still needs a
+  real web-search prompt test.
+
+### Disproved
+- GPT-6 was not unavailable because of the API key or subscription. Its
+  `/responses` endpoint returned HTTP 200; only `/chat/completions` returned
+  HTTP 503.
+

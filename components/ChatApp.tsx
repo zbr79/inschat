@@ -1119,8 +1119,8 @@ export default function ChatApp() {
     t,
   ]);
 
-  // Usage-limit banner removed (2026-09-02): exhaustion now falls back to
-// free models for text, and image sends get the reply-text explanation.
+  // GPT-6 Luna and GLM-5.3 Flash are the only service models; exhaustion
+  // surfaces the service error rather than using OpenCode's free gateway.
 
   // Search jump: flash + scroll to the matched message, then clear ?msg.
   useEffect(() => {
