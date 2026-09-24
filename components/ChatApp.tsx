@@ -7,6 +7,7 @@ import Composer from "./Composer";
 import QuestionCard from "./QuestionCard";
 import ConcludeButton from "./ConcludeButton";
 import ConcludeModal from "./ConcludeModal";
+import MobileReportPortal from "./MobileReportPortal";
 import type {
   ChatImage,
   ChatMode,
@@ -1805,15 +1806,13 @@ export default function ChatApp() {
   const sessionImageKeys = [
     ...new Set(messages.flatMap((message) => message.imageKeys ?? [])),
   ];
-  const reportButton = (
+  const reportButton = concludeReady ? (
     <ConcludeButton
-      onClick={() => {
-        if (concludeReady) setConcludeDraft(concludeResult);
-      }}
-      ready={concludeReady}
-      disabled={!concludeReady || sending || Boolean(pendingQuestion)}
+      onClick={() => setConcludeDraft(concludeResult)}
+      ready
+      disabled={sending || Boolean(pendingQuestion)}
     />
-  );
+  ) : null;
 
   return (
     <div className="app">
@@ -1864,6 +1863,7 @@ export default function ChatApp() {
           }}
         />
       )}
+      <MobileReportPortal>{reportButton}</MobileReportPortal>
       {freeNotice && (
         <p className="free-note-overlay" onClick={() => setFreeNotice(false)}>
           {t["free.notice"]}

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { insertCall } from "./db";
 import { encodeModelMarker } from "./markers";
+import type { ChatReasoning } from "./chatReasoning";
 
 type ChatContentPart = {
   type: string;
@@ -171,7 +172,7 @@ export async function* streamResponses(
   messages: readonly ChatMessageLike[],
   model: string,
   tools: readonly ChatToolLike[],
-  reasoningLevel: "max" | "medium" | "low",
+  reasoningLevel: ChatReasoning | "medium" | "low",
   sessionId: string | undefined,
   hasImageParts: boolean
 ): AsyncGenerator<string, { toolCalls: ResponseToolCall[] }, void> {
@@ -181,7 +182,7 @@ export async function* streamResponses(
     input: toResponsesInput(messages),
     stream: true,
   };
-  if (!hasImageParts) {
+  if (!hasImageParts && reasoningLevel !== "none") {
     body.reasoning = {
       effort: reasoningLevel === "max" ? "high" : reasoningLevel,
     };

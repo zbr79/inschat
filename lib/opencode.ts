@@ -15,6 +15,7 @@ import { getChatChain } from "./models";
 import { insertCall } from "./db";
 import { fetchPageText, searchWeb } from "./webfetch";
 import { ALLOWED_IMAGE_TYPES, MAX_IMAGE_BYTES, type ChatMessage } from "./types";
+import type { ChatReasoning } from "./chatReasoning";
 import { waitForQuestionAnswer } from "./pendingQuestion";
 import {
   parseQuestionToolInput,
@@ -445,7 +446,7 @@ async function* streamOpenCodeOnce(
   messages: OpenAiMessage[],
   model: string,
   tools: boolean,
-  reasoningLevel: "max" | "medium" | "low" = "medium",
+  reasoningLevel: ChatReasoning | "medium" | "low" = "medium",
   sessionId?: string,
   webTools = true
 ): AsyncGenerator<string, { toolCalls: ToolCall[] }, void> {
@@ -467,7 +468,9 @@ async function* streamOpenCodeOnce(
   // The gateway rejects reasoning_effort with image content. Image turns
   // should be visual analysis only; this applies to every vision model and
   // avoids model-specific allowlists going stale.
-  if (!hasImageParts) body.reasoning_effort = reasoningLevel;
+  if (!hasImageParts && reasoningLevel !== "none") {
+    body.reasoning_effort = reasoningLevel;
+  }
   if (requestTools.length > 0) body.tools = requestTools;
   const startedAt = Date.now();
   console.log(
@@ -710,7 +713,7 @@ export async function* streamChat(
   timeZone?: string,
   language?: "zh" | "en",
   freeMode = false,
-  reasoning: "max" | "medium" | "low" = "medium",
+  reasoning: ChatReasoning | "medium" | "low" = "medium",
   sessionId?: string,
   includeImages = false
 ): AsyncGenerator<string> {

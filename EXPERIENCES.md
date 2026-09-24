@@ -6486,3 +6486,186 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - The issue was not caused by the message container alignment; block images
   were left-aligned inside the shared multi-image bubble.
 
+## 2026-09-24 — Guest chat response latency field test
+
+### Solved
+- Measured the live guest route with three text requests, two image requests,
+  and one browser UI request while using GPT-6 Luna.
+- Current live timings were approximately 1.4–2.1 seconds end-to-end for text
+  and 1.4–1.7 seconds for the tested image requests.
+- The browser request showed response headers at about 35 ms, the Luna marker
+  at about 650 ms, first visible text at about 1.3 seconds, and stream
+  completion at about 1.6 seconds.
+- The final server/persistence tail after first visible text was about
+  0.24–0.40 seconds in the field tests.
+
+### Unresolved
+- GPT-6 Luna latency is intermittent upstream. Recent server history includes
+  first-token waits from roughly 2.9 to 12.3 seconds, plus HTTP 503 endpoint
+  failures that trigger GLM fallback. A fix would require routing or model
+  policy changes, not only client rendering changes.
+- The current route hardcodes maximum reasoning for chat requests and enables
+  text tools on every text turn; their separate contribution was not isolated
+  in this run.
+
+### Disproved
+- The current guest browser path does not consistently spend 3–5 seconds
+  before connecting to Luna; repeated live probes connected in roughly
+  0.5–1.0 seconds.
+- Browser rendering, Nginx buffering, and guest persistence were not the
+  dominant latency source in the measured requests.
+
+## 2026-09-24 — Move the report action to the mobile top bar
+
+### Solved
+- Rendered the report action only when a conclusion/report exists.
+- Kept the 36px report control above the composer on desktop.
+- Moved the mobile/PWA report control into the top-right bar slot.
+- Matched the mobile control to the 48px menu button.
+- Verified guest desktop and phone layouts, including the no-report state.
+- `npm run build` passed and InsChat restarted successfully.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Keeping a disabled report button visible when no report exists was not the
+  requested behavior.
+
+## 2026-09-24 — Identify GPT-6 hidden reasoning latency
+
+### Solved
+- Traced the GPT-6 Responses SSE stream directly using the app's current key.
+- GPT-6 emits a `reasoning` output item before the visible `message`; InsChat
+  currently ignores that item, so the UI appears connected but idle.
+- A representative high-reasoning request showed about 537 ms spent in the
+  hidden reasoning item before the first visible token.
+- A representative `reasoning: none` request had no hidden reasoning item and
+  completed about 530 ms faster.
+- The gateway rejected `reasoning: minimal` with HTTP 400, so the practical
+  tested choices are `none` and `high`.
+
+### Unresolved
+- High-reasoning GPT-6 requests can still become much slower under upstream
+  load; recent InsChat logs show first-token waits up to 12.3 seconds and
+  HTTP 503 endpoint failures.
+- The product still needs a speed/quality policy: trivial general chat can
+  use no reasoning, while complex research or health analysis may need high
+  reasoning.
+
+### Disproved
+- The dominant delay for the tested request was not React rendering,
+  persistence, or proxy buffering; it was the model's hidden reasoning phase.
+
+## 2026-09-24 — Apply adaptive GPT-6 reasoning policy
+
+### Solved
+- Added a server-side adaptive selector for chat reasoning.
+- Short general prompts now use `reasoning: none`; health turns, documents,
+  long conversations, research-like prompts, and complex prompts retain high
+  reasoning.
+- Updated both the GPT-6 Responses transport and fallback chat-completions
+  transport to omit reasoning parameters when the selected mode is `none`.
+- Built successfully, restarted only InsChat, and verified the PM2 process is
+  online with the local app returning HTTP 200.
+
+### Unresolved
+- Upstream GPT-6 load spikes and HTTP 503 responses still require a separate
+  first-token watchdog or circuit-breaker policy.
+- The complex research probe exceeded its 30-second diagnostic client timeout
+  while the server continued its multi-round web-research flow; this is
+  expected for that intentionally broad prompt and was not a simple-chat
+  failure.
+
+### Disproved
+- The app does not need to disable GPT-6 globally to improve simple-chat
+  latency; the hidden reasoning phase can be removed selectively.
+
+## 2026-09-24 — Group and animate the mobile report action
+
+### Solved
+- Moved the ready report button next to the mobile sidebar/menu button.
+- Added a limited attention pulse so a newly available report is noticeable
+  without continuously distracting the user.
+- Applied a stable blue background with a white icon for the ready state.
+- Preserved that color through hover, focus, active, and click states.
+- Verified the guest phone layout and report modal opening after the click.
+- `npm run build` passed and InsChat restarted successfully.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The previous gradient-ready rule caused the report control to appear
+  transparent/gray instead of keeping a stable colored action.
+
+## 2026-09-24 — Recheck image latency after adaptive reasoning change
+
+### Solved
+- Confirmed the adaptive reasoning code is still present in the current
+  source and the InsChat PM2 process is online.
+- Confirmed image requests already omit reasoning parameters before and after
+  the change because the GPT-6 gateway rejects reasoning on image turns.
+- A current 512px guest image probe completed in about 1.6 seconds end to end,
+  with the model marker around 0.6 seconds and first text around 1.2 seconds.
+
+### Unresolved
+- The reported 5.9-second result was not reproduced with the small test image.
+  A real phone photo may add browser read/compression/base64 upload time, or
+  the vision provider may be intermittently slow.
+- The next image-specific diagnostic needs the actual uploaded photo size and
+  browser-side timestamps before the request reaches `/api/chat`.
+
+### Disproved
+- The text reasoning optimization was not silently overwritten; it is active.
+- Hidden GPT-6 reasoning is not the cause of image latency, because image
+  requests were already sent without a reasoning setting.
+
+## 2026-09-24 — Restore the report button’s original appearance
+
+### Solved
+- Restored the existing gradient-border and blue-icon report styling.
+- Kept the report button beside the mobile sidebar button.
+- Preserved the requested limited appearance pulse.
+- Prevented hover, focus, active, and click states from changing the ready
+  report appearance.
+- `npm run build` passed and InsChat restarted successfully.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A solid blue background with a white icon was not the requested visual
+  treatment.
+
+## 2026-09-24 — Remove the phone composer focus ring
+
+### Solved
+- Removed the health composer’s outer focus shadow on phone-width screens.
+- Kept the input border and keyboard/focus behavior intact.
+- Preserved the desktop focus ring.
+- `npm run build` passed and the guest phone probe confirmed `box-shadow: none`.
+
+### Unresolved
+- n/a
+
+### Disproved
+- The gray box was not a hover state; it was the mobile health composer’s
+  `:focus-within` box shadow.
+
+## 2026-09-24 — Remove intermittent mobile tap feedback
+
+### Solved
+- Made the composer row and textarea transparent to mobile tap highlighting.
+- Kept the phone focus shadow disabled and preserved desktop focus styling.
+- Verified the guest phone computed styles: transparent tap highlight and no
+  composer box shadow.
+- `npm run build` passed and InsChat restarted successfully.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Removing only the focus shadow did not address the intermittent first-tap
+  flash; the browser tap-highlight layer also needed to be disabled.
+

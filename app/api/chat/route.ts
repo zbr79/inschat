@@ -16,6 +16,7 @@ import {
   updatePendingMessage,
 } from "@/lib/db";
 import { getGuestRun, startGuestRun, updateGuestRun } from "@/lib/guestRunStore";
+import { chooseChatReasoning } from "@/lib/chatReasoning";
 import { randomUUID } from "node:crypto";
 import { ObjectId } from "mongodb";
 
@@ -148,6 +149,7 @@ export async function POST(req: Request) {
   const hasImage = effectiveIncludeImages
     ? messages.some((message) => (message.images?.length ?? 0) > 0)
     : (lastMessage?.images?.length ?? 0) > 0;
+  const chatReasoning = chooseChatReasoning(messages, effectiveChatMode, hasImage);
   let persistedMessageId: string | undefined;
   let persistenceReady: Promise<void> = Promise.resolve();
   if (sessionId && user) {
@@ -255,7 +257,7 @@ export async function POST(req: Request) {
           timeZone,
           language,
           freeMode,
-          "max",
+          chatReasoning,
           sessionId,
           effectiveIncludeImages
         )) {
