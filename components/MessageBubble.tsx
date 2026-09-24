@@ -68,6 +68,13 @@ const MarkdownContent = memo(function MarkdownContent({ text }: { text: string }
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[rehypeHighlight]}
+      components={{
+        table: ({ children }) => (
+          <div className="bubble-table-scroll">
+            <table>{children}</table>
+          </div>
+        ),
+      }}
     >
       {preserveLineBreaks(text)}
     </ReactMarkdown>

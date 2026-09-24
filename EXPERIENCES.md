@@ -6669,3 +6669,70 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 - Removing only the focus shadow did not address the intermittent first-tap
   flash; the browser tap-highlight layer also needed to be disabled.
 
+## 2026-09-23 — Polish health food tables
+
+### Solved
+- Restyled the existing Markdown food table as a rounded card with a subtle
+  health-accent header, consistent borders, and a soft surface.
+- Removed alternating gray row backgrounds while preserving the prompt,
+  Markdown structure, and structured health-record data.
+- `npm run build` passed.
+
+### Unresolved
+- PM2 restart/log verification was unavailable because `pm2` is not installed
+  in this environment. The local HTTP check returned `200 OK`.
+- Browser visual verification could not load the local app in the browser
+  harness.
+
+### Disproved
+- Changing the health prompt or emitting HTML was not needed for this visual
+  improvement; the existing Markdown renderer and CSS are sufficient.
+
+## 2026-09-23 — Correct PM2 path and deploy table polish
+
+### Solved
+- Located the installed PM2 executable at
+  `/home/ubuntu/.nvm/versions/node/v22.21.1/bin/pm2`; the agent shell was
+  using Node 24 and did not include the Node 22 bin directory in `PATH`.
+- Restarted only `inschat` with the installed PM2 executable.
+- Confirmed the restarted app reported Next.js ready on port 3001.
+
+### Unresolved
+- The browser harness still could not load the local app for visual inspection.
+
+### Disproved
+- PM2 was not unavailable; only the shell PATH was wrong.
+
+## 2026-09-23 — Fix full-width health table header
+
+### Solved
+- Wrapped Markdown tables in a dedicated overflow container so the table keeps
+  native layout and the header spans the full available width.
+- Removed the filled table background and reduced the visual treatment to a
+  rounded outline with subtle row dividers.
+- Kept food names left-aligned and right-aligned the GI result column.
+- `npm run build` passed; `inschat` restarted and returned HTTP 200 on port
+  3001.
+
+### Unresolved
+- Browser visual inspection remains unavailable in the local browser harness.
+
+### Disproved
+- Using `display: block` directly on the table caused the incomplete header
+  width; scrolling belongs on a wrapper instead.
+
+## 2026-09-23 — Add table breathing room and rename Chinese header
+
+### Solved
+- Increased table cell padding, with extra right-side space to balance the
+  right-aligned GI values.
+- Renamed the Chinese food column from `食物` to `菜品` in the Health Chat
+  food-photo prompt.
+- `npm run build` passed; PM2 restarted `inschat`, and the app returned HTTP
+  200 after startup.
+
+### Unresolved
+- Browser visual inspection remains unavailable in the local browser harness.
+
+### Disproved
+- No change was needed to the summary or structured conclusion format.

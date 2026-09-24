@@ -2028,30 +2028,43 @@ span.conclude-rank-badge {
   font-size: 15px;
 }
 
-.bubble table {
-  border-collapse: collapse;
-  margin: 10px 0;
-  font-size: 14px;
-  display: block;
+.bubble-table-scroll {
   max-width: 100%;
   overflow-x: auto;
+  margin: 10px 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.bubble table {
+  width: 100%;
+  min-width: 320px;
+  border-collapse: collapse;
+  font-size: 14px;
 }
 
 .bubble th,
 .bubble td {
-  border: 1px solid var(--border);
-  padding: 6px 10px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 9px 22px 9px 18px;
   text-align: left;
   vertical-align: top;
 }
 
 .bubble th {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--health-accent-soft);
+  color: var(--text);
   font-weight: 600;
 }
 
-.bubble tr:nth-child(even) td {
-  background: rgba(0, 0, 0, 0.025);
+.bubble th:last-child,
+.bubble td:last-child {
+  text-align: right;
+}
+
+.bubble tr:last-child td {
+  border-bottom: none;
 }
 
 .bubble blockquote {
