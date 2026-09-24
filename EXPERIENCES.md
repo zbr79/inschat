@@ -6428,3 +6428,23 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
   `/responses` endpoint returned HTTP 200; only `/chat/completions` returned
   HTTP 503.
 
+## 2026-09-23 — Pause streaming auto-scroll when user reads older messages
+
+### Solved
+- Replaced the unconditional message-update `scrollIntoView` behavior with a
+  reusable follow-latest hook.
+- Streaming continues to follow the newest content while the user is within
+  72px of the bottom.
+- Scrolling upward pauses auto-follow; returning to the bottom resumes it.
+- Verified on the guest phone viewport during a live generation: the
+  scroller remained 260px from the bottom while the response continued.
+
+### Unresolved
+- The root-page probe was blocked by the guest sample-data overlay, so the
+  verification used the standalone guest OpenCode page sharing the same
+  `MessageBubble` component.
+
+### Disproved
+- The jump was not caused by Nginx or the model stream; it came from the
+  client-side effect scrolling on every `messages` update.
+
