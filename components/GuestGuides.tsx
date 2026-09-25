@@ -6,7 +6,6 @@ import { useAuth } from "@/lib/authContext";
 import { removeDemoGlucoseRecords } from "@/lib/guestStore";
 import {
   initializeGuestDemoData,
-  rearmGuestExampleFlow,
   setHealthIntroSeen,
   useHealthIntroSeen,
 } from "@/lib/visitorIntent";
@@ -61,7 +60,6 @@ export default function GuestGuides() {
     }
     if (choice === "clear") {
       removeDemoGlucoseRecords();
-      rearmGuestExampleFlow();
       window.dispatchEvent(new CustomEvent("inschat-records-changed"));
     }
   };
