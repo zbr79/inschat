@@ -6833,3 +6833,14 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 ### Disproved
 - `justify-content: space-between` alone was stable; with the action bar
   conditionally appearing, it caused the model metadata to jump positions.
+
+## 2026-09-24 — Guest health intro returned after Clear data
+
+### Solved
+- Clearing sample data no longer re-arms the first-time Health intro. The choice is stored once, so later messages and a reload stay on the chat.
+
+### Unresolved
+- n/a
+
+### Disproved
+- An in-memory “already shown on this page” flag could not keep the intro dismissed. The next page load treated Clear data as a fresh visit and showed the prompt again.

@@ -59,12 +59,17 @@ test.describe("guest Health intro", () => {
     await expect(page.locator(".input-row.mode-health")).toBeVisible();
     await page.getByRole("button", { name: "Send" }).click();
     await expect(modal).toHaveCount(0);
+    await page.getByRole("button", { name: "Stop generating" }).click();
+
+    await page.getByRole("textbox", { name: "Message" }).fill("Second reading after clear");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(modal).toHaveCount(0);
 
     await page.reload({ waitUntil: "domcontentloaded" });
     await expect(page.getByRole("dialog", { name: "Sample data inserted" })).toHaveCount(0);
-    await page.getByRole("textbox", { name: "Message" }).fill("Show the intro again");
+    await page.getByRole("textbox", { name: "Message" }).fill("Still no intro");
     await page.getByRole("button", { name: "Send" }).click();
-    await expect(page.getByRole("dialog", { name: "Sample data inserted" })).toBeVisible();
+    await expect(page.getByRole("dialog", { name: "Sample data inserted" })).toHaveCount(0);
   });
 
   test("can view example records from the first Health send", async ({ page }) => {
