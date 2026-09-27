@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/authContext";
 import { removeDemoGlucoseRecords } from "@/lib/guestStore";
+import { type UiLang } from "@/lib/i18n";
 import {
+  applyDemoDishLanguage,
   initializeGuestDemoData,
   setHealthIntroSeen,
   useHealthIntroSeen,
@@ -21,6 +23,11 @@ export default function GuestGuides() {
   useEffect(() => {
     if (!authChecked || user) return;
     initializeGuestDemoData();
+    const onLang = (event: Event) => {
+      applyDemoDishLanguage((event as CustomEvent<UiLang>).detail);
+    };
+    window.addEventListener("inschat-lang", onLang);
+    return () => window.removeEventListener("inschat-lang", onLang);
   }, [authChecked, user]);
 
   useEffect(() => {

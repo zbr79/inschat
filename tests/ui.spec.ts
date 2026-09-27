@@ -43,6 +43,24 @@ test.describe("guest desktop UI", () => {
     await expect(settings).toBeHidden();
   });
 
+  test("clears the message box as soon as send is tapped", async ({ page }) => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route("**/api/chat", async (route) => {
+      await gate;
+      await route.abort();
+    });
+    await page.goto("/?newMode=general", { waitUntil: "domcontentloaded" });
+    const box = page.getByRole("textbox", { name: "Message" });
+    await box.fill("Leave the box now");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(box).toHaveValue("");
+    await expect(page.getByText("Leave the box now")).toBeVisible();
+    release();
+  });
+
   test("guest can navigate to records from the sidebar", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("link", { name: "Records" }).click();

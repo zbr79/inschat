@@ -81,6 +81,8 @@ export default function Composer({
   imagesRef.current = images;
   const documentsRef = useRef(documents);
   documentsRef.current = documents;
+  const imageNamesRef = useRef(imageNames);
+  imageNamesRef.current = imageNames;
 
   useEffect(() => {
     const input = textInputRef.current;
@@ -120,11 +122,30 @@ export default function Composer({
   };
 
   const clearComposer = () => {
+    textRef.current = "";
     setText("");
+    const input = textInputRef.current;
+    if (input) {
+      input.value = "";
+      input.style.height = "auto";
+    }
     setImages([]);
     setImageNames([]);
     setDocuments([]);
     setImageError(null);
+  };
+
+  const restoreComposer = (
+    nextText: string,
+    nextImages: ChatImage[],
+    nextImageNames: string[],
+    nextDocuments: DocumentAttachment[]
+  ) => {
+    textRef.current = nextText;
+    setText(nextText);
+    setImages(nextImages);
+    setImageNames(nextImageNames);
+    setDocuments(nextDocuments);
   };
 
   const onTranscript = useCallback(
@@ -135,10 +156,12 @@ export default function Composer({
       const docs = documentsRef.current;
       const trimmed = merged.trim();
       if (trimmed || imgs.length > 0 || docs.length > 0) {
+        const names = imageNamesRef.current;
+        clearComposer();
         void Promise.resolve(
           onSend(trimmed, imgs.length > 0 ? imgs : undefined, docs.length > 0 ? docs : undefined)
         ).then((accepted) => {
-          if (accepted !== false) clearComposer();
+          if (accepted === false) restoreComposer(trimmed, imgs, names, docs);
         });
       }
     },
@@ -191,12 +214,19 @@ export default function Composer({
       return;
     }
     if (!canSend) return;
+    const payloadText = text.trim();
+    const payloadImages = images;
+    const payloadNames = imageNames;
+    const payloadDocuments = documents;
+    clearComposer();
     const accepted = await onSend(
-      text.trim(),
-      images.length > 0 ? images : undefined,
-      documents.length > 0 ? documents : undefined
+      payloadText,
+      payloadImages.length > 0 ? payloadImages : undefined,
+      payloadDocuments.length > 0 ? payloadDocuments : undefined
     );
-    if (accepted !== false) clearComposer();
+    if (accepted === false) {
+      restoreComposer(payloadText, payloadImages, payloadNames, payloadDocuments);
+    }
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {

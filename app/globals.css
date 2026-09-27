@@ -7730,9 +7730,19 @@ body.health-intro-open {
 
 .health-intro-card {
   padding: 22px 20px 20px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--health-accent);
   border-radius: 16px;
   background: var(--bg);
+  box-shadow: 0 16px 40px rgba(37, 99, 235, 0.22);
+  overflow: hidden;
+}
+
+.health-intro-card::before {
+  content: "";
+  display: block;
+  height: 4px;
+  margin: -22px -20px 18px;
+  background: var(--health-accent-strong);
 }
 
 .health-intro-title-row {
@@ -7750,8 +7760,8 @@ body.health-intro-open {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--bg-soft);
-  color: var(--text-muted);
+  background: var(--health-accent-soft);
+  color: var(--health-accent-strong);
 }
 
 .health-intro-card h2 {
@@ -7759,6 +7769,7 @@ body.health-intro-open {
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  color: var(--health-accent-strong);
 }
 
 .health-intro-card p {
@@ -7790,19 +7801,28 @@ body.health-intro-open {
 }
 
 .health-intro-primary {
-  border: 1px solid var(--pill);
-  background: var(--pill);
-  color: var(--pill-text);
+  border: 1px solid var(--health-accent-strong);
+  background: var(--health-accent-strong);
+  color: #fff;
+}
+
+.health-intro-primary:hover {
+  background: var(--health-accent);
 }
 
 .health-intro-secondary {
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text);
+  border: 1px solid var(--health-accent);
+  background: var(--health-accent-soft);
+  color: var(--health-accent-strong);
 }
 
 .health-intro-secondary:hover {
-  background: var(--bg-soft);
+  background: rgba(59, 130, 246, 0.22);
+}
+
+.health-intro-actions button:focus-visible {
+  outline: 2px solid var(--health-accent-focus);
+  outline-offset: 2px;
 }
 
 .review-coach {
@@ -7920,10 +7940,18 @@ html.dark-mode .conclude-modal,
 html.dark-mode .conclude-time-modal,
 html.dark-mode .full-day-edit-modal,
 html.dark-mode .record-edit-modal,
-html.dark-mode .search-modal,
-html.dark-mode .health-intro-card {
+html.dark-mode .search-modal {
   border-color: var(--border);
   background: var(--bg);
+}
+
+html.dark-mode .health-intro-card {
+  border-color: var(--health-accent);
+  background: var(--bg);
+}
+
+html.dark-mode .health-intro-primary {
+  color: #102039;
 }
 
 html.dark-mode .auth-card {

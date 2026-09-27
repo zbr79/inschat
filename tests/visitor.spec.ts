@@ -44,6 +44,8 @@ test.describe("guest Health intro", () => {
 
     await expect(page.getByRole("heading", { name: "Blood glucose trend" })).toBeVisible();
     await expect(page.getByText("Example data", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Millet porridge").first()).toBeVisible();
+    await expect(page.getByText("小米粥")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Delete Sample Data" })).toBeEnabled();
   });
 

@@ -1,19 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { addDemoGlucoseRecords, clearGuestData } from "@/lib/guestStore";
+import { addDemoGlucoseRecords, clearGuestData, localizeStoredDemoDishes } from "@/lib/guestStore";
 import { clearGuestImages } from "@/lib/guestImages";
+import { getUiLang, type UiLang } from "@/lib/i18n";
 
 const DEMO_INIT_KEY = "inschat_guest_demo_initialized";
 const HEALTH_INTRO_KEY = "inschat_health_intro_seen";
 const HEALTH_INTRO_EVENT = "inschat-health-intro";
 const HEALTH_INTRO_REQUEST_EVENT = "inschat-health-intro-request";
 
+export function applyDemoDishLanguage(lang: UiLang = getUiLang()): void {
+  if (typeof window === "undefined") return;
+  if (!localizeStoredDemoDishes(lang)) return;
+  window.dispatchEvent(new CustomEvent("inschat-records-changed"));
+}
+
 export function initializeGuestDemoData(): boolean {
   if (typeof window === "undefined") return false;
+  const lang = getUiLang();
   try {
-    if (window.localStorage.getItem(DEMO_INIT_KEY) === "1") return false;
-    const count = addDemoGlucoseRecords(30);
+    if (window.localStorage.getItem(DEMO_INIT_KEY) === "1") {
+      applyDemoDishLanguage(lang);
+      return false;
+    }
+    const count = addDemoGlucoseRecords(30, lang);
     window.localStorage.setItem(DEMO_INIT_KEY, "1");
     window.dispatchEvent(new CustomEvent("inschat-records-changed"));
     return count > 0;
@@ -48,7 +59,7 @@ export function resetGuestDataForFreshVisit(): void {
   if (typeof window === "undefined") return;
   clearGuestData();
   void clearGuestImages();
-  addDemoGlucoseRecords(30);
+  addDemoGlucoseRecords(30, getUiLang());
   try {
     window.localStorage.setItem(DEMO_INIT_KEY, "1");
   } catch {}

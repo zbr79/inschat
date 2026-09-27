@@ -9,6 +9,8 @@ import type {
   ChatMode,
 } from "./types";
 import type { DocumentAttachment } from "./documents/types";
+import { demoDishName } from "./demoDishNames";
+import { getUiLang, type UiLang } from "./i18n";
 
 export interface GuestMessage {
   id?: string;
@@ -311,7 +313,7 @@ function localDateKey(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function demoRecordContent(date: Date, dayIndex: number, safeDays: number): {
+function demoRecordContent(date: Date, dayIndex: number, safeDays: number, lang: UiLang): {
   items: ConcludeItem[];
   meals: ConcludeMeal[];
 } {
@@ -470,7 +472,10 @@ function demoRecordContent(date: Date, dayIndex: number, safeDays: number): {
   const meals: ConcludeMeal[] = menu.map(({ time, dishes }) => ({
     name: "",
     time: `${key} ${time}`,
-    dishes,
+    dishes: dishes.map((dish) => ({
+      ...dish,
+      name: demoDishName(dish.name, lang),
+    })),
   }));
 
   const hasLowExample =
@@ -485,7 +490,34 @@ function demoRecordContent(date: Date, dayIndex: number, safeDays: number): {
   return { items, meals };
 }
 
-export function addDemoGlucoseRecords(days = 30): number {
+export function localizeStoredDemoDishes(lang: UiLang): boolean {
+  if (typeof window === "undefined") return false;
+  const entries = readGuestReport().entries;
+  let changed = false;
+  const next = entries.map((record) => {
+    if (!record.id.startsWith(DEMO_RECORD_PREFIX) || !record.meals?.length) return record;
+    let recordChanged = false;
+    const meals = record.meals.map((meal) => {
+      if (!meal.dishes?.length) return meal;
+      let mealChanged = false;
+      const dishes = meal.dishes.map((dish) => {
+        const name = demoDishName(dish.name, lang);
+        if (name === dish.name) return dish;
+        mealChanged = true;
+        return { ...dish, name };
+      });
+      if (!mealChanged) return meal;
+      recordChanged = true;
+      return { ...meal, dishes };
+    });
+    if (!recordChanged) return record;
+    changed = true;
+    return { ...record, meals };
+  });
+  return changed && writeGuestReport(next);
+}
+
+export function addDemoGlucoseRecords(days = 30, lang: UiLang = getUiLang()): number {
   if (typeof window === "undefined") return 0;
   const safeDays = Math.max(1, Math.min(days, 180));
   const today = new Date();
@@ -495,7 +527,7 @@ export function addDemoGlucoseRecords(days = 30): number {
     const date = new Date(today);
     date.setDate(today.getDate() - offset);
     const dateKey = localDateKey(date);
-    const content = demoRecordContent(date, safeDays - 1 - offset, safeDays);
+    const content = demoRecordContent(date, safeDays - 1 - offset, safeDays, lang);
     demoRecords.push({
       id: `${DEMO_RECORD_PREFIX}${dateKey}`,
       title: "",

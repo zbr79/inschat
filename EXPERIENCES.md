@@ -6844,3 +6844,63 @@ Context: user wants a separate private app (proposed: local, 127.0.0.1) to manag
 
 ### Disproved
 - An in-memory “already shown on this page” flag could not keep the intro dismissed. The next page load treated Clear data as a fresh visit and showed the prompt again.
+
+## 2026-09-25 — Blue first-time Health modal
+
+### Solved
+- Restyled the guest sample-data dialog with the Health blue: tinted backdrop, blue bar and border, blue icon and title, filled View records button, and outlined Clear data button.
+- Dark mode keeps the same blue treatment on a deep blue card, with dark text on the filled button.
+
+### Unresolved
+- n/a
+
+### Disproved
+- n/a
+
+## 2026-09-25 — Keep the page background behind the Health intro
+
+### Solved
+- Removed the blue page wash and the dark-mode card fill. The dialog stays blue; the chat behind it is unchanged.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Tinting the full-screen backdrop made the whole chat look blue, which was not part of the modal redesign.
+
+## 2026-09-25 — English names for guest sample dishes
+
+### Solved
+- Sample meals keep the same foods. English UI stores and shows English dish names such as Millet porridge and Steamed sea bass.
+- A language change rewrites existing sample dishes. Chinese UI keeps the original names.
+
+### Unresolved
+- n/a
+
+### Disproved
+- n/a
+
+## 2026-09-27 — Replace the OpenCode API key
+
+### Solved
+- Wrote the new key into `.env` (`OPENCODE_API_KEY`) and the local OpenCode auth file. The app already forces the env key, so no source change was required.
+- Restarted only `inschat`. Usage check returned HTTP 200: rolling 2%, weekly 0%, monthly 0%.
+
+### Unresolved
+- n/a
+
+### Disproved
+- A usage request without the `InsChat/1.0` user agent returned Cloudflare 403. That was not a rejected key.
+
+## 2026-09-27 — Clear the composer when send is tapped
+
+### Solved
+- The message box now empties in the send tap, including a direct textarea update so a PWA does not keep the typed text until the reply starts.
+- If the first-time Health prompt rejects the send, the text and attachments are put back.
+
+### Unresolved
+- n/a
+
+### Disproved
+- Waiting for the chat request to finish before clearing the box left the typed text visible for the whole wait.
+
