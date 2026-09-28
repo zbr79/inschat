@@ -34,8 +34,7 @@ interface OpenCodeUsageData {
   } | null;
 }
 
-// Request-cap estimates for deepseek-v4-pro from the OpenCode Go docs
-// (limits are dollar-based; these are the published request equivalents).
+// Request-cap estimates for the OpenCode Go dollar limits.
 const LIMITS = {
   h5: 1050,
   w7: 2600,

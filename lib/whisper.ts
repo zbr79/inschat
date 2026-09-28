@@ -2,9 +2,7 @@ import { readFileSync } from "fs";
 
 const WHISPER_PORT = process.env.WHISPER_PORT || "9081";
 export const WHISPER_URL = `http://127.0.0.1:${WHISPER_PORT}`;
-const MODEL_STAMP =
-  process.env.WHISPER_MODEL_STAMP ||
-  "/home/ubuntu/opencode-tmp/agent/whisper-model";
+const MODEL_STAMP = process.env.WHISPER_MODEL_STAMP || "";
 
 export type WhisperLanguage = "zh" | "en" | "auto";
 

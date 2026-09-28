@@ -293,7 +293,7 @@ const WEB_FETCH_TOOL = {
       properties: {
         url: {
           type: "string",
-          description: "The full URL to fetch, e.g. https://api-docs.deepseek.com/quick_start/pricing",
+          description: "The full URL to fetch, e.g. https://example.com/docs",
         },
       },
       required: ["url"],

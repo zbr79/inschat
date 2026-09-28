@@ -2,12 +2,12 @@
 
 Minimalist AI chatbot — text chat + image upload, streaming responses. Powered by the **opencode-go subscription** (`https://opencode.ai/zen/go/v1`).
 
-**Live:** https://agent.renstoolbox.com
+**Live:** https://inschat.rwkit.com
 
 ## Features
 
 - Text chat with streaming responses
-- Image upload (JPEG/PNG/WebP) — DeepSeek V4 Flash Vision Exp analyzes your photo
+- Image upload (JPEG/PNG/WebP) — GPT-6 Luna analyzes your photo
 - Live web research: the direct engine can search the web and fetch pages (`web_search` and `web_fetch`)
 - Multi-turn conversation (last 20 messages kept as context)
 - Conclude button: extracts structured health data (insulin/glucose/meals) and saves records
@@ -51,7 +51,7 @@ Text and image chat use the direct opencode-go engine. Text requests can call
 `web_search` for live sources and `web_fetch` for readable page content; image
 requests stay on the vision model without web tools.
 
-Put nginx (or any reverse proxy) in front and proxy `/` to `127.0.0.1:3002`. If proxying, keep `proxy_buffering off;` so responses stream. Note: each new API route needs its own nginx `location` block (POST-only routes fall through `location /`, which only allows GET).
+Put nginx (or any reverse proxy) in front and proxy `/` to `127.0.0.1:3001`. If proxying, keep `proxy_buffering off;` so responses stream. Note: each new API route needs its own nginx `location` block (POST-only routes fall through `location /`, which only allows GET).
 
 ## How it works
 
@@ -77,7 +77,7 @@ components/
   ChatApp.tsx              # client state: messages, streaming, abort
   MessageBubble.tsx        # message list + markdown rendering
   Composer.tsx             # text input + image upload + preview
-  OpenCodeChat.tsx         # standalone DeepSeek chat page
+  OpenCodeChat.tsx         # standalone OpenCode chat page
   OpenCodeCallsPanel.tsx   # opencode call log + quota
   ModelsPanel.tsx          # model picker (opencode-go catalog)
   UsagePanel.tsx           # usage overview
