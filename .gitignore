@@ -14,3 +14,8 @@ next-env.d.ts
 artifacts/
 test-results/
 snapshot/
+AGENTS.md
+SYSTEM_PROMPT.md
+PLAN.md
+EXPERIENCES.md
+docs/PHASE-1-DOCUMENT-SUPPORT.md
