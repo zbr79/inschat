@@ -49,6 +49,22 @@ export async function putGuestImage(key: string, image: ChatImage): Promise<bool
   });
 }
 
+export async function loadLocalImageSlots(keys: string[] | undefined): Promise<{
+  images?: ChatImage[];
+  imageSlots?: Array<ChatImage | null>;
+}> {
+  if (!keys?.length) return {};
+  const imageSlots = await Promise.all(
+    keys.map(async (key) => (await getGuestImage(key)) ?? null)
+  );
+  const images = imageSlots.filter((image): image is ChatImage => image !== null);
+  const missing = imageSlots.some((slot) => slot === null);
+  return {
+    images: images.length ? images : undefined,
+    imageSlots: missing ? imageSlots : undefined,
+  };
+}
+
 export async function getGuestImage(key: string): Promise<ChatImage | undefined> {
   const db = await openDb();
   if (!db) return undefined;

@@ -1919,6 +1919,26 @@ span.conclude-rank-badge {
   cursor: zoom-in;
 }
 
+.missing-image-plate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  max-width: 100%;
+  min-height: 132px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--bg-soft);
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.message.user .bubble.image-only .missing-image-plate {
+  margin-bottom: 0;
+}
+
 .message-document-chips {
   display: flex;
   flex-wrap: wrap;
@@ -5335,6 +5355,19 @@ span.conclude-rank-badge {
   .input-row textarea {
     font-size: 16px;
   }
+
+  .auth-input {
+    font-size: 16px;
+  }
+
+  .conclude-inline-input,
+  .conclude-inline-select,
+  .record-edit-field input,
+  .record-edit-field textarea,
+  .record-edit-item input,
+  .record-edit-meal input {
+    font-size: 16px;
+  }
 }
 
 /* ---- ChatGPT-style per-message action bar ---- */
@@ -6977,6 +7010,11 @@ html.dark-mode .account-settings-avatar.health-mode-avatar {
     white-space: normal;
   }
 
+  .conclude-modal .conclude-inline-input,
+  .conclude-modal .conclude-inline-select {
+    font-size: 16px;
+  }
+
   .conclude-modal .conclude-rank-badge {
     min-width: 32px;
     min-height: 32px;
@@ -8002,4 +8040,14 @@ html.dark-mode .warn-card {
 
 .toast-info {
   background: #e3f2ff;
+}
+
+/* iOS Safari zooms focused editable controls below 16px. Keep every
+   phone-width form control at the safe threshold while preserving pinch zoom. */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }

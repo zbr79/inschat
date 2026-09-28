@@ -7,6 +7,7 @@ import rehypeHighlight from "rehype-highlight";
 import { Check, Copy, Pencil, RefreshCw, X } from "lucide-react";
 import "highlight.js/styles/github.css";
 import ImageViewer from "./ImageViewer";
+import MissingImagePlate from "./MissingImagePlate";
 import type { DocumentAttachment } from "@/lib/documents/types";
 import type { ChatImage, ConcludeResult } from "@/lib/types";
 import { formatElapsed } from "@/lib/format";
@@ -19,6 +20,7 @@ interface Message {
   role: "user" | "model";
   text: string;
   images?: ChatImage[];
+  imageSlots?: Array<ChatImage | null>;
   documents?: DocumentAttachment[];
   streaming?: boolean;
   failed?: boolean;
@@ -185,11 +187,12 @@ export default function MessageBubble({
   return (
     <main className="messages">
       {messages.map((message, index) => {
-        const imageUrls = (message.images ?? []).map((image) => dataUrl(image));
-        const splitImages =
-          message.role === "user" && imageUrls.length > 0 && message.text
-            ? imageUrls
-            : null;
+        const slots: Array<ChatImage | null> =
+          message.imageSlots ?? message.images ?? [];
+        const userMedia = message.role === "user" && slots.length > 0;
+        const imageUrls = userMedia
+          ? []
+          : (message.images ?? []).map((image) => dataUrl(image));
         const isEditing = editingId === message.id;
         const editImages = editingImages ?? message.images ?? [];
         return (
@@ -266,21 +269,27 @@ export default function MessageBubble({
                   </button>
                 </div>
               </div>
-            ) : splitImages ? (
+            ) : userMedia ? (
               <>
-                {splitImages.map((url, imageIndex) => (
+                {slots.map((slot, imageIndex) => (
                   <div key={imageIndex} className="bubble image-only">
-                    <img
-                      src={url}
-                       alt={t["composer.uploadedAlt"]}
-                      onClick={() => setViewer(url)}
-                    />
+                    {slot ? (
+                      <img
+                        src={dataUrl(slot)}
+                        alt={t["composer.uploadedAlt"]}
+                        onClick={() => setViewer(dataUrl(slot))}
+                      />
+                    ) : (
+                      <MissingImagePlate label={t["chat.imageMissing"]} />
+                    )}
                   </div>
                 ))}
-                <div className="bubble">
-                  <DocumentChips documents={message.documents} />
-                  <MarkdownContent text={message.text} />
-                </div>
+                {message.text ? (
+                  <div className="bubble">
+                    <DocumentChips documents={message.documents} />
+                    <MarkdownContent text={message.text} />
+                  </div>
+                ) : null}
               </>
             ) : (
               <div className={`bubble${imageUrls.length > 1 ? " image-stack" : ""}`}>

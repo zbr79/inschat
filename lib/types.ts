@@ -47,6 +47,10 @@ export interface ConcludeResult {
   meals?: ConcludeMeal[];
   imageKeys?: string[];
   events?: ReportEvent[];
+  /** Latest reply corrects an existing meal or reading instead of adding one. */
+  correction?: boolean;
+  /** Model-named dish swaps. `to` is the dish name the model decided, not the user's wording. */
+  replaces?: { from: string; to: string; rank?: string }[];
 }
 
 export interface SessionConclusion {

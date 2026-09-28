@@ -227,7 +227,7 @@ export function reportEditorResult(record: {
   };
 }
 
-function itemsFromPaired(paired: ReturnType<typeof pairTimeItems>): ConcludeItem[] {
+export function itemsFromPaired(paired: ReturnType<typeof pairTimeItems>): ConcludeItem[] {
   const items: ConcludeItem[] = [];
   for (const entry of paired) {
     const item: ConcludeItem = { name: entry.item.name };

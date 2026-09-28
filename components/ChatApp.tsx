@@ -17,6 +17,7 @@ import type {
   SessionConclusion,
 } from "@/lib/types";
 import { ModelMarkerParser } from "@/lib/markers";
+import { applyRecordCorrection, parseDishReplacements } from "@/lib/recordCorrection";
 import { createReportEvent, mergeReportEvents } from "@/lib/reportEvents";
 import {
   maybeRenameHealthSession,
@@ -40,7 +41,7 @@ import {
   truncateGuestSession,
   updateGuestMessage,
 } from "@/lib/guestStore";
-import { putGuestImage, getGuestImage } from "@/lib/guestImages";
+import { putGuestImage, loadLocalImageSlots } from "@/lib/guestImages";
 import { STR, useUiLang } from "@/lib/i18n";
 import type { DocumentAttachment } from "@/lib/documents/types";
 import { useAuth } from "@/lib/authContext";
@@ -52,6 +53,7 @@ interface UiMessage {
   role: "user" | "model";
   text: string;
   images?: ChatImage[];
+  imageSlots?: Array<ChatImage | null>;
   documents?: DocumentAttachment[];
   imageKeys?: string[];
   createdAt?: string;
@@ -330,6 +332,8 @@ function parseConclusionTail(
         meals: Array.isArray(raw.meals)
           ? sanitizeConcludeMeals(raw.meals as ConcludeResult["meals"])
           : undefined,
+        correction: raw.correction === true,
+        replaces: parseDishReplacements(raw.replaces),
       },
       sourceText: visibleMessageText(text),
     };
@@ -697,10 +701,14 @@ export default function ChatApp() {
           if (status !== "pending") {
             const restored = parseConclusionTail(incoming.text ?? "");
             if (restored) {
-              const merged = mergeConclusion(
-                restored.result,
-                eventForLatestUser(restored.result, messagesRef.current)
-              );
+              const baseResult = concludeResultRef.current?.result;
+              const merged =
+                (restored.result.correction || restored.result.replaces?.length) && baseResult
+                  ? applyRecordCorrection(baseResult, restored.result)
+                  : mergeConclusion(
+                      restored.result,
+                      eventForLatestUser(restored.result, messagesRef.current)
+                    );
               const savedRecordId = await persistConclusionRecord(
                 merged,
                 restored.sourceText
@@ -875,18 +883,13 @@ export default function ChatApp() {
                   (message as { processSteps?: string[] }).processSteps
                 );
                 const rawText = visibleMessageText(message.text);
-                const images = message.imageKeys?.length
-                  ? (
-                      await Promise.all(
-                        message.imageKeys.map(async (key) => (await getGuestImage(key)) ?? null)
-                      )
-                    ).filter((image): image is ChatImage => image !== null)
-                  : undefined;
+                const loaded = await loadLocalImageSlots(message.imageKeys);
                 return {
                   id: nextId++,
                   role: (message.role === "model" ? "model" : "user") as "user" | "model",
                   text: withRestoredTrail(rawText, processSteps, pending),
-                  images,
+                  images: loaded.images,
+                  imageSlots: loaded.imageSlots,
                   imageKeys: message.imageKeys,
                   model: message.model,
                   hideModelMeta: pending,
@@ -963,20 +966,15 @@ export default function ChatApp() {
           local.messages.map(async (message, index) => {
             const status = normalizeUiStatus(message.status as StoredStatus);
             const pending = status === "pending";
-            const images = message.images?.length
-              ? message.images
-              : message.imageKeys?.length
-                ? (
-                    await Promise.all(
-                      message.imageKeys.map(async (key) => (await getGuestImage(key)) ?? null)
-                    )
-                  ).filter((image): image is ChatImage => image !== null)
-                : undefined;
+            const loaded = message.images?.length
+              ? { images: message.images }
+              : await loadLocalImageSlots(message.imageKeys);
             return {
               id: nextId++,
               role: (message.role === "model" ? "model" : "user") as "user" | "model",
               text: visibleMessageText(message.text),
-              images,
+              images: loaded.images,
+              imageSlots: loaded.imageSlots,
               documents: message.documents,
               imageKeys: message.imageKeys,
               createdAt: message.createdAt
@@ -1368,6 +1366,8 @@ export default function ChatApp() {
                   meals: Array.isArray(raw.meals)
                     ? sanitizeConcludeMeals(raw.meals as ConcludeResult["meals"])
                     : undefined,
+                  correction: raw.correction === true,
+                  replaces: parseDishReplacements(raw.replaces),
                 };
               }
             } catch {
@@ -1375,10 +1375,14 @@ export default function ChatApp() {
             }
           }
           if (parsedConclude) {
-            const merged = mergeConclusion(
-              parsedConclude,
-              eventForLatestUser(parsedConclude, base)
-            );
+            const baseResult = concludeResultRef.current?.result;
+            const merged =
+              (parsedConclude.correction || parsedConclude.replaces?.length) && baseResult
+                ? applyRecordCorrection(baseResult, parsedConclude)
+                : mergeConclusion(
+                    parsedConclude,
+                    eventForLatestUser(parsedConclude, base)
+                  );
             const savedRecordId = await persistConclusionRecord(merged, savedText);
             setConcludeSaved(Boolean(savedRecordId));
             setConcludeResult({ result: merged, sourceText: savedText });
