@@ -4,10 +4,6 @@ Minimalist AI chatbot — text chat + image upload, streaming responses.
 
 **Live:** https://inschat.rwkit.com
 
-![InsChat chat](docs/screenshots/chat.png)
-
-![InsChat records](docs/screenshots/records.png)
-
 ## Features
 
 - Text chat with streaming responses
