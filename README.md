@@ -50,7 +50,7 @@ npm run test:lighthouse:records
 npm test
 ```
 
-Playwright starts a production server on port `3101` and writes its HTML report to `artifacts/playwright-report`. Fresh-visitor coverage is in `tests/visitor.spec.ts` (desktop) and `tests/visitor.mobile.spec.ts` (Pixel 5). Guest records coverage is in `tests/records.spec.ts` (desktop) and `tests/records.mobile.spec.ts` (Pixel 5 plus a 320px overflow check).
+Playwright starts a production server on port `3101` and writes its HTML report to `artifacts/playwright-report`. It covers a fresh guest visit on desktop and a phone, and guest records on desktop, a phone, and a narrow 320px width.
 
 Lighthouse tests the public UI routes at a 390px mobile viewport by default and writes per-route JSON/HTML reports plus `artifacts/lighthouse/summary.json`. `npm run test:lighthouse:records` audits `/records` on a 390px phone and a 1350px desktop, including viewport, content width, tap targets, font size, and image sizing.
 
