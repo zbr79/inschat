@@ -1,8 +1,13 @@
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { ChatValidationError } from "./errors";
+import {
+  currentOpenCodeKey,
+  keySuffix,
+  markKeyRanOut,
+  readCachedUsage,
+  selectOpenCodeKey,
+  type OpenCodeOfficialUsage,
+} from "./opencodeKeys";
 import { getSystemPrompt } from "./prompt";
 import {
   encodeFreeMarker,
@@ -32,43 +37,10 @@ export const OPENCODE_FREE_BASE_URL = "https://opencode.ai/zen/v1";
 export const OPENCODE_MODEL = "gpt-6-luna";
 export const OPENCODE_VISION_MODEL = "gpt-6-luna";
 
-// The opencode CLI stores the current subscription key here; it changes when
-// the user rotates/reconnects the key in the TUI. Prefer it over .env so the
-// app never runs on a stale (exhausted) key.
-function keyFromAuthFile(): string | null {
-  try {
-    const file = path.join(
-      os.homedir(),
-      ".local",
-      "share",
-      "opencode",
-      "auth.json"
-    );
-    const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as Record<
-      string,
-      { key?: string }
-    >;
-    const key = parsed["opencode-go"]?.key;
-    if (typeof key === "string" && key) return key;
-  } catch {}
-  return null;
-}
+export type { OpenCodeOfficialUsage, OpenCodeUsageWindow } from "./opencodeKeys";
 
 export function getOpenCodeKey(): string {
-  // OPENCODE_API_KEY_FORCE=1 pins the app to the .env key even when the
-  // opencode CLI has a different (newer) key in auth.json — useful for
-  // deliberately testing the exhausted-key state.
-  const envKey = process.env.OPENCODE_API_KEY;
-  const key =
-    process.env.OPENCODE_API_KEY_FORCE === "1"
-      ? envKey
-      : keyFromAuthFile() ?? envKey;
-  if (!key || key === "your_opencode_go_api_key_here" || key === "your_api_key_here") {
-    throw new ChatValidationError(
-      "OPENCODE_API_KEY is not configured on the server."
-    );
-  }
-  return key;
+  return currentOpenCodeKey();
 }
 
 export function isQuotaError(error: unknown): boolean {
@@ -172,46 +144,9 @@ export function imageExhaustedText(
     : "No image model usage available. Please retry later.";
 }
 
-export interface OpenCodeUsageWindow {
-  status: string;
-  percent: number;
-  resetsAt: string;
-}
-
-export interface OpenCodeOfficialUsage {
-  rolling: OpenCodeUsageWindow;
-  weekly: OpenCodeUsageWindow;
-  monthly: OpenCodeUsageWindow;
-}
-
-let officialCache: { at: number; data: OpenCodeOfficialUsage } | null = null;
-
 export async function getOpenCodeOfficialUsage(): Promise<OpenCodeOfficialUsage | null> {
-  const now = Date.now();
-  if (officialCache && now - officialCache.at < 60_000) {
-    return officialCache.data;
-  }
-  try {
-    const response = await fetch(`${OPENCODE_BASE_URL}/usage`, {
-      headers: { Authorization: `Bearer ${getOpenCodeKey()}` },
-      signal: AbortSignal.timeout(15_000),
-    });
-    if (!response.ok) return null;
-    const body = (await response.json()) as {
-      usage?: Partial<OpenCodeOfficialUsage>;
-    };
-    const usage = body.usage;
-    if (!usage?.rolling || !usage.weekly || !usage.monthly) return null;
-    const data = {
-      rolling: usage.rolling,
-      weekly: usage.weekly,
-      monthly: usage.monthly,
-    };
-    officialCache = { at: now, data };
-    return data;
-  } catch {
-    return null;
-  }
+  const key = await selectOpenCodeKey();
+  return readCachedUsage(key);
 }
 
 interface OpenAiContentPart {
@@ -416,13 +351,14 @@ async function postCompletion(
   model: string,
   body: Record<string, unknown>,
   timeoutMs: number,
-  sessionId?: string
+  sessionId: string | undefined,
+  apiKey: string
 ): Promise<Response> {
   return fetch(`${baseUrlForModel(model)}/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${getOpenCodeKey()}`,
+      Authorization: `Bearer ${apiKey}`,
       "User-Agent": "InsChat/1.0",
       "x-opencode-session": sessionId ?? `inschat-${randomUUID()}`,
     },
@@ -448,8 +384,10 @@ async function* streamOpenCodeOnce(
   tools: boolean,
   reasoningLevel: ChatReasoning | "medium" | "low" = "medium",
   sessionId?: string,
-  webTools = true
+  webTools = true,
+  apiKey?: string
 ): AsyncGenerator<string, { toolCalls: ToolCall[] }, void> {
+  const key = apiKey || (await selectOpenCodeKey());
   const requestId = Math.random().toString(36).slice(2, 8);
   const hasImageParts = messages.some(
     (message) =>
@@ -474,7 +412,7 @@ async function* streamOpenCodeOnce(
   if (requestTools.length > 0) body.tools = requestTools;
   const startedAt = Date.now();
   console.log(
-    `[opencode:${requestId}] start — model ${model}, ${messages.length} messages${tools ? ", tools on" : ""}`
+    `[opencode:${requestId}] start — model ${model}, key …${keySuffix(key)}, ${messages.length} messages${tools ? ", tools on" : ""}`
   );
 
   if (process.env.OPENCODE_TEST_LIMIT === "1") {
@@ -485,7 +423,7 @@ async function* streamOpenCodeOnce(
 
   if (model === OPENCODE_MODEL) {
     return yield* streamResponses(
-      getOpenCodeKey(),
+      key,
       OPENCODE_BASE_URL,
       messages,
       model,
@@ -500,7 +438,7 @@ async function* streamOpenCodeOnce(
   // effectively stalled for an interactive chat. Fail over promptly instead
   // of holding the browser on a spinner for the full two-minute text timeout.
   const timeoutMs = hasImageParts ? 30_000 : 120_000;
-  const response = await postCompletion(model, body, timeoutMs, sessionId);
+  const response = await postCompletion(model, body, timeoutMs, sessionId, key);
 
   if (!response.ok || !response.body) {
     const text = await response.text().catch(() => "");
@@ -752,6 +690,8 @@ export async function* streamChat(
     systemOverride
   );
   let lastError: unknown = null;
+  let apiKey = await selectOpenCodeKey();
+  const triedKeys = new Set<string>();
   // True when a paid model in this request failed with quota/balance errors
   // (exhausted subscription) and a free model answered as a result.
   let paidExhausted = false;
@@ -769,7 +709,8 @@ export async function* streamChat(
             useTools,
             reasoning,
             sessionId,
-            useWebTools
+            useWebTools,
+            apiKey
           );
           while (true) {
             const { done, value } = await gen.next();
@@ -782,6 +723,19 @@ export async function* streamChat(
         } catch (error) {
           lastError = error;
           if (error instanceof ChatValidationError) throw error;
+          if (isBalanceError(error)) {
+            triedKeys.add(apiKey);
+            markKeyRanOut(apiKey);
+            const nextKey = await selectOpenCodeKey();
+            if (!triedKeys.has(nextKey)) {
+              console.log(
+                `[opencode:${requestId}] ${model} usage limit → key …${keySuffix(nextKey)}`
+              );
+              apiKey = nextKey;
+              attempt -= 1;
+              continue;
+            }
+          }
           const moveToNextModel =
             isQuotaError(error) ||
             isUnavailableError(error) ||
@@ -901,7 +855,8 @@ export async function* streamChat(
     false,
     reasoning,
     sessionId,
-    false
+    false,
+    apiKey
   );
   while (true) {
     const { done, value } = await finalGen.next();
@@ -928,9 +883,47 @@ export async function completeOpenCode(
     reasoning?: "none" | "minimal" | "low" | "medium" | "high" | "max";
   }
 ): Promise<string> {
+  const tried = new Set<string>();
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const apiKey = await selectOpenCodeKey();
+    if (tried.has(apiKey)) break;
+    tried.add(apiKey);
+    try {
+      return await completeOpenCodeWithKey(
+        apiKey,
+        model,
+        messages,
+        timeZone,
+        language,
+        options
+      );
+    } catch (error) {
+      lastError = error;
+      if (!isBalanceError(error)) throw error;
+      markKeyRanOut(apiKey);
+      console.log(`[opencode] ${model} usage limit → key …${keySuffix(apiKey)} ran out`);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("Chat request failed.");
+}
+
+async function completeOpenCodeWithKey(
+  apiKey: string,
+  model: string,
+  messages: ChatMessage[],
+  timeZone?: string,
+  language?: "zh" | "en",
+  options?: {
+    maxTokens?: number;
+    json?: boolean;
+    systemPrompt?: string;
+    reasoning?: "none" | "minimal" | "low" | "medium" | "high" | "max";
+  }
+): Promise<string> {
   if (model === OPENCODE_MODEL) {
     return completeResponses(
-      getOpenCodeKey(),
+      apiKey,
       OPENCODE_BASE_URL,
       toOpenAiMessages(messages, timeZone, language, options?.systemPrompt),
       model,
@@ -950,7 +943,7 @@ export async function completeOpenCode(
   if (options?.maxTokens) body.max_tokens = options.maxTokens;
   if (options?.json) body.response_format = { type: "json_object" };
 
-  const response = await postCompletion(model, body, 60_000);
+  const response = await postCompletion(model, body, 60_000, undefined, apiKey);
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     throw errorFromResponse(response.status, text);
